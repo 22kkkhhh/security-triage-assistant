@@ -1,0 +1,149 @@
+"use client";
+
+import Link from "next/link";
+import { caseStatusLabels } from "@/domain/labels";
+import type { CaseStatus } from "@/domain/types";
+import {
+  displayCaseListRisk,
+  riskBadgeClass,
+  statusBadgeClass,
+} from "@/components/cases/caseDisplay";
+import type { AutosaveState } from "@/hooks/autosaveState";
+import type { RiskLevel } from "@/domain/types";
+
+function formatSavedAt(iso: string | null): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const cn = new Date(date.getTime() + 8 * 3600 * 1000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${cn.getUTCFullYear()}-${pad(cn.getUTCMonth() + 1)}-${pad(cn.getUTCDate())} ${pad(cn.getUTCHours())}:${pad(cn.getUTCMinutes())}:${pad(cn.getUTCSeconds())}`;
+}
+
+function saveStatusLabel(state: AutosaveState): string {
+  switch (state.status) {
+    case "SAVING":
+    case "DIRTY":
+      return state.status === "SAVING" ? "保存中…" : "待保存…";
+    case "SAVED":
+      return `已保存 ${formatSavedAt(state.lastSavedAt).slice(11)}`;
+    case "ERROR":
+      return "保存失败";
+    default:
+      return "已同步";
+  }
+}
+
+/**
+ * 持久化案件工作台顶部栏：返回、案件信息、状态、保存反馈。
+ */
+export function CaseHeader({
+  caseNumber,
+  title,
+  status,
+  humanRiskLevel,
+  suggestedRiskLevel,
+  saveState,
+  navigationError,
+  onStatusChange,
+  onRetry,
+  onBack,
+}: {
+  caseNumber: string;
+  title: string;
+  status: CaseStatus;
+  humanRiskLevel: RiskLevel | null;
+  suggestedRiskLevel: RiskLevel | null;
+  saveState: AutosaveState;
+  navigationError: string | null;
+  onStatusChange: (status: CaseStatus) => void;
+  onRetry: () => void;
+  onBack: () => void;
+}) {
+  const riskLabel = displayCaseListRisk(humanRiskLevel, suggestedRiskLevel);
+
+  return (
+    <section className="space-y-3 rounded-md border border-neutral-200 bg-white px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-sm text-slate-600 hover:text-slate-900"
+        >
+          ← 返回历史案件
+        </button>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span
+            className={
+              saveState.status === "ERROR"
+                ? "text-red-700"
+                : "text-neutral-500"
+            }
+          >
+            {saveStatusLabel(saveState)}
+          </span>
+          {saveState.status === "ERROR" && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+            >
+              重试
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="font-mono text-xs text-neutral-500">{caseNumber}</div>
+          <h1 className="mt-1 text-xl font-semibold text-neutral-900">
+            {title}
+          </h1>
+          <p className="mt-1 text-xs text-neutral-500">
+            最后保存：{formatSavedAt(saveState.lastSavedAt)}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`inline-block rounded border px-2 py-0.5 text-xs ${riskBadgeClass(riskLabel)}`}
+          >
+            {riskLabel}
+          </span>
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            案件状态
+            <select
+              value={status}
+              onChange={(e) => onStatusChange(e.target.value as CaseStatus)}
+              className={`rounded border px-2 py-1 text-xs ${statusBadgeClass(status)}`}
+            >
+              {(Object.entries(caseStatusLabels) as [CaseStatus, string][]).map(
+                ([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {navigationError && (
+        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {navigationError}{" "}
+          <button
+            type="button"
+            onClick={onRetry}
+            className="underline underline-offset-2"
+          >
+            重试
+          </button>
+          <Link href="/cases" className="ml-3 text-neutral-600 underline">
+            仍要离开
+          </Link>
+        </div>
+      )}
+    </section>
+  );
+}

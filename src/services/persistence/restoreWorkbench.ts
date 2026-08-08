@@ -1,0 +1,92 @@
+import type {
+  CaseStatus,
+  ChecklistItem,
+  RiskLevel,
+  SecurityCaseDraft,
+  TimelineEvent,
+} from "@/domain/types";
+import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
+import {
+  mergeChecklistOnRestore,
+  toSecurityCaseDraft,
+} from "./caseMapper";
+import type { PersistedCase, PersistedCaseState } from "./types";
+
+/** 恢复到 Workbench 的初始视图（分析结果为现场派生） */
+export interface RestoredWorkbenchView {
+  caseId: string;
+  caseNumber: string;
+  title: string;
+  status: CaseStatus;
+  updatedAt: string;
+  /** 含持久化 businessContext / humanReview / timeline */
+  draft: SecurityCaseDraft;
+  /** 已与当前规则合并后的 checklist */
+  initialChecklist: ChecklistItem[];
+  /** 当前业务上下文下重新分析得到的建议风险（非持久化权威） */
+  suggestedRiskLevel: RiskLevel | null;
+}
+
+/**
+ * 从 PersistedCase 构建 Workbench 初始数据：
+ * caseState → draft → analyzeSecurityCase → mergeChecklistOnRestore。
+ * 不持久化、不返回 AnalysisResult 作为第二套状态。
+ */
+export function restoreWorkbenchFromPersisted(
+  record: PersistedCase,
+): RestoredWorkbenchView {
+  return restoreWorkbenchFromState({
+    caseId: record.id,
+    caseNumber: record.caseNumber,
+    status: record.status,
+    updatedAt: record.updatedAt,
+    caseState: record.caseState,
+  });
+}
+
+export function restoreWorkbenchFromState(input: {
+  caseId: string;
+  caseNumber: string;
+  status: CaseStatus;
+  updatedAt: string;
+  caseState: PersistedCaseState;
+}): RestoredWorkbenchView {
+  const draft = toSecurityCaseDraft(input.caseId, input.caseState);
+  const analyzed = analyzeSecurityCase(draft);
+  const initialChecklist = mergeChecklistOnRestore(
+    input.caseState.checklist,
+    analyzed.checklist,
+  );
+
+  return {
+    caseId: input.caseId,
+    caseNumber: input.caseNumber,
+    title: draft.name,
+    status: input.status,
+    updatedAt: input.updatedAt,
+    draft,
+    initialChecklist,
+    suggestedRiskLevel:
+      analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
+  };
+}
+
+/**
+ * Timeline 去重：按稳定 id 合并，已持久化事件优先，避免重跑分析时重复系统事件。
+ * 当前 analyzeSecurityCase 不重写 timeline，此函数用于防御性合并。
+ */
+export function mergeTimelineOnRestore(
+  persisted: TimelineEvent[],
+  incoming: TimelineEvent[],
+): TimelineEvent[] {
+  const byId = new Map<string, TimelineEvent>();
+  for (const event of incoming) {
+    byId.set(event.id, event);
+  }
+  for (const event of persisted) {
+    byId.set(event.id, event);
+  }
+  return Array.from(byId.values()).sort((a, b) =>
+    a.occurredAt.localeCompare(b.occurredAt),
+  );
+}

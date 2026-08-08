@@ -1,50 +1,26 @@
-import Link from "next/link";
+import { notFound } from "next/navigation";
+import { PersistedCaseWorkbench } from "@/components/cases/PersistedCaseWorkbench";
 import { getCaseById } from "@/services/persistence/caseRepository";
+import { restoreWorkbenchFromPersisted } from "@/services/persistence/restoreWorkbench";
 
 export const dynamic = "force-dynamic";
 
 /**
- * 案件详情占位页（Step 2）。
- * Step 3 将在此接入 Workbench 恢复与自动保存。
+ * 案件工作台入口：服务端加载 caseState → 重新分析 → 合并 Checklist → 客户端可编辑并自动保存。
+ * 刷新或直接访问 /cases/[id] 均可完整恢复。
  */
-export default async function CaseDetailPlaceholderPage({
+export default async function CaseDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
   const record = await getCaseById(id);
+  if (!record) {
+    notFound();
+  }
 
-  return (
-    <div className="space-y-4">
-      <Link
-        href="/cases"
-        className="inline-block text-sm text-slate-600 hover:text-slate-900"
-      >
-        ← 返回历史案件
-      </Link>
-      <div className="rounded-md border border-neutral-200 bg-white px-5 py-6">
-        {record ? (
-          <>
-            <h1 className="text-xl font-semibold text-neutral-900">
-              {record.title}
-            </h1>
-            <p className="mt-2 font-mono text-sm text-neutral-500">
-              {record.caseNumber}
-            </p>
-            <p className="mt-4 text-sm text-neutral-600">
-              案件详情工作台将在 Step 3 接入。当前仅确认路由与数据恢复入口可用。
-            </p>
-          </>
-        ) : (
-          <>
-            <h1 className="text-xl font-semibold text-neutral-900">案件不存在</h1>
-            <p className="mt-2 text-sm text-neutral-600">
-              未找到 ID 为 {id} 的案件记录。
-            </p>
-          </>
-        )}
-      </div>
-    </div>
-  );
+  const initial = restoreWorkbenchFromPersisted(record);
+
+  return <PersistedCaseWorkbench initial={initial} />;
 }

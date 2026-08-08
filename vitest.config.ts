@@ -9,5 +9,7 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.ts"],
+    // SQLite Prisma 单例测试不可并行切库
+    fileParallelism: false,
   },
 });
