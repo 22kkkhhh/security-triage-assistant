@@ -22,5 +22,7 @@ export default async function CaseDetailPage({
 
   const initial = restoreWorkbenchFromPersisted(record);
 
-  return <PersistedCaseWorkbench initial={initial} />;
+  return (
+    <PersistedCaseWorkbench initial={initial} hasReport={record.hasReport} />
+  );
 }

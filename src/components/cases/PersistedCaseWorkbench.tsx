@@ -23,7 +23,6 @@ import { HumanReviewPanel } from "@/components/HumanReviewPanel";
 import { SuggestedAssessmentBar } from "@/components/SuggestedAssessmentBar";
 import { TimelinePanel } from "@/components/TimelinePanel";
 import { Field } from "@/components/common";
-import { ReportEditor, type ReportSession } from "@/components/report/ReportEditor";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import { CaseHeader } from "./CaseHeader";
 
@@ -51,8 +50,10 @@ type LivePayload = {
  */
 export function PersistedCaseWorkbench({
   initial,
+  hasReport = false,
 }: {
   initial: RestoredWorkbenchView;
+  hasReport?: boolean;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<CaseStatus>(initial.status);
@@ -67,9 +68,6 @@ export function PersistedCaseWorkbench({
   );
   const [timeline, setTimeline] = useState<TimelineEvent[]>(
     initial.draft.timeline,
-  );
-  const [reportSession, setReportSession] = useState<ReportSession | null>(
-    null,
   );
   const [navigationError, setNavigationError] = useState<string | null>(null);
 
@@ -213,14 +211,20 @@ export function PersistedCaseWorkbench({
     router.push("/cases");
   };
 
-  if (reportSession) {
-    return (
-      <ReportEditor
-        session={reportSession}
-        onBack={() => setReportSession(null)}
-      />
-    );
-  }
+  const goToReport = async () => {
+    if (
+      saveState.status === "DIRTY" ||
+      saveState.status === "SAVING" ||
+      saveState.status === "ERROR"
+    ) {
+      const ok = await flushSave();
+      if (!ok) {
+        setNavigationError("保存失败，请重试后再进入报告。");
+        return;
+      }
+    }
+    router.push(`/cases/${initial.caseId}/report`);
+  };
 
   return (
     <div className="space-y-4">
@@ -324,16 +328,9 @@ export function PersistedCaseWorkbench({
         <button
           type="button"
           className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700"
-          onClick={() =>
-            setReportSession({
-              securityCase: { ...analyzed, humanReview },
-              humanReview,
-              checklist,
-              timeline,
-            })
-          }
+          onClick={() => void goToReport()}
         >
-          生成报告
+          {hasReport ? "继续编辑报告" : "生成报告"}
         </button>
       </div>
     </div>
