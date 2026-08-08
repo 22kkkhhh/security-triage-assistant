@@ -105,3 +105,8 @@
 
 浏览器人工点验（A–J：交接 / 状态 / Checklist / 业务 / 人工 / Timeline /
 报告 / 分页 / 双标签案件 / 双标签报告）在自动化通过后仍须由用户确认。
+
+v1.2 Case 双 Tab 并发（I）：已在发布前用真实双 Page 浏览器一次性复测通过
+（Status→BusinessContext / BusinessContext→Checklist / Status vs Status /
+单 Tab sanity / Handoff→stale）。项目未将 Playwright 列为正式依赖；
+长期回归保留 `caseConcurrency` 单测与 `scripts/smoke-v12-case-concurrency.ts`。

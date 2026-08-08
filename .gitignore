@@ -20,6 +20,9 @@
 *.db
 *.db-journal
 
+# 浏览器验证运行时产物（截图 / JSON 等，不得提交）
+/scripts/.browser-verify/
+
 # 调试日志
 npm-debug.log*
 yarn-debug.log*
