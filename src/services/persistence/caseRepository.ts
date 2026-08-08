@@ -197,6 +197,7 @@ export async function saveReportDraft(
     data: {
       reportDraft: toJsonValue(reportDraft),
       hasReport: true,
+      reportUpdatedAt: new Date(),
     },
   });
   return rowToPersistedCase(row);
@@ -251,7 +252,7 @@ export async function listCases(
 export async function listReportCases(): Promise<CaseListItem[]> {
   const rows = await prisma.caseRecord.findMany({
     where: { hasReport: true },
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ reportUpdatedAt: "desc" }, { updatedAt: "desc" }],
   });
   return rows.map(rowToListItem);
 }

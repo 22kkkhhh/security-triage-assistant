@@ -1,124 +1,145 @@
 # Security Triage Assistant
 
-数据与网络安全联合研判及报告助手。
+数据与网络安全联合研判及报告助手（v1.1）
 
-## 1. 解决什么问题
+## 一、项目是什么
 
-安全运营人员已经拥有数据库审计、认证系统、防火墙、堡垒机等成熟工具，
-但告警来自不同系统、上下文分散、研判步骤容易遗漏、证据难以统一整理、
-报告需要重复编写。本项目解决的是**告警之后的研判与报告整理问题**。
+本工具帮助安全人员在**已有安全平台告警之后**完成：
 
-## 2. 为什么不是重新造 SIEM / SOC
+导入 → 标准化 → 多维辅助研判 → 业务合理性核查 → 证据与核查清单 →
+人工结论 → 案件持续跟踪 → 报告编辑 → 导出可编辑 Word（DOCX）
 
-本项目不做日志采集、不做实时监控、不做自动阻断、不做威胁情报联网查询，
-也不接入外部 AI。默认企业已经存在成熟的安全产品，本项目只负责：
+**不是** SIEM / SOC / IDS / NDR / DLP / 漏洞扫描器 / 日志采集平台 / SOAR 的替代品。
+默认企业已经存在成熟的安全检测产品；本项目只做研判与报告整理。
 
-已有安全告警或日志 → 导入 → 标准化 → 补充上下文 → 辅助研判 →
-证据整理 → 人工确认 → 处置记录 → 报告编辑 → 导出 DOCX
+## 二、解决的问题
 
-## 3. 核心流程
+已有安全平台：负责检测并产生告警。
+
+本工具负责：
+
+- 导入（手工 / CSV / 文本粘贴）
+- 字段标准化与人工确认
+- 数据 / 网络 / 身份联合辅助研判
+- 业务合理性核查（工单 / 负责人确认）
+- Evidence / Checklist / Timeline
+- 人工最终结论（HumanReview）
+- 案件持久化与历史跟踪
+- 报告草稿持久化与 DOCX 导出
+
+## 三、技术栈
+
+- Next.js（App Router）+ TypeScript + Tailwind CSS
+- Prisma ORM 7 + SQLite（本地 Demo）
+- Vitest
+- docx（原生可编辑 Word）
+
+## 四、核心流程
 
 ```text
-新建研判（手工录入 / CSV 导入 / 文本粘贴）
-→ 字段标准化（集中别名表，精确匹配）
-→ 人工确认导入结果（未识别内容原样保留）
-→ 规则引擎分析（数据 / 网络 / 身份 / 业务四个维度）
-→ 核查清单（自动生成、可人工增删改）
-→ 业务合理性核查（工单 / 负责人确认）
-→ 人工最终研判
-→ 事件时间线
-→ 报告编辑（初稿可改）
-→ 敏感信息检查 → 导出可编辑 DOCX
+已有平台告警
+→ Import（手工 / CSV / 文本）
+→ Normalization + 人工确认
+→ SecurityCase
+→ Analysis（静态规则引擎）
+→ Checklist / Evidence / Timeline
+→ HumanReview
+→ Persistence（caseState）
+→ ReportDraft（独立持久化）
+→ DOCX 导出
 ```
 
-## 4. 数据 / 网络 / 身份联合研判
+## 五、核心安全设计
 
-内置 11 条静态 TypeScript 规则（DATA-001~003、IDENTITY-001~003、
-NETWORK-001~002、BUSINESS-001~003），每条规则输出状态、风险等级、
-判断依据、证据与建议核查事项，所有结论可追溯到证据。
+- `UNKNOWN ≠ NORMAL`，`UNKNOWN ≠ LOW`（数据不足显示「暂无法评级」）
+- 技术异常 ≠ 安全事件（须结合业务上下文）
+- `SuggestedAssessment` 与 `HumanReview` 严格分离；系统建议不得覆盖人工结论
+- 系统不得自动产生：确认攻击 / 确认失陷 / 确认数据泄露
 
-## 5. UNKNOWN 设计原则
+## 六、数据安全说明
 
-任何可能因数据缺失而无法判断的字段统一使用三态：
-`NORMAL`（当前未发现明显异常）/ `ABNORMAL`（存在异常特征）/
-`UNKNOWN`（暂缺少相关信息，当前无法判断）。
-`UNKNOWN` 绝不等于“正常”，会生成对应的核查清单项。
+- Demo **全部使用虚构 Mock 数据**（私网 / 测试 IP，虚构账号与人员）
+- **不得**导入真实客户或生产安全日志
+- SQLite 仅用于本地 Demo；真实生产需要权限、审计、备份、高可用、
+  企业数据库与安全部署评审，不在本 Demo 范围内
 
-## 6. 业务合理性的重要性
-
-技术异常不等于安全事件。系统支持“技术异常 + 业务确认合法 =
-正常授权业务行为”的研判路径：存在变更工单且负责人确认时，
-系统建议会明确提示业务合法上下文并降低建议风险等级。
-
-## 7. 人工最终决策原则
-
-系统只输出“疑似 / 存在风险 / 建议核查 / 当前证据显示 / 暂无法排除”
-等措辞，绝不自动生成“确认攻击 / 已失陷 / 已泄露”类结论；
-最终结论始终由安全人员人工确认，系统建议不得覆盖人工研判。
-
-## 8. DOCX 报告生成
-
-报告初稿由 `Report Builder` 自动生成（13 个部分），经人工编辑与预览后，
-导出为 Word / WPS 均可继续编辑的原生 `.docx`（标题、正文、表格均可编辑）。
-导出前自动扫描手机号 / 身份证 / Email，默认使用脱敏版本。
-样例见 `samples/` 目录（仅含虚构 Mock 数据）。
-
-## 9. 合规边界
-
-- 仅本地处理，不上传任何外部服务
-- Demo 只使用虚构数据，示例 IP 均为测试 / 私网地址
-- 禁止导入真实生产安全日志或客户敏感数据
-- 不调用任何外部 AI / LLM
-
-## 10. 本地启动
+## 七、启动方法
 
 ```bash
 npm install
-npm run dev        # 开发服务器
-npm run test       # 单元测试（Vitest）
-npm run build      # 生产构建
-npm run generate:samples  # 重新生成 samples/ 下的 DOCX 验收样例
+
+# 确认 .env（可从 .env.example 复制）
+# DATABASE_URL="file:./prisma/dev.db"
+
+npx prisma generate
+npx prisma migrate deploy
+npm run db:seed
+
+npm run dev
 ```
 
-## 11. Demo Case A：技术异常但授权合法
+常用命令：
 
-夜间大批量查询 `CRM_PROD.customer_info` 约 18 万条敏感记录，
-技术维度异常明显（大批量、偏离基线约 15 倍、非工作时间）；
-但存在变更工单 `CHG-20260808-003` 且业务负责人已确认，
-人工最终结论：**正常授权业务行为**。
+```bash
+npm test                 # 单元测试
+npm run build            # 生产构建
+npm run generate:samples # 重新生成 samples/ DOCX
+npm run db:seed          # 幂等写入 Case A / Case B
+npm run db:reset-demo    # 清空本地 Demo DB 并重新 migrate + seed（仅本地）
+```
 
-## 12. Demo Case B：疑似安全事件
+> `db:reset-demo` 是本地开发 / 面试前复位工具，**不会**在 Web UI 中提供。
 
-连续 16 次失败认证后由陌生来源登录，跨 HR / ERP / CRM 多个系统，
-批量查询约 18 万条敏感记录并伴随异常公网通信，业务合理性尚未确认。
-系统建议升级进一步调查；人工结论使用“疑似安全事件”措辞，
-不宣称“确认遭到攻击”。
+## 八、Demo Flow（约 3～5 分钟）
 
----
+1. **定位（30 秒）**  
+   打开 `/cases`，说明：不替代 SIEM，只做告警后的研判与报告。
 
-## 面试 Demo 建议流程（3～5 分钟）
+2. **Case A（1 分钟）**  
+   打开 `INC-20260808-001`：技术异常明显，但业务已授权；人工结论为
+   「正常授权业务行为」。可查看 Checklist / 业务上下文 / 已闭环状态。
+   进入报告中心继续编辑或导出 Word。
 
-1. （30 秒）打开首页，说明产品定位：不替代 SIEM，只解决告警之后的研判与报告整理。
-2. （1 分钟）新建研判 → 选择“文本粘贴”，粘贴一段中文“键：值”告警文本，
-   展示自动字段识别与“导入确认”页（强调：未识别内容原样保留，绝不猜测）。
-3. （1 分钟）切换到 Case B，展示三维联合分析（认证异常 + 陌生来源 + 批量敏感查询 + 异常外联）、
-   异常摘要、证据中心与核查清单；指出 UNKNOWN 以琥珀色单独展示。
-4. （1 分钟）切换到 Case A，在“业务合理性核查”中把工单状态改为“确认存在”、负责人确认改为“已确认”，
-   展示系统建议从高风险降为低风险——技术异常被业务上下文合法化。
-5. （30 秒）点击“生成报告”，人工修改结论段，预览后导出 DOCX，
-   用 Word 打开 `samples/` 中的样例，证明标题、正文、表格均可继续编辑。
+3. **Case B（1 分钟）**  
+   打开 `INC-20260808-002`：多维异常、业务尚未确认、人工结论「疑似安全事件」。
+   点击「生成报告」→ 修改事件概述 → 保存 → 导出 Word。
 
----
+4. **新建研判（1 分钟）**  
+   `/cases/new` → 文本粘贴 Mock 告警 → 确认 → 创建案件 → 刷新后状态仍在。
 
-## 开工前必读（开发约束）
+5. **报告中心（30 秒）**  
+   `/reports` → 继续编辑 / 导出 Word。
 
-修改代码前，必须先阅读 [`AGENTS.md`](./AGENTS.md) 与对应 `docs/` 文档。
-若需求与约束冲突，以约束文件为准。
+## 九、Demo 案件说明
+
+| 案件 | 编号 | 状态 | 报告 | 结论方向 |
+| --- | --- | --- | --- | --- |
+| Case A | INC-20260808-001 | 已闭环 | 已预置 reportDraft | 正常授权业务行为 |
+| Case B | INC-20260808-002 | 待核查 | 无报告（演示首次生成） | 疑似安全事件 |
+
+Seed 使用固定 `id`（`demo-case-a` / `demo-case-b`）与固定案件编号，可重复执行。
+
+## 十、合规与约束
+
+开发前必读：[`AGENTS.md`](./AGENTS.md) 与 `docs/`。
 
 | 文档 | 作用 |
 | --- | --- |
-| [`docs/PRODUCT_BOUNDARY.md`](./docs/PRODUCT_BOUNDARY.md) | 产品边界与 V1 范围 |
-| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | 架构与技术栈 |
-| [`docs/DOMAIN_MODEL.md`](./docs/DOMAIN_MODEL.md) | 核心领域模型 |
-| [`docs/COMPLIANCE.md`](./docs/COMPLIANCE.md) | 数据与合规 |
-| [`docs/ACCEPTANCE_CRITERIA.md`](./docs/ACCEPTANCE_CRITERIA.md) | 验收 Demo |
+| [`docs/PRODUCT_BOUNDARY.md`](./docs/PRODUCT_BOUNDARY.md) | 产品边界 |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | 架构 |
+| [`docs/DOMAIN_MODEL.md`](./docs/DOMAIN_MODEL.md) | 领域模型 |
+| [`docs/COMPLIANCE.md`](./docs/COMPLIANCE.md) | 合规 |
+| [`docs/ACCEPTANCE_CRITERIA.md`](./docs/ACCEPTANCE_CRITERIA.md) | 验收 |
+
+## 十一、Future Work
+
+合理后续方向（**不在 v1.1 范围**）：
+
+- PostgreSQL / 企业数据库
+- RBAC 与操作审计
+- 企业 Word 模板定制
+- 更多安全产品字段适配
+- 内部系统 / API 对接
+- 案件变更审计历史
+
+**不作为近期默认方向**：AI 自动判定攻击、自动封禁、自动响应。

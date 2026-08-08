@@ -80,6 +80,7 @@ export const CaseRecordScalarFieldEnum = {
   systemsSearchText: 'systemsSearchText',
   pendingChecklistCount: 'pendingChecklistCount',
   hasReport: 'hasReport',
+  reportUpdatedAt: 'reportUpdatedAt',
   caseState: 'caseState',
   reportDraft: 'reportDraft',
   createdAt: 'createdAt',

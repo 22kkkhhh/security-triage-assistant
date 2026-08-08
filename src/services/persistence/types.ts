@@ -76,6 +76,8 @@ export interface PersistedCase {
   systemsSearchText: string | null;
   pendingChecklistCount: number;
   hasReport: boolean;
+  /** 报告草稿最后写入时间；案件编辑不更新 */
+  reportUpdatedAt: string | null;
   caseState: PersistedCaseState;
   reportDraft: ReportData | null;
   createdAt: string;
@@ -97,6 +99,7 @@ export interface CaseListItem {
   systemsSearchText: string | null;
   pendingChecklistCount: number;
   hasReport: boolean;
+  reportUpdatedAt: string | null;
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;

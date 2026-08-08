@@ -11,7 +11,7 @@ import {
 } from "@/services/persistence/reportDraftService";
 
 export type SaveReportActionResult =
-  | { ok: true; updatedAt: string }
+  | { ok: true; updatedAt: string; reportUpdatedAt: string }
   | { ok: false; error: string };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -49,7 +49,11 @@ export async function saveReportDraftAction(
     const existing = await getCaseById(caseId);
     if (!existing) return { ok: false, error: "案件不存在" };
     const saved = await saveReportDraft(caseId, parsed);
-    return { ok: true, updatedAt: saved.updatedAt };
+    return {
+      ok: true,
+      updatedAt: saved.reportUpdatedAt ?? saved.updatedAt,
+      reportUpdatedAt: saved.reportUpdatedAt ?? saved.updatedAt,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "报告保存失败";
     return { ok: false, error: message };

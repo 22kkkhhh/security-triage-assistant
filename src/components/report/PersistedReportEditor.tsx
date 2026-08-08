@@ -46,7 +46,7 @@ export function PersistedReportEditor({
   const { saveState, scheduleSave, flushSave, retrySave } = useReportAutosave({
     caseId: bundle.caseId,
     getReport,
-    initialSavedAt: bundle.caseUpdatedAt,
+    initialSavedAt: bundle.reportUpdatedAt,
   });
 
   const commitReport = (

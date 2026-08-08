@@ -48,7 +48,9 @@ export default async function ReportsPage() {
                   <th className="px-4 py-3 font-medium">事件名称</th>
                   <th className="px-4 py-3 font-medium">人工结论</th>
                   <th className="px-4 py-3 font-medium">人工风险等级</th>
-                  <th className="px-4 py-3 font-medium">报告更新时间</th>
+                  <th className="px-4 py-3 font-medium" title="仅反映报告草稿最后保存时间">
+                    报告更新时间
+                  </th>
                   <th className="px-4 py-3 font-medium">操作</th>
                 </tr>
               </thead>
@@ -91,7 +93,9 @@ export default async function ReportsPage() {
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-neutral-600">
-                        {formatDateTimeForDisplay(item.updatedAt)}
+                        {formatDateTimeForDisplay(
+                          item.reportUpdatedAt ?? item.updatedAt,
+                        )}
                       </td>
                       <td className="px-4 py-2">
                         <div className="flex flex-wrap items-center gap-3">

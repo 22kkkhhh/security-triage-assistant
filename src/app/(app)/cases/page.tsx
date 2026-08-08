@@ -160,10 +160,11 @@ export default async function CasesPage({
                           {item.caseNumber}
                         </Link>
                       </td>
-                      <td className="max-w-[240px] px-4 py-2">
+                      <td className="max-w-[260px] px-4 py-2">
                         <Link
                           href={`/cases/${item.id}`}
-                          className="line-clamp-2 text-neutral-900 underline-offset-2 hover:underline"
+                          title={item.title}
+                          className="line-clamp-2 text-[14px] leading-5 text-neutral-900 underline-offset-2 hover:underline"
                         >
                           {item.title}
                         </Link>

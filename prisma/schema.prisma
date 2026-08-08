@@ -31,6 +31,8 @@ model CaseRecord {
 
   pendingChecklistCount Int     @default(0)
   hasReport             Boolean @default(false)
+  /// 报告草稿最后写入时间；仅 saveReportDraft / 首次生成时更新，案件编辑不改动
+  reportUpdatedAt       DateTime?
 
   /// 当前案件可恢复状态（PersistedCaseState JSON）
   caseState   Json

@@ -24,10 +24,30 @@ export interface ReportDraftBundle {
   /** true = 本次刚生成初稿；false = 加载已有草稿 */
   freshlyCreated: boolean;
   context: ReportWorkbenchContext;
-  caseUpdatedAt: string;
+  /** 报告草稿最后保存时间（用于 autosave 展示；非案件 updatedAt） */
+  reportUpdatedAt: string | null;
   hasReport: boolean;
   humanRiskLevel: PersistedCase["humanRiskLevel"];
   humanConclusion: PersistedCase["humanConclusion"];
+}
+
+function toBundle(
+  record: PersistedCase,
+  report: ReportData,
+  freshlyCreated: boolean,
+): ReportDraftBundle {
+  return {
+    caseId: record.id,
+    caseNumber: record.caseNumber,
+    title: record.title,
+    report,
+    freshlyCreated,
+    context: buildContext(record),
+    reportUpdatedAt: record.reportUpdatedAt,
+    hasReport: true,
+    humanRiskLevel: record.humanRiskLevel,
+    humanConclusion: record.humanConclusion,
+  };
 }
 
 function buildContext(record: PersistedCase): ReportWorkbenchContext {
@@ -80,69 +100,25 @@ export async function getOrCreateReportDraft(
   if (!record) return null;
 
   if (record.reportDraft) {
-    return {
-      caseId: record.id,
-      caseNumber: record.caseNumber,
-      title: record.title,
-      report: record.reportDraft,
-      freshlyCreated: false,
-      context: buildContext(record),
-      caseUpdatedAt: record.updatedAt,
-      hasReport: true,
-      humanRiskLevel: record.humanRiskLevel,
-      humanConclusion: record.humanConclusion,
-    };
+    return toBundle(record, record.reportDraft, false);
   }
 
   // 并发保护：生成前再次读取，若已有草稿则直接返回
   const again = await getCaseById(caseId);
   if (!again) return null;
   if (again.reportDraft) {
-    return {
-      caseId: again.id,
-      caseNumber: again.caseNumber,
-      title: again.title,
-      report: again.reportDraft,
-      freshlyCreated: false,
-      context: buildContext(again),
-      caseUpdatedAt: again.updatedAt,
-      hasReport: true,
-      humanRiskLevel: again.humanRiskLevel,
-      humanConclusion: again.humanConclusion,
-    };
+    return toBundle(again, again.reportDraft, false);
   }
 
   const report = buildInitialReport(again);
   // 写入前再读一次，避免双写覆盖
   const beforeWrite = await getCaseById(caseId);
   if (beforeWrite?.reportDraft) {
-    return {
-      caseId: beforeWrite.id,
-      caseNumber: beforeWrite.caseNumber,
-      title: beforeWrite.title,
-      report: beforeWrite.reportDraft,
-      freshlyCreated: false,
-      context: buildContext(beforeWrite),
-      caseUpdatedAt: beforeWrite.updatedAt,
-      hasReport: true,
-      humanRiskLevel: beforeWrite.humanRiskLevel,
-      humanConclusion: beforeWrite.humanConclusion,
-    };
+    return toBundle(beforeWrite, beforeWrite.reportDraft, false);
   }
 
   const saved = await saveReportDraft(caseId, report);
-  return {
-    caseId: saved.id,
-    caseNumber: saved.caseNumber,
-    title: saved.title,
-    report: saved.reportDraft!,
-    freshlyCreated: true,
-    context: buildContext(saved),
-    caseUpdatedAt: saved.updatedAt,
-    hasReport: true,
-    humanRiskLevel: saved.humanRiskLevel,
-    humanConclusion: saved.humanConclusion,
-  };
+  return toBundle(saved, saved.reportDraft!, true);
 }
 
 /** 仅读取已有报告导出载荷；不存在则失败，绝不临时 buildReportData */

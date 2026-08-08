@@ -25,6 +25,7 @@ export interface CaseRecordRow {
   systemsSearchText: string | null;
   pendingChecklistCount: number;
   hasReport: boolean;
+  reportUpdatedAt: Date | null;
   caseState: unknown;
   reportDraft: unknown;
   createdAt: Date;
@@ -170,6 +171,9 @@ export function rowToPersistedCase(row: CaseRecordRow): PersistedCase {
     systemsSearchText: row.systemsSearchText,
     pendingChecklistCount: row.pendingChecklistCount,
     hasReport: row.hasReport,
+    reportUpdatedAt: row.reportUpdatedAt
+      ? row.reportUpdatedAt.toISOString()
+      : null,
     caseState: row.caseState as PersistedCaseState,
     reportDraft: (row.reportDraft as PersistedCase["reportDraft"]) ?? null,
     createdAt: row.createdAt.toISOString(),
@@ -192,6 +196,9 @@ export function rowToListItem(row: CaseRecordRow): CaseListItem {
     systemsSearchText: row.systemsSearchText,
     pendingChecklistCount: row.pendingChecklistCount,
     hasReport: row.hasReport,
+    reportUpdatedAt: row.reportUpdatedAt
+      ? row.reportUpdatedAt.toISOString()
+      : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     closedAt: row.closedAt ? row.closedAt.toISOString() : null,

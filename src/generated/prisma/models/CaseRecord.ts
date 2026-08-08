@@ -47,6 +47,7 @@ export type CaseRecordMinAggregateOutputType = {
   systemsSearchText: string | null
   pendingChecklistCount: number | null
   hasReport: boolean | null
+  reportUpdatedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
   closedAt: Date | null
@@ -65,6 +66,7 @@ export type CaseRecordMaxAggregateOutputType = {
   systemsSearchText: string | null
   pendingChecklistCount: number | null
   hasReport: boolean | null
+  reportUpdatedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
   closedAt: Date | null
@@ -83,6 +85,7 @@ export type CaseRecordCountAggregateOutputType = {
   systemsSearchText: number
   pendingChecklistCount: number
   hasReport: number
+  reportUpdatedAt: number
   caseState: number
   reportDraft: number
   createdAt: number
@@ -113,6 +116,7 @@ export type CaseRecordMinAggregateInputType = {
   systemsSearchText?: true
   pendingChecklistCount?: true
   hasReport?: true
+  reportUpdatedAt?: true
   createdAt?: true
   updatedAt?: true
   closedAt?: true
@@ -131,6 +135,7 @@ export type CaseRecordMaxAggregateInputType = {
   systemsSearchText?: true
   pendingChecklistCount?: true
   hasReport?: true
+  reportUpdatedAt?: true
   createdAt?: true
   updatedAt?: true
   closedAt?: true
@@ -149,6 +154,7 @@ export type CaseRecordCountAggregateInputType = {
   systemsSearchText?: true
   pendingChecklistCount?: true
   hasReport?: true
+  reportUpdatedAt?: true
   caseState?: true
   reportDraft?: true
   createdAt?: true
@@ -256,6 +262,7 @@ export type CaseRecordGroupByOutputType = {
   systemsSearchText: string | null
   pendingChecklistCount: number
   hasReport: boolean
+  reportUpdatedAt: Date | null
   caseState: runtime.JsonValue
   reportDraft: runtime.JsonValue | null
   createdAt: Date
@@ -299,6 +306,7 @@ export type CaseRecordWhereInput = {
   systemsSearchText?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
   pendingChecklistCount?: Prisma.IntFilter<"CaseRecord"> | number
   hasReport?: Prisma.BoolFilter<"CaseRecord"> | boolean
+  reportUpdatedAt?: Prisma.DateTimeNullableFilter<"CaseRecord"> | Date | string | null
   caseState?: Prisma.JsonFilter<"CaseRecord">
   reportDraft?: Prisma.JsonNullableFilter<"CaseRecord">
   createdAt?: Prisma.DateTimeFilter<"CaseRecord"> | Date | string
@@ -319,6 +327,7 @@ export type CaseRecordOrderByWithRelationInput = {
   systemsSearchText?: Prisma.SortOrderInput | Prisma.SortOrder
   pendingChecklistCount?: Prisma.SortOrder
   hasReport?: Prisma.SortOrder
+  reportUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   caseState?: Prisma.SortOrder
   reportDraft?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -342,6 +351,7 @@ export type CaseRecordWhereUniqueInput = Prisma.AtLeast<{
   systemsSearchText?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
   pendingChecklistCount?: Prisma.IntFilter<"CaseRecord"> | number
   hasReport?: Prisma.BoolFilter<"CaseRecord"> | boolean
+  reportUpdatedAt?: Prisma.DateTimeNullableFilter<"CaseRecord"> | Date | string | null
   caseState?: Prisma.JsonFilter<"CaseRecord">
   reportDraft?: Prisma.JsonNullableFilter<"CaseRecord">
   createdAt?: Prisma.DateTimeFilter<"CaseRecord"> | Date | string
@@ -362,6 +372,7 @@ export type CaseRecordOrderByWithAggregationInput = {
   systemsSearchText?: Prisma.SortOrderInput | Prisma.SortOrder
   pendingChecklistCount?: Prisma.SortOrder
   hasReport?: Prisma.SortOrder
+  reportUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   caseState?: Prisma.SortOrder
   reportDraft?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -390,6 +401,7 @@ export type CaseRecordScalarWhereWithAggregatesInput = {
   systemsSearchText?: Prisma.StringNullableWithAggregatesFilter<"CaseRecord"> | string | null
   pendingChecklistCount?: Prisma.IntWithAggregatesFilter<"CaseRecord"> | number
   hasReport?: Prisma.BoolWithAggregatesFilter<"CaseRecord"> | boolean
+  reportUpdatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"CaseRecord"> | Date | string | null
   caseState?: Prisma.JsonWithAggregatesFilter<"CaseRecord">
   reportDraft?: Prisma.JsonNullableWithAggregatesFilter<"CaseRecord">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"CaseRecord"> | Date | string
@@ -410,6 +422,7 @@ export type CaseRecordCreateInput = {
   systemsSearchText?: string | null
   pendingChecklistCount?: number
   hasReport?: boolean
+  reportUpdatedAt?: Date | string | null
   caseState: Prisma.JsonNullValueInput | runtime.InputJsonValue
   reportDraft?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -430,6 +443,7 @@ export type CaseRecordUncheckedCreateInput = {
   systemsSearchText?: string | null
   pendingChecklistCount?: number
   hasReport?: boolean
+  reportUpdatedAt?: Date | string | null
   caseState: Prisma.JsonNullValueInput | runtime.InputJsonValue
   reportDraft?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -450,6 +464,7 @@ export type CaseRecordUpdateInput = {
   systemsSearchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   pendingChecklistCount?: Prisma.IntFieldUpdateOperationsInput | number
   hasReport?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reportUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   caseState?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   reportDraft?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -470,6 +485,7 @@ export type CaseRecordUncheckedUpdateInput = {
   systemsSearchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   pendingChecklistCount?: Prisma.IntFieldUpdateOperationsInput | number
   hasReport?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reportUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   caseState?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   reportDraft?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -490,6 +506,7 @@ export type CaseRecordCreateManyInput = {
   systemsSearchText?: string | null
   pendingChecklistCount?: number
   hasReport?: boolean
+  reportUpdatedAt?: Date | string | null
   caseState: Prisma.JsonNullValueInput | runtime.InputJsonValue
   reportDraft?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -510,6 +527,7 @@ export type CaseRecordUpdateManyMutationInput = {
   systemsSearchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   pendingChecklistCount?: Prisma.IntFieldUpdateOperationsInput | number
   hasReport?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reportUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   caseState?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   reportDraft?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -530,6 +548,7 @@ export type CaseRecordUncheckedUpdateManyInput = {
   systemsSearchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   pendingChecklistCount?: Prisma.IntFieldUpdateOperationsInput | number
   hasReport?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reportUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   caseState?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   reportDraft?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -550,6 +569,7 @@ export type CaseRecordCountOrderByAggregateInput = {
   systemsSearchText?: Prisma.SortOrder
   pendingChecklistCount?: Prisma.SortOrder
   hasReport?: Prisma.SortOrder
+  reportUpdatedAt?: Prisma.SortOrder
   caseState?: Prisma.SortOrder
   reportDraft?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -574,6 +594,7 @@ export type CaseRecordMaxOrderByAggregateInput = {
   systemsSearchText?: Prisma.SortOrder
   pendingChecklistCount?: Prisma.SortOrder
   hasReport?: Prisma.SortOrder
+  reportUpdatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   closedAt?: Prisma.SortOrder
@@ -592,6 +613,7 @@ export type CaseRecordMinOrderByAggregateInput = {
   systemsSearchText?: Prisma.SortOrder
   pendingChecklistCount?: Prisma.SortOrder
   hasReport?: Prisma.SortOrder
+  reportUpdatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   closedAt?: Prisma.SortOrder
@@ -621,12 +643,12 @@ export type BoolFieldUpdateOperationsInput = {
   set?: boolean
 }
 
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
-}
-
 export type NullableDateTimeFieldUpdateOperationsInput = {
   set?: Date | string | null
+}
+
+export type DateTimeFieldUpdateOperationsInput = {
+  set?: Date | string
 }
 
 
@@ -644,6 +666,7 @@ export type CaseRecordSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   systemsSearchText?: boolean
   pendingChecklistCount?: boolean
   hasReport?: boolean
+  reportUpdatedAt?: boolean
   caseState?: boolean
   reportDraft?: boolean
   createdAt?: boolean
@@ -664,6 +687,7 @@ export type CaseRecordSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   systemsSearchText?: boolean
   pendingChecklistCount?: boolean
   hasReport?: boolean
+  reportUpdatedAt?: boolean
   caseState?: boolean
   reportDraft?: boolean
   createdAt?: boolean
@@ -684,6 +708,7 @@ export type CaseRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   systemsSearchText?: boolean
   pendingChecklistCount?: boolean
   hasReport?: boolean
+  reportUpdatedAt?: boolean
   caseState?: boolean
   reportDraft?: boolean
   createdAt?: boolean
@@ -704,6 +729,7 @@ export type CaseRecordSelectScalar = {
   systemsSearchText?: boolean
   pendingChecklistCount?: boolean
   hasReport?: boolean
+  reportUpdatedAt?: boolean
   caseState?: boolean
   reportDraft?: boolean
   createdAt?: boolean
@@ -711,7 +737,7 @@ export type CaseRecordSelectScalar = {
   closedAt?: boolean
 }
 
-export type CaseRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "caseNumber" | "title" | "status" | "suggestedRiskLevel" | "humanRiskLevel" | "humanConclusion" | "username" | "sourceIp" | "systemsSearchText" | "pendingChecklistCount" | "hasReport" | "caseState" | "reportDraft" | "createdAt" | "updatedAt" | "closedAt", ExtArgs["result"]["caseRecord"]>
+export type CaseRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "caseNumber" | "title" | "status" | "suggestedRiskLevel" | "humanRiskLevel" | "humanConclusion" | "username" | "sourceIp" | "systemsSearchText" | "pendingChecklistCount" | "hasReport" | "reportUpdatedAt" | "caseState" | "reportDraft" | "createdAt" | "updatedAt" | "closedAt", ExtArgs["result"]["caseRecord"]>
 
 export type $CaseRecordPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "CaseRecord"
@@ -738,6 +764,10 @@ export type $CaseRecordPayload<ExtArgs extends runtime.Types.Extensions.Internal
     systemsSearchText: string | null
     pendingChecklistCount: number
     hasReport: boolean
+    /**
+     * 报告草稿最后写入时间；仅 saveReportDraft / 首次生成时更新，案件编辑不改动
+     */
+    reportUpdatedAt: Date | null
     /**
      * 当前案件可恢复状态（PersistedCaseState JSON）
      */
@@ -1184,6 +1214,7 @@ export interface CaseRecordFieldRefs {
   readonly systemsSearchText: Prisma.FieldRef<"CaseRecord", 'String'>
   readonly pendingChecklistCount: Prisma.FieldRef<"CaseRecord", 'Int'>
   readonly hasReport: Prisma.FieldRef<"CaseRecord", 'Boolean'>
+  readonly reportUpdatedAt: Prisma.FieldRef<"CaseRecord", 'DateTime'>
   readonly caseState: Prisma.FieldRef<"CaseRecord", 'Json'>
   readonly reportDraft: Prisma.FieldRef<"CaseRecord", 'Json'>
   readonly createdAt: Prisma.FieldRef<"CaseRecord", 'DateTime'>
