@@ -2,6 +2,7 @@
 
 import type { CaseStatus } from "@/domain/types";
 import {
+  addHandoffNoteCommand,
   addTimelineEventCommand,
   applyChecklistCommand,
   changeCaseStatusCommand,
@@ -9,6 +10,11 @@ import {
   updateHumanReviewCommand,
   type ChecklistCommandAction,
 } from "@/services/caseCommands";
+import {
+  listCaseAuditLogs,
+  type CaseAuditLogView,
+  type ListCaseAuditLogsResult,
+} from "@/services/persistence/auditRepository";
 import type { SaveCaseStateInput } from "@/services/persistence/types";
 import { isCaseStatus } from "@/services/caseCommands";
 
@@ -199,4 +205,70 @@ export async function addTimelineEventAction(
       nextCaseState,
     }),
   );
+}
+
+export type HandoffActionResult =
+  | {
+      ok: true;
+      alreadyApplied: boolean;
+      lastActivityAt: string;
+      audit: CaseAuditLogView;
+    }
+  | { ok: false; error: string };
+
+/** 添加交接说明（append-only Audit） */
+export async function addHandoffNoteAction(
+  caseId: string,
+  note: unknown,
+  operationId: unknown,
+): Promise<HandoffActionResult> {
+  if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
+  if (typeof note !== "string") return { ok: false, error: "交接说明无效" };
+  if (typeof operationId !== "string" || !operationId.trim()) {
+    return { ok: false, error: "operationId 无效" };
+  }
+  const result = await addHandoffNoteCommand({
+    caseId,
+    note,
+    operationId: operationId.trim(),
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+  if (!result.audit) {
+    return { ok: false, error: "交接记录添加失败，请重试。" };
+  }
+  return {
+    ok: true,
+    alreadyApplied: result.alreadyApplied,
+    lastActivityAt: result.case.lastActivityAt,
+    audit: result.audit,
+  };
+}
+
+/** Activity Feed 分页加载（不更新 lastActivityAt） */
+export async function loadMoreCaseAuditLogsAction(
+  caseId: string,
+  cursor: unknown,
+  limit: unknown = 40,
+): Promise<
+  | { ok: true; result: ListCaseAuditLogsResult }
+  | { ok: false; error: string }
+> {
+  if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
+  if (cursor != null && (typeof cursor !== "string" || !cursor.trim())) {
+    return { ok: false, error: "分页游标无效" };
+  }
+  const take =
+    typeof limit === "number" && Number.isFinite(limit) ? limit : 40;
+  try {
+    const result = await listCaseAuditLogs({
+      caseId,
+      cursor: typeof cursor === "string" ? cursor : null,
+      limit: take,
+    });
+    return { ok: true, result };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "操作记录加载失败，请重试。";
+    return { ok: false, error: message };
+  }
 }

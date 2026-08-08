@@ -36,6 +36,8 @@ import { SuggestedAssessmentBar } from "@/components/SuggestedAssessmentBar";
 import { TimelinePanel } from "@/components/TimelinePanel";
 import { Field } from "@/components/common";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
+import type { CaseAuditLogView } from "@/services/persistence/auditRepository";
+import { CaseActivityPanel } from "./CaseActivityPanel";
 import { CaseHeader } from "./CaseHeader";
 
 const emptyHumanReview = (): HumanReview => ({
@@ -63,9 +65,16 @@ type LivePayload = {
 export function PersistedCaseWorkbench({
   initial,
   hasReport = false,
+  initialAudit,
 }: {
   initial: RestoredWorkbenchView;
   hasReport?: boolean;
+  initialAudit?: {
+    items: CaseAuditLogView[];
+    nextCursor: string | null;
+    hasMore: boolean;
+    latestHandoff: CaseAuditLogView | null;
+  };
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<CaseStatus>(initial.status);
@@ -568,6 +577,14 @@ export function PersistedCaseWorkbench({
             commitExternalSave(result.updatedAt);
           })();
         }}
+      />
+
+      <CaseActivityPanel
+        caseId={initial.caseId}
+        initialItems={initialAudit?.items ?? []}
+        initialNextCursor={initialAudit?.nextCursor ?? null}
+        initialHasMore={initialAudit?.hasMore ?? false}
+        initialLatestHandoff={initialAudit?.latestHandoff ?? null}
       />
 
       <div className="flex justify-end rounded-md border border-neutral-200 bg-white px-4 py-3">

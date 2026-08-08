@@ -19,3 +19,11 @@ export {
   type AuditActor,
   type BuiltAuditEvent,
 } from "./auditEventBuilder";
+
+export {
+  formatAuditActionLabel,
+  formatAuditActorName,
+  formatAuditChangesForDisplay,
+  formatAuditTime,
+  formatHandoffNoteBody,
+} from "./formatAuditDisplay";

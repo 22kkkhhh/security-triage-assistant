@@ -15,6 +15,8 @@ export {
   type ExportReportCommandResult,
 } from "./reportCommands";
 
+export { addHandoffNoteCommand } from "./handoffCommands";
+
 export {
   hasStructuredBusinessContextChange,
   hasStructuredHumanReviewChange,
