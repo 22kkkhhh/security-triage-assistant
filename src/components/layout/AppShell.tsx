@@ -1,0 +1,70 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
+
+const navItems = [
+  { href: "/cases/new", label: "+ 新建研判", match: (path: string) => path.startsWith("/cases/new") },
+  {
+    href: "/cases",
+    label: "历史案件",
+    match: (path: string) =>
+      path === "/cases" ||
+      (path.startsWith("/cases/") && !path.startsWith("/cases/new")),
+  },
+  {
+    href: "/reports",
+    label: "报告中心",
+    match: (path: string) => path.startsWith("/reports"),
+  },
+];
+
+/**
+ * 企业级应用壳：深色侧边栏 + 浅色主内容区。
+ * 导航严格限定为新建研判 / 历史案件 / 报告中心。
+ */
+export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname() ?? "/cases";
+
+  return (
+    <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
+      <aside className="flex w-[230px] shrink-0 flex-col bg-slate-900 text-slate-100">
+        <div className="border-b border-slate-700 px-5 py-5">
+          <div className="text-sm font-semibold tracking-wide">
+            Security Triage Assistant
+          </div>
+          <div className="mt-1 text-xs text-slate-400">安全研判助手</div>
+        </div>
+        <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
+          {navItems.map((item) => {
+            const active = item.match(pathname);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`rounded px-3 py-2.5 text-sm transition-colors ${
+                  active
+                    ? "bg-slate-700 text-white"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="border-t border-slate-700 px-5 py-4 text-xs leading-5 text-slate-500">
+          系统说明
+          <br />
+          本地 Demo · 仅使用虚构数据
+          <br />
+          最终结论以人工确认为准
+        </div>
+      </aside>
+      <main className="min-w-0 flex-1 overflow-auto">
+        <div className="mx-auto max-w-7xl px-6 py-6">{children}</div>
+      </main>
+    </div>
+  );
+}

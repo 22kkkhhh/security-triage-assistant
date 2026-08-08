@@ -1,0 +1,48 @@
+// Prisma 7 + SQLite（本地 Demo 专用）
+// 数据库 URL 配置于 prisma.config.ts / .env
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// 案件持久化记录：索引字段 + 单一 caseState + 独立 reportDraft
+model CaseRecord {
+  id       String @id @default(cuid())
+  /// 稳定案件编号，如 INC-20260808-001；创建后永不变更
+  caseNumber String @unique
+  title      String
+
+  /// NEW | INVESTIGATING | PENDING_VERIFICATION | PENDING_BUSINESS_CONFIRMATION | RESPONDING | CLOSED
+  status String
+
+  suggestedRiskLevel String?
+  humanRiskLevel     String?
+  humanConclusion    String?
+
+  username          String?
+  sourceIp          String?
+  /// 全部涉及系统，以 | 拼接，便于 contains 搜索，例如：HR 系统|ERP 系统|CRM_PROD
+  systemsSearchText String?
+
+  pendingChecklistCount Int     @default(0)
+  hasReport             Boolean @default(false)
+
+  /// 当前案件可恢复状态（PersistedCaseState JSON）
+  caseState   Json
+  /// 人工编辑后的报告草稿；null 表示尚未生成报告
+  reportDraft Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  closedAt  DateTime?
+
+  @@index([status])
+  @@index([updatedAt])
+  @@index([username])
+  @@index([sourceIp])
+}
