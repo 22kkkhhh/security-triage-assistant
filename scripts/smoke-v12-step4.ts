@@ -38,10 +38,13 @@ async function main() {
     throw new Error("最新交接未更新");
   }
 
+  const afterHandoff = await getCaseById(created.id);
+  if (!afterHandoff) throw new Error("案件不存在");
   const statused = await changeCaseStatusCommand({
     caseId: created.id,
     nextStatus: "PENDING_VERIFICATION",
     operationId: `smoke-status-${Date.now()}`,
+    baseUpdatedAt: afterHandoff.updatedAt,
     nextCaseState: {
       caseData: created.caseState.caseData,
       businessContext: created.caseState.businessContext,

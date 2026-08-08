@@ -1,6 +1,6 @@
 /**
  * 案件 Semantic Commands：业务状态更新 + Audit 同事务。
- * 与普通 saveCaseState autosave 路径分离。
+ * 与普通 saveCaseState autosave 路径分离；写入前校验 baseUpdatedAt。
  */
 
 import type {
@@ -20,6 +20,7 @@ import {
   buildHumanReviewUpdatedAudit,
   buildStatusChangedAudit,
   buildTimelineEventAddedAudit,
+  type BuiltAuditEvent,
 } from "@/services/audit/auditEventBuilder";
 import {
   appendCaseAudit,
@@ -29,15 +30,21 @@ import {
 import {
   createCaseRecord,
   getCaseById,
-  saveCaseState,
+  saveCaseStateIfVersionMatches,
+  StaleCaseStateError,
 } from "@/services/persistence/caseRepository";
 import type {
   CreateCaseInput,
   PersistedCase,
   PersistedCaseState,
 } from "@/services/persistence/types";
-import type { CommandResult, NextCaseStateInput } from "./types";
-import { isCaseStatus } from "./types";
+import {
+  isCaseStatus,
+  requireBaseUpdatedAt,
+  staleCommandResult,
+  type CommandResult,
+  type NextCaseStateInput,
+} from "./types";
 
 const STRUCTURED_BC_FIELDS = [
   "plannedTaskStatus",
@@ -74,6 +81,48 @@ function reviewerOf(state: {
 
 function asPersistedState(record: PersistedCase): PersistedCaseState {
   return record.caseState;
+}
+
+async function commitStateAndAudit(input: {
+  caseId: string;
+  baseUpdatedAt: string;
+  nextCaseState: NextCaseStateInput;
+  built: BuiltAuditEvent;
+}): Promise<CommandResult> {
+  try {
+    const audit = await runInTransaction(async (tx) => {
+      await saveCaseStateIfVersionMatches(
+        input.caseId,
+        input.nextCaseState,
+        input.baseUpdatedAt,
+        tx,
+      );
+      return appendCaseAudit(
+        {
+          caseId: input.caseId,
+          ...input.built,
+        },
+        tx,
+      );
+    });
+    const saved = await getCaseById(input.caseId);
+    if (!saved) return { ok: false, error: "案件不存在" };
+    return {
+      ok: true,
+      alreadyApplied: false,
+      case: saved,
+      audit,
+    };
+  } catch (error) {
+    if (error instanceof StaleCaseStateError) {
+      const current =
+        error.currentCase ?? (await getCaseById(input.caseId));
+      return staleCommandResult(current, error.message);
+    }
+    const message =
+      error instanceof Error ? error.message : "案件更新失败";
+    return { ok: false, error: message };
+  }
 }
 
 /** 创建案件 + CASE_CREATED（同事务；operationId 幂等） */
@@ -125,7 +174,6 @@ export async function createCaseWithAudit(
       audit: created.audit,
     };
   } catch (error) {
-    // 并发同 operationId：唯一约束冲突时回读已创建结果
     if (operationId) {
       const raced = await findAuditByOperationId(operationId);
       if (raced?.actionType === "CASE_CREATED") {
@@ -151,12 +199,16 @@ export async function changeCaseStatusCommand(input: {
   nextStatus: CaseStatus;
   operationId: string;
   nextCaseState: NextCaseStateInput;
+  baseUpdatedAt: string;
 }): Promise<CommandResult> {
   if (!isCaseStatus(input.nextStatus)) {
     return { ok: false, error: "案件状态无效" };
   }
   const idempotent = await resolveOperationId(input.caseId, input.operationId);
   if (idempotent) return idempotent;
+
+  const base = requireBaseUpdatedAt(input.baseUpdatedAt);
+  if (typeof base !== "string") return base;
 
   const existing = await getCaseById(input.caseId);
   if (!existing) return { ok: false, error: "案件不存在" };
@@ -171,41 +223,20 @@ export async function changeCaseStatusCommand(input: {
     };
   }
 
-  try {
-    const result = await runInTransaction(async (tx) => {
-      await saveCaseState(
-        input.caseId,
-        {
-          ...input.nextCaseState,
-          status: input.nextStatus,
-        },
-        tx,
-      );
-      return appendCaseAudit(
-        {
-          caseId: input.caseId,
-          ...buildStatusChangedAudit({
-            from: oldStatus,
-            to: input.nextStatus,
-            reviewer: reviewerOf(input.nextCaseState),
-            operationId: input.operationId,
-          }),
-        },
-        tx,
-      );
-    });
-    const saved = await getCaseById(input.caseId);
-    if (!saved) return { ok: false, error: "案件不存在" };
-    return {
-      ok: true,
-      alreadyApplied: false,
-      case: saved,
-      audit: result,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "状态修改失败";
-    return { ok: false, error: message };
-  }
+  return commitStateAndAudit({
+    caseId: input.caseId,
+    baseUpdatedAt: base,
+    nextCaseState: {
+      ...input.nextCaseState,
+      status: input.nextStatus,
+    },
+    built: buildStatusChangedAudit({
+      from: oldStatus,
+      to: input.nextStatus,
+      reviewer: reviewerOf(existing.caseState),
+      operationId: input.operationId,
+    }),
+  });
 }
 
 export type ChecklistCommandAction =
@@ -221,9 +252,13 @@ export async function applyChecklistCommand(input: {
   itemId: string;
   operationId: string;
   nextCaseState: NextCaseStateInput;
+  baseUpdatedAt: string;
 }): Promise<CommandResult> {
   const idempotent = await resolveOperationId(input.caseId, input.operationId);
   if (idempotent) return idempotent;
+
+  const base = requireBaseUpdatedAt(input.baseUpdatedAt);
+  if (typeof base !== "string") return base;
 
   const existing = await getCaseById(input.caseId);
   if (!existing) return { ok: false, error: "案件不存在" };
@@ -232,7 +267,7 @@ export async function applyChecklistCommand(input: {
   const nextItems = input.nextCaseState.checklist;
   const oldItem = oldItems.find((i) => i.id === input.itemId);
   const nextItem = nextItems.find((i) => i.id === input.itemId);
-  const reviewer = reviewerOf(input.nextCaseState);
+  const reviewer = reviewerOf(existing.caseState);
 
   let built:
     | ReturnType<typeof buildChecklistCompletedAudit>
@@ -315,23 +350,12 @@ export async function applyChecklistCommand(input: {
     return { ok: false, error: "未知核查操作" };
   }
 
-  try {
-    const audit = await runInTransaction(async (tx) => {
-      await saveCaseState(input.caseId, input.nextCaseState, tx);
-      return appendCaseAudit({ caseId: input.caseId, ...built! }, tx);
-    });
-    const saved = await getCaseById(input.caseId);
-    if (!saved) return { ok: false, error: "案件不存在" };
-    return {
-      ok: true,
-      alreadyApplied: false,
-      case: saved,
-      audit,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "核查项更新失败";
-    return { ok: false, error: message };
-  }
+  return commitStateAndAudit({
+    caseId: input.caseId,
+    baseUpdatedAt: base,
+    nextCaseState: input.nextCaseState,
+    built: built!,
+  });
 }
 
 function collectStructuredBcDiff(
@@ -352,9 +376,13 @@ export async function updateBusinessContextCommand(input: {
   caseId: string;
   operationId: string;
   nextCaseState: NextCaseStateInput;
+  baseUpdatedAt: string;
 }): Promise<CommandResult> {
   const idempotent = await resolveOperationId(input.caseId, input.operationId);
   if (idempotent) return idempotent;
+
+  const base = requireBaseUpdatedAt(input.baseUpdatedAt);
+  if (typeof base !== "string") return base;
 
   const existing = await getCaseById(input.caseId);
   if (!existing) return { ok: false, error: "案件不存在" };
@@ -380,40 +408,23 @@ export async function updateBusinessContextCommand(input: {
         { from: v.from, to: v.to },
       ]),
     ),
-    reviewer: reviewerOf(input.nextCaseState),
+    reviewer: reviewerOf(existing.caseState),
     operationId: input.operationId,
   });
 
-  // changes 使用字段级 from/to（产品约定）
   const fieldChanges: Record<string, { from: string; to: string }> = {
     ...enumChanges,
   };
 
-  try {
-    const audit = await runInTransaction(async (tx) => {
-      await saveCaseState(input.caseId, input.nextCaseState, tx);
-      return appendCaseAudit(
-        {
-          caseId: input.caseId,
-          ...built,
-          changes: fieldChanges,
-        },
-        tx,
-      );
-    });
-    const saved = await getCaseById(input.caseId);
-    if (!saved) return { ok: false, error: "案件不存在" };
-    return {
-      ok: true,
-      alreadyApplied: false,
-      case: saved,
-      audit,
-    };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "业务核查信息更新失败";
-    return { ok: false, error: message };
-  }
+  return commitStateAndAudit({
+    caseId: input.caseId,
+    baseUpdatedAt: base,
+    nextCaseState: input.nextCaseState,
+    built: {
+      ...built,
+      changes: fieldChanges,
+    },
+  });
 }
 
 /** HumanReview 结构化结论变更 */
@@ -421,9 +432,13 @@ export async function updateHumanReviewCommand(input: {
   caseId: string;
   operationId: string;
   nextCaseState: NextCaseStateInput;
+  baseUpdatedAt: string;
 }): Promise<CommandResult> {
   const idempotent = await resolveOperationId(input.caseId, input.operationId);
   if (idempotent) return idempotent;
+
+  const base = requireBaseUpdatedAt(input.baseUpdatedAt);
+  if (typeof base !== "string") return base;
 
   const existing = await getCaseById(input.caseId);
   if (!existing) return { ok: false, error: "案件不存在" };
@@ -460,7 +475,7 @@ export async function updateHumanReviewCommand(input: {
           to: nextRisk as RiskLevel | null,
         }
       : undefined,
-    reviewer: reviewerOf(input.nextCaseState),
+    reviewer: reviewerOf(existing.caseState),
     operationId: input.operationId,
   });
 
@@ -472,31 +487,15 @@ export async function updateHumanReviewCommand(input: {
     changes.humanRiskLevel = { from: oldRisk, to: nextRisk };
   }
 
-  try {
-    const audit = await runInTransaction(async (tx) => {
-      await saveCaseState(input.caseId, input.nextCaseState, tx);
-      return appendCaseAudit(
-        {
-          caseId: input.caseId,
-          ...built,
-          changes,
-        },
-        tx,
-      );
-    });
-    const saved = await getCaseById(input.caseId);
-    if (!saved) return { ok: false, error: "案件不存在" };
-    return {
-      ok: true,
-      alreadyApplied: false,
-      case: saved,
-      audit,
-    };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "人工研判更新失败";
-    return { ok: false, error: message };
-  }
+  return commitStateAndAudit({
+    caseId: input.caseId,
+    baseUpdatedAt: base,
+    nextCaseState: input.nextCaseState,
+    built: {
+      ...built,
+      changes,
+    },
+  });
 }
 
 /** 人工新增 Timeline */
@@ -505,9 +504,13 @@ export async function addTimelineEventCommand(input: {
   operationId: string;
   eventId: string;
   nextCaseState: NextCaseStateInput;
+  baseUpdatedAt: string;
 }): Promise<CommandResult> {
   const idempotent = await resolveOperationId(input.caseId, input.operationId);
   if (idempotent) return idempotent;
+
+  const base = requireBaseUpdatedAt(input.baseUpdatedAt);
+  if (typeof base !== "string") return base;
 
   const existing = await getCaseById(input.caseId);
   if (!existing) return { ok: false, error: "案件不存在" };
@@ -535,37 +538,21 @@ export async function addTimelineEventCommand(input: {
   const built = buildTimelineEventAddedAudit({
     eventId: nextEvent.id,
     title: nextEvent.title,
-    reviewer: reviewerOf(input.nextCaseState),
+    reviewer: reviewerOf(existing.caseState),
     operationId: input.operationId,
   });
 
-  try {
-    const audit = await runInTransaction(async (tx) => {
-      await saveCaseState(input.caseId, input.nextCaseState, tx);
-      return appendCaseAudit(
-        {
-          caseId: input.caseId,
-          ...built,
-          changes: {
-            eventId: nextEvent.id,
-            eventType: nextEvent.eventType,
-            title: nextEvent.title,
-          },
-        },
-        tx,
-      );
-    });
-    const saved = await getCaseById(input.caseId);
-    if (!saved) return { ok: false, error: "案件不存在" };
-    return {
-      ok: true,
-      alreadyApplied: false,
-      case: saved,
-      audit,
-    };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "时间线事件添加失败";
-    return { ok: false, error: message };
-  }
+  return commitStateAndAudit({
+    caseId: input.caseId,
+    baseUpdatedAt: base,
+    nextCaseState: input.nextCaseState,
+    built: {
+      ...built,
+      changes: {
+        eventId: nextEvent.id,
+        eventType: nextEvent.eventType,
+        title: nextEvent.title,
+      },
+    },
+  });
 }

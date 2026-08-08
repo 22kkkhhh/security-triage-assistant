@@ -210,6 +210,7 @@ export function PersistedCaseWorkbench({
     retrySave,
     cancelPendingSave,
     commitExternalSave,
+    getPersistedUpdatedAt,
   } = useCaseAutosave({
     caseId: initial.caseId,
     getPayload,
@@ -223,6 +224,31 @@ export function PersistedCaseWorkbench({
       setCommandError(null);
     },
   });
+
+  type CommandActionResult = Awaited<
+    ReturnType<typeof changeCaseStatusAction>
+  >;
+
+  /** STALE：恢复服务器 canonical，不回滚到本地点击前旧状态 */
+  const applyCommandStale = (result: Extract<CommandActionResult, { ok: false }>) => {
+    if (
+      result.code !== "STALE" ||
+      !result.updatedAt ||
+      !result.caseState ||
+      !result.status
+    ) {
+      return false;
+    }
+    cancelPendingSave();
+    applyCanonicalState({
+      status: result.status,
+      caseState: result.caseState,
+    });
+    commitExternalSave(result.updatedAt);
+    setStaleNotice("案件已发生更新，已刷新到最新状态。");
+    setCommandError(null);
+    return true;
+  };
 
   const handleBusinessContextChange = (next: BusinessContext) => {
     const prevBc = businessContext;
@@ -262,6 +288,7 @@ export function PersistedCaseWorkbench({
     }
 
     const operationId = crypto.randomUUID();
+    const baseUpdatedAt = getPersistedUpdatedAt();
     cancelPendingSave();
     setCommandError(null);
     void (async () => {
@@ -269,8 +296,10 @@ export function PersistedCaseWorkbench({
         initial.caseId,
         operationId,
         getPayload(),
+        baseUpdatedAt,
       );
       if (!result.ok) {
+        if (applyCommandStale(result)) return;
         setBusinessContext(prevBc);
         setChecklistBase(prevChecklistBase);
         payloadRef.current = {
@@ -309,6 +338,7 @@ export function PersistedCaseWorkbench({
     }
 
     const operationId = crypto.randomUUID();
+    const baseUpdatedAt = getPersistedUpdatedAt();
     cancelPendingSave();
     setCommandError(null);
     void (async () => {
@@ -316,8 +346,10 @@ export function PersistedCaseWorkbench({
         initial.caseId,
         operationId,
         getPayload(),
+        baseUpdatedAt,
       );
       if (!result.ok) {
+        if (applyCommandStale(result)) return;
         setHumanReview(prev);
         payloadRef.current = { ...payloadRef.current, humanReview: prev };
         setCommandError(result.error || "人工研判更新失败，请重试。");
@@ -333,6 +365,7 @@ export function PersistedCaseWorkbench({
     setStatus(next);
     payloadRef.current = { ...payloadRef.current, status: next };
     const operationId = crypto.randomUUID();
+    const baseUpdatedAt = getPersistedUpdatedAt();
     cancelPendingSave();
     setCommandError(null);
     void (async () => {
@@ -341,8 +374,10 @@ export function PersistedCaseWorkbench({
         next,
         operationId,
         getPayload(),
+        baseUpdatedAt,
       );
       if (!result.ok) {
+        if (applyCommandStale(result)) return;
         setStatus(prev);
         payloadRef.current = { ...payloadRef.current, status: prev };
         setCommandError(result.error || "状态修改失败，请重试。");
@@ -362,6 +397,7 @@ export function PersistedCaseWorkbench({
     setChecklistBase(nextChecklist);
     payloadRef.current = { ...payloadRef.current, checklist: nextChecklist };
     const operationId = crypto.randomUUID();
+    const baseUpdatedAt = getPersistedUpdatedAt();
     cancelPendingSave();
     setCommandError(null);
     void (async () => {
@@ -371,8 +407,10 @@ export function PersistedCaseWorkbench({
         itemId,
         operationId,
         getPayload(),
+        baseUpdatedAt,
       );
       if (!result.ok) {
+        if (applyCommandStale(result)) return;
         setChecklistBase(prevChecklistBase);
         payloadRef.current = {
           ...payloadRef.current,
@@ -572,6 +610,7 @@ export function PersistedCaseWorkbench({
           setTimeline(next);
           payloadRef.current = { ...payloadRef.current, timeline: next };
           const operationId = crypto.randomUUID();
+          const baseUpdatedAt = getPersistedUpdatedAt();
           cancelPendingSave();
           setCommandError(null);
           void (async () => {
@@ -580,8 +619,10 @@ export function PersistedCaseWorkbench({
               event.id,
               operationId,
               getPayload(),
+              baseUpdatedAt,
             );
             if (!result.ok) {
+              if (applyCommandStale(result)) return;
               setTimeline(prev);
               payloadRef.current = { ...payloadRef.current, timeline: prev };
               setCommandError(result.error || "时间线事件添加失败，请重试。");
@@ -600,6 +641,10 @@ export function PersistedCaseWorkbench({
         initialNextCursor={initialAudit?.nextCursor ?? null}
         initialHasMore={initialAudit?.hasMore ?? false}
         initialLatestHandoff={initialAudit?.latestHandoff ?? null}
+        onCaseRowUpdated={(updatedAt) => {
+          // Handoff 会触摸 CaseRecord（@updatedAt），同步 base token
+          commitExternalSave(updatedAt);
+        }}
       />
 
       <div className="flex justify-end rounded-md border border-neutral-200 bg-white px-4 py-3">

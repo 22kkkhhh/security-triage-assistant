@@ -190,6 +190,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       caseId: created.id,
       nextStatus: "PENDING_VERIFICATION",
       operationId: "op-status-1",
+      baseUpdatedAt: created.updatedAt,
       nextCaseState: next,
     });
     expect(r1.ok).toBe(true);
@@ -203,6 +204,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       caseId: created.id,
       nextStatus: "PENDING_VERIFICATION",
       operationId: "op-status-2",
+      baseUpdatedAt: r1.case.updatedAt,
       nextCaseState: toNextState(r1.case, { status: "PENDING_VERIFICATION" }),
     });
     expect(r2.ok).toBe(true);
@@ -222,6 +224,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       caseId: created.id,
       nextStatus: "CLOSED",
       operationId: "op-close-1",
+      baseUpdatedAt: created.updatedAt,
       nextCaseState: toNextState(created, { status: "CLOSED" }),
     });
     expect(closed.ok).toBe(true);
@@ -232,6 +235,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       caseId: created.id,
       nextStatus: "CLOSED",
       operationId: "op-close-1",
+      baseUpdatedAt: closed.case.updatedAt,
       nextCaseState: toNextState(closed.case, { status: "CLOSED" }),
     });
     expect(retry.ok).toBe(true);
@@ -242,6 +246,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       caseId: created.id,
       nextStatus: "INVESTIGATING",
       operationId: "op-reopen-1",
+      baseUpdatedAt: closed.case.updatedAt,
       nextCaseState: toNextState(closed.case, { status: "INVESTIGATING" }),
     });
     expect(reopened.ok).toBe(true);
@@ -263,6 +268,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       action: "complete",
       itemId: item.id,
       operationId: "op-cl-complete",
+      baseUpdatedAt: created.updatedAt,
       nextCaseState: toNextState(created, { checklist: completedList }),
     });
     expect(c1.ok).toBe(true);
@@ -274,6 +280,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       action: "complete",
       itemId: item.id,
       operationId: "op-cl-complete-2",
+      baseUpdatedAt: c1.case.updatedAt,
       nextCaseState: toNextState(c1.case, { checklist: completedList }),
     });
     expect(c2.ok && c2.alreadyApplied).toBe(true);
@@ -286,6 +293,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       action: "reopen",
       itemId: item.id,
       operationId: "op-cl-reopen",
+      baseUpdatedAt: c1.case.updatedAt,
       nextCaseState: toNextState(c1.case, { checklist: reopenedList }),
     });
     expect(r1.ok).toBe(true);
@@ -302,6 +310,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       action: "add",
       itemId: manual.id,
       operationId: "op-cl-add",
+      baseUpdatedAt: r1.case.updatedAt,
       nextCaseState: toNextState(r1.case, { checklist: withManual }),
     });
     expect(a1.ok).toBe(true);
@@ -313,6 +322,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       action: "add",
       itemId: manual.id,
       operationId: "op-cl-add",
+      baseUpdatedAt: a1.case.updatedAt,
       nextCaseState: toNextState(a1.case, {
         checklist: [...withManual, { ...manual, id: "dup-should-not-apply" }],
       }),
@@ -329,6 +339,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       action: "delete",
       itemId: manual.id,
       operationId: "op-cl-del",
+      baseUpdatedAt: a1.case.updatedAt,
       nextCaseState: toNextState(a1.case, { checklist: deleted }),
     });
     expect(d1.ok).toBe(true);
@@ -350,6 +361,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
     const r = await updateBusinessContextCommand({
       caseId: created.id,
       operationId: "op-bc-1",
+      baseUpdatedAt: created.updatedAt,
       nextCaseState: toNextState(created, {
         businessContext: nextBc,
         checklist: analyzed.checklist,
@@ -397,6 +409,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
     const r = await updateHumanReviewCommand({
       caseId: created.id,
       operationId: "op-hr-1",
+      baseUpdatedAt: created.updatedAt,
       nextCaseState: toNextState(created, { humanReview: hr }),
     });
     expect(r.ok).toBe(true);
@@ -430,6 +443,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       caseId: created.id,
       eventId: event.id,
       operationId: "op-tl-1",
+      baseUpdatedAt: created.updatedAt,
       nextCaseState: toNextState(created, {
         timeline: [...created.caseState.timeline, event],
       }),
@@ -442,6 +456,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       caseId: created.id,
       eventId: event.id,
       operationId: "op-tl-1",
+      baseUpdatedAt: r1.case.updatedAt,
       nextCaseState: toNextState(r1.case, {
         timeline: [
           ...r1.case.caseState.timeline,
@@ -470,6 +485,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       caseId: a.id,
       nextStatus: "PENDING_VERIFICATION",
       operationId: "op-act-1",
+      baseUpdatedAt: a.updatedAt,
       nextCaseState: toNextState(a, { status: "PENDING_VERIFICATION" }),
     });
     expect(statused.ok).toBe(true);

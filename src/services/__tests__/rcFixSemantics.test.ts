@@ -121,6 +121,7 @@ describe("RC Fix · Timeline / Audit", () => {
       caseId: created.case.id,
       eventId: event.id,
       operationId: "rc-tl-add",
+      baseUpdatedAt: created.case.updatedAt,
       nextCaseState: toNextState(created.case, { timeline: nextTimeline }),
     });
     expect(result.ok).toBe(true);
@@ -175,6 +176,7 @@ describe("RC Fix · SYSTEM Checklist 删除", () => {
       action: "delete",
       itemId: systemItem.id,
       operationId: "rc-cl-del-system",
+      baseUpdatedAt: before!.updatedAt,
       nextCaseState: toNextState(before!, { checklist: deleted }),
     });
     expect(result.ok).toBe(false);
@@ -216,6 +218,7 @@ describe("RC Fix · SYSTEM Checklist 删除", () => {
       action: "add",
       itemId: manual.id,
       operationId: "rc-cl-add-manual",
+      baseUpdatedAt: created.case.updatedAt,
       nextCaseState: toNextState(created.case, { checklist: withManual }),
     });
     expect(added.ok).toBe(true);
@@ -228,6 +231,7 @@ describe("RC Fix · SYSTEM Checklist 删除", () => {
       action: "delete",
       itemId: manual.id,
       operationId: "rc-cl-del-manual",
+      baseUpdatedAt: mid!.updatedAt,
       nextCaseState: toNextState(mid!, { checklist: without }),
     });
     expect(deleted.ok).toBe(true);

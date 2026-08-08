@@ -195,6 +195,11 @@ export function useCaseAutosave(options: {
     abortRef.current?.abort();
   }, []);
 
+  /** 当前已持久化的 CaseRecord.updatedAt（供 Semantic Command 作 baseUpdatedAt） */
+  const getPersistedUpdatedAt = useCallback((): string | null => {
+    return stateRef.current.lastSavedAt;
+  }, []);
+
   return {
     saveState: state as AutosaveState,
     scheduleSave,
@@ -202,5 +207,6 @@ export function useCaseAutosave(options: {
     retrySave: runSave,
     cancelPendingSave,
     commitExternalSave,
+    getPersistedUpdatedAt,
   };
 }

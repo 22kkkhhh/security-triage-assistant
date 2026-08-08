@@ -28,9 +28,15 @@ function toJsonValue(value: PersistedCaseState | ReportData): Prisma.InputJsonVa
 /** stale autosave 与语义命令竞态时拒绝覆盖 */
 export class StaleCaseStateError extends Error {
   readonly code = "STALE" as const;
-  constructor(message = "案件状态已被更新，跳过过期保存") {
+  /** 服务器当前 canonical case（供客户端恢复） */
+  readonly currentCase: PersistedCase | null;
+  constructor(
+    message = "案件已发生更新，已刷新到最新状态。",
+    currentCase: PersistedCase | null = null,
+  ) {
     super(message);
     this.name = "StaleCaseStateError";
+    this.currentCase = currentCase;
   }
 }
 
@@ -143,8 +149,11 @@ export async function createCase(
   return createCaseRecord(input, prisma);
 }
 
-export async function getCaseById(id: string): Promise<PersistedCase | null> {
-  const row = await prisma.caseRecord.findUnique({ where: { id } });
+export async function getCaseById(
+  id: string,
+  client: CaseDbClient = prisma,
+): Promise<PersistedCase | null> {
+  const row = await client.caseRecord.findUnique({ where: { id } });
   return row ? rowToPersistedCase(row) : null;
 }
 
@@ -155,31 +164,13 @@ export async function getCaseByCaseNumber(
   return row ? rowToPersistedCase(row) : null;
 }
 
-/**
- * 保存案件可恢复状态（单一 caseState Source of Truth）。
- * 普通 autosave 路径：不更新 lastActivityAt。
- * 可注入事务客户端，供 Semantic Command 与 Audit 同提交。
- */
-export async function saveCaseState(
-  id: string,
+function buildCaseStateUpdateData(
+  existing: {
+    status: string;
+    closedAt: Date | null;
+  },
   input: SaveCaseStateInput,
-  client: CaseDbClient = prisma,
-): Promise<PersistedCase> {
-  const existing = await client.caseRecord.findUnique({ where: { id } });
-  if (!existing) throw new Error(`案件不存在：${id}`);
-
-  if (input.baseUpdatedAt) {
-    const baseMs = new Date(input.baseUpdatedAt).getTime();
-    const currentMs = existing.updatedAt.getTime();
-    if (
-      Number.isFinite(baseMs) &&
-      Number.isFinite(currentMs) &&
-      currentMs > baseMs
-    ) {
-      throw new StaleCaseStateError();
-    }
-  }
-
+) {
   const status: CaseStatus =
     input.status ?? (existing.status as CaseStatus);
   const caseState = toPersistedCaseState({
@@ -203,18 +194,81 @@ export async function saveCaseState(
     suggestedRiskLevel: input.suggestedRiskLevel,
     status,
   });
+  return {
+    ...indexes,
+    caseState: toJsonValue(caseState),
+    // 已闭环时写入 closedAt；重新打开则清空
+    closedAt:
+      status === "CLOSED" ? (existing.closedAt ?? new Date()) : null,
+  };
+}
+
+/**
+ * 条件更新 caseState/status：仅当 updatedAt 仍等于 expectedUpdatedAt。
+ * 必须在事务内与 Audit 同提交，避免 TOCTOU。
+ */
+export async function saveCaseStateIfVersionMatches(
+  id: string,
+  input: SaveCaseStateInput,
+  expectedUpdatedAt: string,
+  client: CaseDbClient = prisma,
+): Promise<PersistedCase> {
+  const expected = new Date(expectedUpdatedAt);
+  if (!Number.isFinite(expected.getTime())) {
+    throw new Error("baseUpdatedAt 无效");
+  }
+
+  const existing = await client.caseRecord.findUnique({ where: { id } });
+  if (!existing) throw new Error(`案件不存在：${id}`);
+
+  const data = buildCaseStateUpdateData(existing, input);
+  const result = await client.caseRecord.updateMany({
+    where: {
+      id,
+      updatedAt: expected,
+    },
+    data,
+  });
+
+  if (result.count !== 1) {
+    const current = await getCaseById(id, client);
+    throw new StaleCaseStateError(
+      "案件已发生更新，已刷新到最新状态。",
+      current,
+    );
+  }
+
+  const row = await client.caseRecord.findUnique({ where: { id } });
+  if (!row) throw new Error(`案件不存在：${id}`);
+  return rowToPersistedCase(row);
+}
+
+/**
+ * 保存案件可恢复状态（单一 caseState Source of Truth）。
+ * 普通 autosave 路径：不更新 lastActivityAt。
+ * 提供 baseUpdatedAt 时走条件更新（与 Semantic Command 共用版本约束）。
+ * 可注入事务客户端，供 Semantic Command 与 Audit 同提交。
+ */
+export async function saveCaseState(
+  id: string,
+  input: SaveCaseStateInput,
+  client: CaseDbClient = prisma,
+): Promise<PersistedCase> {
+  if (input.baseUpdatedAt) {
+    return saveCaseStateIfVersionMatches(
+      id,
+      input,
+      input.baseUpdatedAt,
+      client,
+    );
+  }
+
+  const existing = await client.caseRecord.findUnique({ where: { id } });
+  if (!existing) throw new Error(`案件不存在：${id}`);
 
   const row = await client.caseRecord.update({
     where: { id },
-    data: {
-      ...indexes,
-      caseState: toJsonValue(caseState),
-      // 已闭环时写入 closedAt；重新打开则清空
-      closedAt:
-        status === "CLOSED"
-          ? existing.closedAt ?? new Date()
-          : null,
-    },
+    data: buildCaseStateUpdateData(existing, input),
   });
   return rowToPersistedCase(row);
 }

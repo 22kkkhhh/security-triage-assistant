@@ -12,6 +12,9 @@ export type CommandOk = {
 export type CommandFail = {
   ok: false;
   error: string;
+  code?: "STALE";
+  /** STALE 时返回服务器当前 canonical case */
+  case?: PersistedCase;
 };
 
 export type CommandResult = CommandOk | CommandFail;
@@ -30,4 +33,28 @@ export const CASE_STATUSES: CaseStatus[] = [
 
 export function isCaseStatus(value: unknown): value is CaseStatus {
   return typeof value === "string" && CASE_STATUSES.includes(value as CaseStatus);
+}
+
+export function staleCommandResult(
+  current: PersistedCase | null,
+  fallbackError = "案件已发生更新，已刷新到最新状态。",
+): CommandFail {
+  if (!current) {
+    return { ok: false, error: "案件不存在" };
+  }
+  return {
+    ok: false,
+    error: fallbackError,
+    code: "STALE",
+    case: current,
+  };
+}
+
+export function requireBaseUpdatedAt(
+  baseUpdatedAt: unknown,
+): string | CommandFail {
+  if (typeof baseUpdatedAt !== "string" || !baseUpdatedAt.trim()) {
+    return { ok: false, error: "baseUpdatedAt 无效" };
+  }
+  return baseUpdatedAt.trim();
 }

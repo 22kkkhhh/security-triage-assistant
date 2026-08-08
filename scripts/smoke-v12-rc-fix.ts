@@ -102,6 +102,7 @@ async function main() {
     action: "delete",
     itemId: systemItem!.id,
     operationId: `smoke-rc-del-sys-${Date.now()}`,
+    baseUpdatedAt: created.case.updatedAt,
     nextCaseState: toNextState(created.case, {
       checklist: created.case.caseState.checklist.filter(
         (x) => x.id !== systemItem!.id,
@@ -123,6 +124,7 @@ async function main() {
     action: "add",
     itemId: manual.id,
     operationId: `smoke-rc-add-${Date.now()}`,
+    baseUpdatedAt: created.case.updatedAt,
     nextCaseState: toNextState(created.case, {
       checklist: [...created.case.caseState.checklist, manual],
     }),
@@ -134,6 +136,7 @@ async function main() {
     action: "delete",
     itemId: manual.id,
     operationId: `smoke-rc-del-man-${Date.now()}`,
+    baseUpdatedAt: added.case.updatedAt,
     nextCaseState: toNextState(added.case, {
       checklist: added.case.caseState.checklist.filter((x) => x.id !== manual.id),
     }),

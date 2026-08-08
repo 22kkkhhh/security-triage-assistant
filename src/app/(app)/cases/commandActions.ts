@@ -15,7 +15,10 @@ import {
   type CaseAuditLogView,
   type ListCaseAuditLogsResult,
 } from "@/services/persistence/auditRepository";
-import type { SaveCaseStateInput } from "@/services/persistence/types";
+import type {
+  PersistedCaseState,
+  SaveCaseStateInput,
+} from "@/services/persistence/types";
 import { isCaseStatus } from "@/services/caseCommands";
 
 export type SemanticCommandActionResult =
@@ -29,7 +32,15 @@ export type SemanticCommandActionResult =
       /** 本次新产生或幂等命中的 Audit；无实际变化时为 null */
       audit: CaseAuditLogView | null;
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      code?: "STALE";
+      updatedAt?: string;
+      lastActivityAt?: string;
+      status?: CaseStatus;
+      caseState?: PersistedCaseState;
+    };
 
 const CHECKLIST_ACTIONS: ChecklistCommandAction[] = [
   "complete",
@@ -65,10 +76,28 @@ function parseNextState(raw: unknown): SaveCaseStateInput | string {
   };
 }
 
+function parseBaseUpdatedAt(raw: unknown): string | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  return raw.trim();
+}
+
 function toResult(
   result: Awaited<ReturnType<typeof changeCaseStatusCommand>>,
 ): SemanticCommandActionResult {
-  if (!result.ok) return { ok: false, error: result.error };
+  if (!result.ok) {
+    if (result.code === "STALE" && result.case) {
+      return {
+        ok: false,
+        error: result.error,
+        code: "STALE",
+        updatedAt: result.case.updatedAt,
+        lastActivityAt: result.case.lastActivityAt,
+        status: result.case.status,
+        caseState: result.case.caseState,
+      };
+    }
+    return { ok: false, error: result.error };
+  }
   return {
     ok: true,
     alreadyApplied: result.alreadyApplied,
@@ -84,12 +113,15 @@ export async function changeCaseStatusAction(
   nextStatus: unknown,
   operationId: unknown,
   rawNextState: unknown,
+  baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (!isCaseStatus(nextStatus)) return { ok: false, error: "案件状态无效" };
   if (typeof operationId !== "string" || !operationId.trim()) {
     return { ok: false, error: "operationId 无效" };
   }
+  const base = parseBaseUpdatedAt(baseUpdatedAt);
+  if (!base) return { ok: false, error: "baseUpdatedAt 无效" };
   const nextCaseState = parseNextState(rawNextState);
   if (typeof nextCaseState === "string") {
     return { ok: false, error: nextCaseState };
@@ -100,6 +132,7 @@ export async function changeCaseStatusAction(
       nextStatus,
       operationId: operationId.trim(),
       nextCaseState,
+      baseUpdatedAt: base,
     }),
   );
 }
@@ -110,6 +143,7 @@ export async function applyChecklistCommandAction(
   itemId: unknown,
   operationId: unknown,
   rawNextState: unknown,
+  baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (
@@ -124,6 +158,8 @@ export async function applyChecklistCommandAction(
   if (typeof operationId !== "string" || !operationId.trim()) {
     return { ok: false, error: "operationId 无效" };
   }
+  const base = parseBaseUpdatedAt(baseUpdatedAt);
+  if (!base) return { ok: false, error: "baseUpdatedAt 无效" };
   const nextCaseState = parseNextState(rawNextState);
   if (typeof nextCaseState === "string") {
     return { ok: false, error: nextCaseState };
@@ -135,6 +171,7 @@ export async function applyChecklistCommandAction(
       itemId: itemId.trim(),
       operationId: operationId.trim(),
       nextCaseState,
+      baseUpdatedAt: base,
     }),
   );
 }
@@ -143,11 +180,14 @@ export async function updateBusinessContextAction(
   caseId: string,
   operationId: unknown,
   rawNextState: unknown,
+  baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (typeof operationId !== "string" || !operationId.trim()) {
     return { ok: false, error: "operationId 无效" };
   }
+  const base = parseBaseUpdatedAt(baseUpdatedAt);
+  if (!base) return { ok: false, error: "baseUpdatedAt 无效" };
   const nextCaseState = parseNextState(rawNextState);
   if (typeof nextCaseState === "string") {
     return { ok: false, error: nextCaseState };
@@ -157,6 +197,7 @@ export async function updateBusinessContextAction(
       caseId,
       operationId: operationId.trim(),
       nextCaseState,
+      baseUpdatedAt: base,
     }),
   );
 }
@@ -165,11 +206,14 @@ export async function updateHumanReviewAction(
   caseId: string,
   operationId: unknown,
   rawNextState: unknown,
+  baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (typeof operationId !== "string" || !operationId.trim()) {
     return { ok: false, error: "operationId 无效" };
   }
+  const base = parseBaseUpdatedAt(baseUpdatedAt);
+  if (!base) return { ok: false, error: "baseUpdatedAt 无效" };
   const nextCaseState = parseNextState(rawNextState);
   if (typeof nextCaseState === "string") {
     return { ok: false, error: nextCaseState };
@@ -179,6 +223,7 @@ export async function updateHumanReviewAction(
       caseId,
       operationId: operationId.trim(),
       nextCaseState,
+      baseUpdatedAt: base,
     }),
   );
 }
@@ -188,6 +233,7 @@ export async function addTimelineEventAction(
   eventId: unknown,
   operationId: unknown,
   rawNextState: unknown,
+  baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (typeof eventId !== "string" || !eventId.trim()) {
@@ -196,6 +242,8 @@ export async function addTimelineEventAction(
   if (typeof operationId !== "string" || !operationId.trim()) {
     return { ok: false, error: "operationId 无效" };
   }
+  const base = parseBaseUpdatedAt(baseUpdatedAt);
+  if (!base) return { ok: false, error: "baseUpdatedAt 无效" };
   const nextCaseState = parseNextState(rawNextState);
   if (typeof nextCaseState === "string") {
     return { ok: false, error: nextCaseState };
@@ -206,6 +254,7 @@ export async function addTimelineEventAction(
       eventId: eventId.trim(),
       operationId: operationId.trim(),
       nextCaseState,
+      baseUpdatedAt: base,
     }),
   );
 }
@@ -214,6 +263,7 @@ export type HandoffActionResult =
   | {
       ok: true;
       alreadyApplied: boolean;
+      updatedAt: string;
       lastActivityAt: string;
       audit: CaseAuditLogView;
     }
@@ -242,6 +292,7 @@ export async function addHandoffNoteAction(
   return {
     ok: true,
     alreadyApplied: result.alreadyApplied,
+    updatedAt: result.case.updatedAt,
     lastActivityAt: result.case.lastActivityAt,
     audit: result.audit,
   };

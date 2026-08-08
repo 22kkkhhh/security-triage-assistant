@@ -53,6 +53,8 @@ export const CaseActivityPanel = forwardRef<
     initialNextCursor: string | null;
     initialHasMore: boolean;
     initialLatestHandoff: CaseAuditLogView | null;
+    /** Handoff 成功后同步 CaseRecord.updatedAt（供后续 Semantic Command base） */
+    onCaseRowUpdated?: (updatedAt: string) => void;
   }
 >(function CaseActivityPanel(
   {
@@ -61,6 +63,7 @@ export const CaseActivityPanel = forwardRef<
     initialNextCursor,
     initialHasMore,
     initialLatestHandoff,
+    onCaseRowUpdated,
   },
   ref,
 ) {
@@ -108,6 +111,7 @@ export const CaseActivityPanel = forwardRef<
       }
       setLatestHandoff(result.audit);
       setItems((prev) => mergeByIdDesc(prev, [result.audit]));
+      onCaseRowUpdated?.(result.updatedAt);
       setNote("");
       operationIdRef.current = null;
     } catch {
