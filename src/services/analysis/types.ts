@@ -16,10 +16,10 @@ export interface RuleEvidenceDraft {
   summary: string;
 }
 
-/** 单条规则的求值输出 */
+/** 单条规则的求值输出；UNKNOWN 时 riskLevel 必须为 null */
 export interface RuleEvaluation {
   status: ObservationStatus;
-  riskLevel: RiskLevel;
+  riskLevel: RiskLevel | null;
   /** 判断依据；UNKNOWN 时必须说明缺少什么信息、为什么无法判断 */
   explanation: string;
   /** 建议核查事项；UNKNOWN 时必须包含建议补充的数据 */

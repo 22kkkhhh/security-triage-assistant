@@ -1,23 +1,11 @@
-import type { AnalysisRule, RuleEvaluation } from "../types";
+import { unknownEvaluation } from "../ruleHelpers";
+import type { AnalysisRule } from "../types";
 
 /** 出站流量超过该字节数（100MB）视为异常出站 */
 const OUTBOUND_BYTES_THRESHOLD = 100 * 1024 * 1024;
 
 /** 出口网络核查项统一文案：NETWORK-001 / NETWORK-002 共用，避免生成近义重复核查项 */
 const FETCH_EGRESS_LOG_ACTION = "获取对应时间段防火墙/出口网络日志及流量统计信息";
-
-function unknown(
-  explanation: string,
-  verificationActions: string[],
-): RuleEvaluation {
-  return {
-    status: "UNKNOWN",
-    riskLevel: "LOW",
-    explanation,
-    verificationActions,
-    evidences: [],
-  };
-}
 
 export const networkRules: AnalysisRule[] = [
   {
@@ -27,7 +15,7 @@ export const networkRules: AnalysisRule[] = [
     evaluate: (securityCase) => {
       const n = securityCase.networkContext;
       if (n.externalCommunication === "UNKNOWN") {
-        return unknown(
+        return unknownEvaluation(
           "当前未获取对应时间段的出口网络通信数据，无法判断是否存在异常公网通信，建议结合防火墙或出口网络日志进一步核查。",
           [FETCH_EGRESS_LOG_ACTION],
         );
@@ -67,7 +55,7 @@ export const networkRules: AnalysisRule[] = [
     evaluate: (securityCase) => {
       const n = securityCase.networkContext;
       if (n.outboundTransferBytes === null) {
-        return unknown(
+        return unknownEvaluation(
           "缺少出口流量统计数据（字节数），无法判断出站流量是否异常。",
           [FETCH_EGRESS_LOG_ACTION],
         );

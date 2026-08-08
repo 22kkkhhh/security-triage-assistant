@@ -144,12 +144,16 @@ export interface BusinessContext {
   businessJustification: string | null;
 }
 
-/** 规则分析结果，必须可追溯到证据与建议核查事项 */
+/**
+ * 规则分析结果，必须可追溯到证据与建议核查事项。
+ * 领域不变量：status === UNKNOWN 时 riskLevel 必须为 null（不可评级，≠ LOW）。
+ */
 export interface AnalysisResult {
   ruleId: string;
   category: SecurityDomain;
   status: ObservationStatus;
-  riskLevel: RiskLevel;
+  /** UNKNOWN 时为 null；NORMAL / ABNORMAL 时为具体等级 */
+  riskLevel: RiskLevel | null;
   title: string;
   /** 判断依据与解释；UNKNOWN 时必须说明缺少什么信息、为什么无法判断 */
   explanation: string;

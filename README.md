@@ -2,7 +2,8 @@
 
 数据与网络安全联合研判及案件运营助手。
 
-当前版本属于**本地可运行的安全研判与案件运营 MVP / Prototype**（v1.2 Release Candidate）。
+当前稳定版本：**v1.2.x**（本地可运行的安全研判与案件运营 **MVP / Prototype**）。  
+不是 Production-ready 企业平台。
 
 ## 一、项目是什么
 
@@ -175,7 +176,7 @@ Seed 使用固定 `id`（`demo-case-a` / `demo-case-b`）、固定案件编号�
 
 ## 十三、Future Work / Roadmap
 
-合理后续方向（**不在 v1.2 RC 范围**）：
+合理后续方向（**不在当前 v1.2.x 稳定系列默认范围**）：
 
 - 认证身份 / RBAC
 - PostgreSQL / 企业数据库

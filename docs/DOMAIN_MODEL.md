@@ -117,7 +117,8 @@ interface AnalysisResult {
   ruleId: string;
   category: SecurityDomain;
   status: ObservationStatus;
-  riskLevel: RiskLevel;
+  /** UNKNOWN 时为 null（不可评级，≠ LOW） */
+  riskLevel: RiskLevel | null;
   title: string;
   explanation: string;
   evidenceIds: string[];
@@ -132,6 +133,7 @@ interface AnalysisResult {
 - 每条分析结果必须可追溯到证据与建议核查事项
 - 缺少必要数据时必须输出 `UNKNOWN`，并说明缺少什么信息、
   为什么无法判断、建议补充什么数据
+- `UNKNOWN` 时 `riskLevel` 必须为 `null`，不得内部伪装为 `LOW`
 
 ---
 

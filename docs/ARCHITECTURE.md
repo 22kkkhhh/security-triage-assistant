@@ -40,12 +40,14 @@ V1 为单体 Web 应用，不允许拆微服务。
 | Web 框架 | Next.js |
 | 语言 | TypeScript |
 | 样式 | Tailwind CSS |
-| UI 组件 | shadcn/ui |
+| UI 组件 | 项目内组件（未启用 shadcn/ui） |
 | 数据库 | SQLite |
 | ORM | Prisma |
-| 校验 | Zod |
+| 校验 | TypeScript 类型（未启用 Zod） |
 | CSV 解析 | PapaParse |
 | Word 导出 | docx |
+
+说明：`shadcn/ui`、`Zod` 曾列在早期技术设想中，当前仓库依赖与源码未正式使用；后续若引入需单独批准并更新本表。
 
 ---
 

@@ -1,17 +1,6 @@
-import type { AnalysisRule, RuleEvaluation } from "../types";
+import { unknownEvaluation } from "../ruleHelpers";
+import type { AnalysisRule } from "../types";
 
-function unknown(
-  explanation: string,
-  verificationActions: string[],
-): RuleEvaluation {
-  return {
-    status: "UNKNOWN",
-    riskLevel: "LOW",
-    explanation,
-    verificationActions,
-    evidences: [],
-  };
-}
 
 export const businessRules: AnalysisRule[] = [
   {
@@ -21,7 +10,7 @@ export const businessRules: AnalysisRule[] = [
     evaluate: (securityCase) => {
       const b = securityCase.businessContext;
       if (b.changeTicketStatus === "UNKNOWN") {
-        return unknown(
+        return unknownEvaluation(
           "尚未核查变更管理系统，无法判断是否存在对应变更工单。",
           ["查询变更工单"],
         );
@@ -59,7 +48,7 @@ export const businessRules: AnalysisRule[] = [
     evaluate: (securityCase) => {
       const b = securityCase.businessContext;
       if (b.ownerVerification === "UNKNOWN") {
-        return unknown(
+        return unknownEvaluation(
           "尚未获取业务负责人确认，无法判断本次操作是否获得授权。",
           ["联系业务负责人"],
         );
@@ -97,7 +86,7 @@ export const businessRules: AnalysisRule[] = [
     evaluate: (securityCase) => {
       const b = securityCase.businessContext;
       if (b.businessLegitimacy === "UNKNOWN") {
-        return unknown(
+        return unknownEvaluation(
           "缺少工单与负责人确认等关键信息，暂无法判断业务合理性。",
           ["核查计划任务", "查询变更工单", "联系业务负责人"],
         );

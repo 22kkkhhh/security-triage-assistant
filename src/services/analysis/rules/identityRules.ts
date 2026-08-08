@@ -1,20 +1,8 @@
-import type { AnalysisRule, RuleEvaluation } from "../types";
+import { unknownEvaluation } from "../ruleHelpers";
+import type { AnalysisRule } from "../types";
 
 /** 连续失败认证达到该次数，视为高风险 */
 const FAILED_LOGIN_HIGH_THRESHOLD = 10;
-
-function unknown(
-  explanation: string,
-  verificationActions: string[],
-): RuleEvaluation {
-  return {
-    status: "UNKNOWN",
-    riskLevel: "LOW",
-    explanation,
-    verificationActions,
-    evidences: [],
-  };
-}
 
 export const identityRules: AnalysisRule[] = [
   {
@@ -24,7 +12,7 @@ export const identityRules: AnalysisRule[] = [
     evaluate: (securityCase) => {
       const i = securityCase.identityContext;
       if (i.loginFromUnseenSource === "UNKNOWN") {
-        return unknown(
+        return unknownEvaluation(
           "缺少该账号的历史登录来源记录，无法判断登录来源是否陌生。",
           ["补充该账号历史登录来源清单后重新评估"],
         );
@@ -61,7 +49,7 @@ export const identityRules: AnalysisRule[] = [
     evaluate: (securityCase) => {
       const i = securityCase.identityContext;
       if (i.failedLoginAttempts === null) {
-        return unknown(
+        return unknownEvaluation(
           "缺少认证日志中的失败次数记录，无法判断是否存在连续失败认证。",
           ["补充统一认证系统日志（含失败次数与时间分布）"],
         );
@@ -102,7 +90,7 @@ export const identityRules: AnalysisRule[] = [
     evaluate: (securityCase) => {
       const i = securityCase.identityContext;
       if (i.accessedSystems.length === 0) {
-        return unknown(
+        return unknownEvaluation(
           "缺少业务系统访问日志，无法判断是否存在跨系统访问行为。",
           ["补充各业务系统的访问日志"],
         );

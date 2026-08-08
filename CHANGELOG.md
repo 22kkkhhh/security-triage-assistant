@@ -2,7 +2,13 @@
 
 本项目采用轻量变更记录。版本号遵循语义化约定；未打正式 tag 的条目以 `-rc` 标记。
 
-## v1.2.0-rc
+## v1.2.1
+
+Fixed:
+- UNKNOWN observation 不再在内部携带 LOW 风险语义（`riskLevel` 为 `null`）
+- 对齐 README 正式版本表述与 ARCHITECTURE 技术栈（去除未使用的 Zod / shadcn 声称）
+
+## v1.2.0
 
 - CaseAuditLog 操作审计（与 Timeline 分离）
 - Semantic Command + Prisma 事务写入业务状态与 Audit

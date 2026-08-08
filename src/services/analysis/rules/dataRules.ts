@@ -1,21 +1,9 @@
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
-import type { AnalysisRule, RuleEvaluation } from "../types";
+import { unknownEvaluation } from "../ruleHelpers";
+import type { AnalysisRule } from "../types";
 
 /** 单次查询超过该记录数且涉及敏感字段，视为大批量敏感数据访问 */
 const LARGE_QUERY_THRESHOLD = 100_000;
-
-function unknown(
-  explanation: string,
-  verificationActions: string[],
-): RuleEvaluation {
-  return {
-    status: "UNKNOWN",
-    riskLevel: "LOW",
-    explanation,
-    verificationActions,
-    evidences: [],
-  };
-}
 
 export const dataRules: AnalysisRule[] = [
   {
@@ -25,7 +13,7 @@ export const dataRules: AnalysisRule[] = [
     evaluate: (securityCase) => {
       const d = securityCase.dataContext;
       if (d.accessedRecordCount === null) {
-        return unknown(
+        return unknownEvaluation(
           "缺少数据库审计返回行数，无法判断是否存在大批量敏感数据访问。",
           ["补充对应时间段的数据库审计日志（含返回行数与涉及字段）"],
         );
@@ -76,7 +64,7 @@ export const dataRules: AnalysisRule[] = [
         baseline.averageRecordCount === null ||
         baseline.averageRecordCount <= 0
       ) {
-        return unknown(
+        return unknownEvaluation(
           "缺少历史访问基线数据（平均访问量）或本次访问记录数，无法判断是否偏离基线。",
           ["补充该账号及来源地址的历史访问基线数据后重新评估"],
         );
@@ -131,7 +119,7 @@ export const dataRules: AnalysisRule[] = [
     evaluate: (securityCase) => {
       const d = securityCase.dataContext;
       if (d.outsideBusinessHours === "UNKNOWN") {
-        return unknown(
+        return unknownEvaluation(
           "缺少工作时间基准或审计时间戳，无法判断是否发生在非工作时间。",
           ["确认企业工作时间口径，并补充审计日志时间戳"],
         );

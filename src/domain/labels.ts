@@ -27,13 +27,15 @@ export const riskLevelLabels: Record<RiskLevel, string> = {
 
 /**
  * 面向用户/报告的风险等级展示：
- * UNKNOWN（数据不足无法判断）不得显示“低风险”等等级，统一显示“暂无法评级”。
+ * UNKNOWN 或 riskLevel 缺失 →「暂无法评级」。
+ * UNKNOWN + 错误携带的 LOW 等值仅作防御式覆盖，主语义应由规则层输出 null。
  */
 export function displayRiskLevel(
   status: ObservationStatus,
-  riskLevel: RiskLevel,
+  riskLevel: RiskLevel | null,
 ): string {
-  return status === "UNKNOWN" ? "暂无法评级" : riskLevelLabels[riskLevel];
+  if (status === "UNKNOWN" || riskLevel == null) return "暂无法评级";
+  return riskLevelLabels[riskLevel];
 }
 
 export const securityDomainLabels: Record<SecurityDomain, string> = {

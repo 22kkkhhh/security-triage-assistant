@@ -143,7 +143,8 @@ describe("Report Builder", () => {
 
 describe("风险等级展示", () => {
   it("UNKNOWN 一律展示为“暂无法评级”，ABNORMAL / NORMAL 行为不变", () => {
-    expect(displayRiskLevel("UNKNOWN", "LOW")).toBe("暂无法评级");
+    expect(displayRiskLevel("UNKNOWN", null)).toBe("暂无法评级");
+    expect(displayRiskLevel("UNKNOWN", "LOW")).toBe("暂无法评级"); // 防御式
     expect(displayRiskLevel("UNKNOWN", "HIGH")).toBe("暂无法评级");
     expect(displayRiskLevel("ABNORMAL", "HIGH")).toBe("高风险");
     expect(displayRiskLevel("NORMAL", "LOW")).toBe("低风险");

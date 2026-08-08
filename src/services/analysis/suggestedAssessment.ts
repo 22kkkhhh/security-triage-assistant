@@ -12,9 +12,18 @@ const riskOrder: RiskLevel[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
 function maxRisk(levels: RiskLevel[]): RiskLevel {
   return levels.reduce<RiskLevel>(
-    (acc, level) => (riskOrder.indexOf(level) > riskOrder.indexOf(acc) ? level : acc),
+    (acc, level) =>
+      riskOrder.indexOf(level) > riskOrder.indexOf(acc) ? level : acc,
     "LOW",
   );
+}
+
+/** 仅聚合 ABNORMAL 的非空 riskLevel；UNKNOWN 的 null 不得参与 LOW 统计 */
+function maxAbnormalRisk(results: AnalysisResult[]): RiskLevel {
+  const levels = results
+    .filter((r) => r.status === "ABNORMAL" && r.riskLevel != null)
+    .map((r) => r.riskLevel as RiskLevel);
+  return maxRisk(levels);
 }
 
 /**
@@ -31,7 +40,7 @@ function rollupDimension(
   if (rs.some((r) => r.status === "ABNORMAL")) {
     return {
       status: "ABNORMAL",
-      riskLevel: maxRisk(rs.filter((r) => r.status === "ABNORMAL").map((r) => r.riskLevel)),
+      riskLevel: maxAbnormalRisk(rs),
     };
   }
   if (rs.length > 0 && rs.every((r) => r.status === "NORMAL")) {
@@ -101,10 +110,10 @@ export function buildSuggestedAssessment(input: {
         ? `当前证据显示，${abnormalDomains.join("、")}维度存在技术异常，但业务上下文已确认该行为获得授权（工单与负责人确认），系统建议按授权业务行为处理并保留核查记录。最终结论以人工研判为准。`
         : "当前未见明显技术异常，业务上下文已确认为授权行为。最终结论以人工研判为准。";
   } else if (abnormalDomains.length >= 2) {
-    suggestedRiskLevel = maxRisk(abnormalResults.map((r) => r.riskLevel));
+    suggestedRiskLevel = maxAbnormalRisk(abnormalResults);
     summary = `当前证据显示，${abnormalDomains.join("、")}多个维度同时存在异常${businessPhrase}，疑似存在安全风险，建议升级进一步安全调查。该系统建议不构成最终结论，需人工确认。`;
   } else if (abnormalDomains.length === 1) {
-    suggestedRiskLevel = maxRisk(abnormalResults.map((r) => r.riskLevel));
+    suggestedRiskLevel = maxAbnormalRisk(abnormalResults);
     summary = `当前证据显示，${abnormalDomains[0]}维度存在异常${businessPhrase}，建议进一步核查。该系统建议不构成最终结论，需人工确认。`;
   } else if (hasUnknownDimension) {
     suggestedRiskLevel = null;
