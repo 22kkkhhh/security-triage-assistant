@@ -77,3 +77,28 @@
 - [ ] 没有自动阻断动作
 
 未满足任一通用项，不得视为 V1 验收通过。
+
+---
+
+## v1.2 验收条件（操作审计 / 交接 / Activity Feed）
+
+自动化或演示时必须证明：
+
+- [ ] Timeline 与 Audit 语义分离（安全事件历史 vs 运营操作历史）
+- [ ] Semantic Command 与业务状态同事务写入 Audit
+- [ ] Snapshot Autosave 不刷 Audit（业务备注 / 人工说明 / 报告同会话后续保存）
+- [ ] `operationId` 幂等（重试不重复副作用）
+- [ ] `lastActivityAt` 仅在有意义 Audit 时更新，且与最新 Audit 时间语义一致
+- [ ] Activity Feed 按时间 DESC；支持 pagination（加载更多）
+- [ ] 最新交接卡片正确；交接写入后 Feed 可见
+- [ ] 报告创建 / 更新（会话首次）/ 导出产生对应 Audit
+- [ ] stale 防覆盖：旧 `baseUpdatedAt` / `baseReportUpdatedAt` 不得覆盖新版本
+- [ ] Audit UI 中文化（不直接展示原始 enum / JSON / operationId）
+- [ ] Audit append-only（业务删除案件不静默级联抹掉审计的设计约束）
+- [ ] 不夸大为生产级合规审计
+- [ ] Seed Audit 幂等；Case A 结论仍为「正常授权业务行为」；Case B 仍为「疑似安全事件」
+- [ ] 正式调查报告正文不意外嵌入操作审计全文（v1.2 无审计附件）
+- [ ] `UNKNOWN` 不显示为低风险
+
+浏览器人工点验（A–J：交接 / 状态 / Checklist / 业务 / 人工 / Timeline /
+报告 / 分页 / 双标签案件 / 双标签报告）在自动化通过后仍须由用户确认。

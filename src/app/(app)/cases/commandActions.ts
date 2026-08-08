@@ -26,6 +26,8 @@ export type SemanticCommandActionResult =
       updatedAt: string;
       lastActivityAt: string;
       status: CaseStatus;
+      /** 本次新产生或幂等命中的 Audit；无实际变化时为 null */
+      audit: CaseAuditLogView | null;
     }
   | { ok: false; error: string };
 
@@ -73,6 +75,7 @@ function toResult(
     updatedAt: result.case.updatedAt,
     lastActivityAt: result.case.lastActivityAt,
     status: result.case.status,
+    audit: result.audit,
   };
 }
 

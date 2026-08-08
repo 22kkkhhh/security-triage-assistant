@@ -70,3 +70,26 @@ Security Triage Assistant 用于解决上述问题。
 ## 边界判定原则
 
 任何功能如果不能直接服务「研判—核查—证据—处置—报告」，默认不做。
+
+---
+
+## v1.2 产品边界（案件运营留痕）
+
+### 支持
+
+- 案件操作留痕（CaseAuditLog）
+- 交接说明（Handoff Note）
+- 最近活动（Activity Feed / lastActivityAt）
+- 报告创建 / 更新 / 导出操作留痕
+- Semantic Command 与 Snapshot Autosave 分离
+
+### 仍不支持
+
+- 全局 SIEM 审计中心
+- 用户身份认证 / RBAC
+- 不可篡改审计 / 不可抵赖
+- 排班系统
+- SOAR / 自动阻断
+- 通知系统 / 邮件推送
+- WebSocket 实时跨端推送
+- Audit 全文检索 / 导出中心 / Soft Delete UI

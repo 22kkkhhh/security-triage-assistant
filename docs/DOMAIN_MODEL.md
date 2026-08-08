@@ -206,9 +206,47 @@ type FinalConclusion =
 | `AnalysisResult` | 单条规则的分析输出 |
 | `Evidence` | 可进入报告的证据条目（evidenceId / sourceType / timestamp / title / summary / relatedRuleId / analystNote），summary 必须说明“为什么系统认为该行为异常” |
 | `ChecklistItem` | 人工核查清单项（支持未完成 / 已完成 / 人工编辑 / 人工新增） |
-| `TimelineEvent` | 处置与研判时间线（含事件类型与操作人） |
+| `TimelineEvent` | **安全事件历史**：处置与研判时间线（含事件类型与操作人） |
 | `HumanReview` | 人工最终结论、人工风险等级与修正 |
 | `ReportData` | 报告编辑态与导出内容：事件名称、案件编号、基本信息区（basicInfo 标签-内容对）、可编辑章节（sections）、进入报告的证据与时间线 ID；自动生成内容仅为初稿，结论章节来自 HumanReview，不得被 SuggestedAssessment 覆盖；正文时间统一为 UTC+8 人类易读格式 |
+| `CaseAuditLog` | **运营操作历史**：研判人员/系统对案件的操作留痕（append-only） |
+
+---
+
+## CaseAuditLog（v1.2）
+
+```ts
+type AuditActionType =
+  | "CASE_CREATED"
+  | "STATUS_CHANGED"
+  | "CHECKLIST_COMPLETED"
+  | "CHECKLIST_REOPENED"
+  | "CHECKLIST_ADDED"
+  | "CHECKLIST_DELETED"
+  | "BUSINESS_CONTEXT_UPDATED"
+  | "HUMAN_REVIEW_UPDATED"
+  | "TIMELINE_EVENT_ADDED"
+  | "REPORT_CREATED"
+  | "REPORT_UPDATED"
+  | "REPORT_EXPORTED"
+  | "HANDOFF_NOTE_ADDED";
+
+type AuditActorType = "SYSTEM" | "MANUAL" | "USER";
+```
+
+关键字段：
+
+- `operationId`：可选唯一键，用于 Semantic Command 幂等（Seed 使用稳定 `seed:v12:...`）
+- `summary` / `changes` / `metadata`：短字段；禁止写入完整 `SecurityCase` / `reportDraft` / 敏感全文
+- `CaseRecord.lastActivityAt`：最近一次有意义 Audit 时间（不等于 `updatedAt` / `reportUpdatedAt`）
+
+分离规则：
+
+| | Timeline | AuditLog |
+| --- | --- | --- |
+| 回答的问题 | 安全事件本身发生了什么 | 运营人员对案件做了什么 |
+| 典型条目 | 告警触发、异常登录、人工处置记录 | 改状态、完成核查、交接、导出报告 |
+| 是否进入正式调查报告正文 | 可选进入 | v1.2 **不**自动进入 |
 
 ---
 
@@ -217,3 +255,5 @@ type FinalConclusion =
 - 不得用 boolean 表示可能缺失数据的判断字段
 - 不得自动生成不可推翻的最终安全事件结论
 - 不得引入与核心流程无关的复杂状态机或微服务实体拆分
+- 不得把 `UNKNOWN` 解释为“未发现异常”
+- 不得混淆 Timeline 与 AuditLog

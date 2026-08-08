@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   addHandoffNoteAction,
   loadMoreCaseAuditLogsAction,
@@ -31,22 +37,33 @@ function mergeByIdDesc(
   });
 }
 
+export type CaseActivityPanelHandle = {
+  /** Semantic Command 成功后局部插入，避免 router.refresh 冲掉未保存输入 */
+  prependAudit: (log: CaseAuditLogView) => void;
+};
+
 /**
  * 操作记录与交接：最新交接卡片 + 添加交接 + Activity Feed（Timeline 之后）。
  */
-export function CaseActivityPanel({
-  caseId,
-  initialItems,
-  initialNextCursor,
-  initialHasMore,
-  initialLatestHandoff,
-}: {
-  caseId: string;
-  initialItems: CaseAuditLogView[];
-  initialNextCursor: string | null;
-  initialHasMore: boolean;
-  initialLatestHandoff: CaseAuditLogView | null;
-}) {
+export const CaseActivityPanel = forwardRef<
+  CaseActivityPanelHandle,
+  {
+    caseId: string;
+    initialItems: CaseAuditLogView[];
+    initialNextCursor: string | null;
+    initialHasMore: boolean;
+    initialLatestHandoff: CaseAuditLogView | null;
+  }
+>(function CaseActivityPanel(
+  {
+    caseId,
+    initialItems,
+    initialNextCursor,
+    initialHasMore,
+    initialLatestHandoff,
+  },
+  ref,
+) {
   const [items, setItems] = useState(initialItems);
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -57,6 +74,15 @@ export function CaseActivityPanel({
   const [handoffError, setHandoffError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const operationIdRef = useRef<string | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    prependAudit(log: CaseAuditLogView) {
+      setItems((prev) => mergeByIdDesc(prev, [log]));
+      if (log.actionType === "HANDOFF_NOTE_ADDED") {
+        setLatestHandoff(log);
+      }
+    },
+  }));
 
   const handoffBody = useMemo(
     () => (latestHandoff ? formatHandoffNoteBody(latestHandoff) : ""),
@@ -229,4 +255,4 @@ export function CaseActivityPanel({
       </div>
     </Panel>
   );
-}
+});

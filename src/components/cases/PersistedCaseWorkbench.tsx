@@ -37,7 +37,10 @@ import { TimelinePanel } from "@/components/TimelinePanel";
 import { Field } from "@/components/common";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import type { CaseAuditLogView } from "@/services/persistence/auditRepository";
-import { CaseActivityPanel } from "./CaseActivityPanel";
+import {
+  CaseActivityPanel,
+  type CaseActivityPanelHandle,
+} from "./CaseActivityPanel";
 import { CaseHeader } from "./CaseHeader";
 
 const emptyHumanReview = (): HumanReview => ({
@@ -93,6 +96,12 @@ export function PersistedCaseWorkbench({
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [staleNotice, setStaleNotice] = useState<string | null>(null);
+  const activityPanelRef = useRef<CaseActivityPanelHandle>(null);
+
+  /** Command 返回的 Audit 局部合并进 Feed，避免 router.refresh 冲掉未保存输入 */
+  const mergeReturnedAudit = useCallback((audit: CaseAuditLogView | null) => {
+    if (audit) activityPanelRef.current?.prependAudit(audit);
+  }, []);
 
   const draftBase = initial.draft;
 
@@ -281,6 +290,7 @@ export function PersistedCaseWorkbench({
         return;
       }
       commitExternalSave(result.updatedAt);
+      mergeReturnedAudit(result.audit);
     })();
   };
 
@@ -314,6 +324,7 @@ export function PersistedCaseWorkbench({
         return;
       }
       commitExternalSave(result.updatedAt);
+      mergeReturnedAudit(result.audit);
     })();
   };
 
@@ -338,6 +349,7 @@ export function PersistedCaseWorkbench({
         return;
       }
       commitExternalSave(result.updatedAt);
+      mergeReturnedAudit(result.audit);
     })();
   };
 
@@ -370,6 +382,7 @@ export function PersistedCaseWorkbench({
         return;
       }
       commitExternalSave(result.updatedAt);
+      mergeReturnedAudit(result.audit);
     })();
   };
 
@@ -575,11 +588,13 @@ export function PersistedCaseWorkbench({
               return;
             }
             commitExternalSave(result.updatedAt);
+            mergeReturnedAudit(result.audit);
           })();
         }}
       />
 
       <CaseActivityPanel
+        ref={activityPanelRef}
         caseId={initial.caseId}
         initialItems={initialAudit?.items ?? []}
         initialNextCursor={initialAudit?.nextCursor ?? null}
