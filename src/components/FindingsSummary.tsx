@@ -1,5 +1,6 @@
 import { displayRiskLevel } from "@/domain/labels";
 import type { AnalysisResult } from "@/domain/types";
+import { formatDateTimesInDisplayText } from "@/lib/formatDateTimeForDisplay";
 import { Panel, StatusBadge, statusStyle } from "./common";
 
 /**
@@ -28,7 +29,7 @@ export function FindingsSummary({ results }: { results: AnalysisResult[] }) {
                 </span>
               </div>
               <p className="mt-1 text-xs leading-5 opacity-90">
-                {result.explanation}
+                {formatDateTimesInDisplayText(result.explanation)}
               </p>
             </li>
           ))}

@@ -24,9 +24,9 @@ describe("历史案件展示工具", () => {
     expect(displaySystems(null)).toBe("—");
   });
 
-  it("最近更新时间格式化为 YYYY-MM-DD HH:mm（UTC+8）", () => {
+  it("最近更新时间格式化为 YYYY-MM-DD HH:mm:ss（UTC+8）", () => {
     expect(displayUpdatedAt("2026-08-08T12:32:00.000Z")).toBe(
-      "2026-08-08 20:32",
+      "2026-08-08 20:32:00",
     );
   });
 });

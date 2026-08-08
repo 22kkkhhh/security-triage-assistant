@@ -1,5 +1,6 @@
 import { displayRiskLevel } from "@/domain/labels";
 import type { SecurityCase } from "@/domain/types";
+import { formatDateTimesInDisplayText } from "@/lib/formatDateTimeForDisplay";
 import { Field, StatusBadge } from "./common";
 
 /**
@@ -34,7 +35,7 @@ function RuleList({
             </span>
           </div>
           <p className="mt-1 text-xs leading-5 text-neutral-600">
-            {result.explanation}
+            {formatDateTimesInDisplayText(result.explanation)}
           </p>
           {result.evidenceIds.length > 0 && (
             <div className="mt-1 space-y-1">

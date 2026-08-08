@@ -1,5 +1,6 @@
 import { caseStatusLabels, riskLevelLabels } from "@/domain/labels";
 import type { CaseStatus, RiskLevel } from "@/domain/types";
+import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 
 /** 列表风险显示：优先人工风险，否则建议风险；都没有则“暂无法评级” */
 export function displayCaseListRisk(
@@ -21,13 +22,9 @@ export function displaySystems(systemsSearchText: string | null): string {
   return systemsSearchText.split("|").filter(Boolean).join(" / ");
 }
 
-/** UTC+8 最近更新时间展示：YYYY-MM-DD HH:mm */
+/** UTC+8 最近更新时间展示：YYYY-MM-DD HH:mm:ss（Web 展示层） */
 export function displayUpdatedAt(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  const cn = new Date(date.getTime() + 8 * 3600 * 1000);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${cn.getUTCFullYear()}-${pad(cn.getUTCMonth() + 1)}-${pad(cn.getUTCDate())} ${pad(cn.getUTCHours())}:${pad(cn.getUTCMinutes())}`;
+  return formatDateTimeForDisplay(iso);
 }
 
 export function riskBadgeClass(label: string): string {

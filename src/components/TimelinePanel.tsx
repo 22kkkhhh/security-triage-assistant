@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { TimelineEvent } from "@/domain/types";
+import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import { Panel } from "./common";
 
 const eventTypeOptions = [
@@ -68,7 +69,9 @@ export function TimelinePanel({
               }`}
             />
             <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-              <span className="font-mono">{event.occurredAt}</span>
+              <span className="font-mono">
+                {formatDateTimeForDisplay(event.occurredAt)}
+              </span>
               <span className="rounded bg-neutral-100 px-1.5 py-0.5">
                 {event.eventType}
               </span>

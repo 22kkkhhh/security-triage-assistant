@@ -10,14 +10,11 @@ import {
 } from "@/components/cases/caseDisplay";
 import type { AutosaveState } from "@/hooks/autosaveState";
 import type { RiskLevel } from "@/domain/types";
+import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 
 function formatSavedAt(iso: string | null): string {
   if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  const cn = new Date(date.getTime() + 8 * 3600 * 1000);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${cn.getUTCFullYear()}-${pad(cn.getUTCMonth() + 1)}-${pad(cn.getUTCDate())} ${pad(cn.getUTCHours())}:${pad(cn.getUTCMinutes())}:${pad(cn.getUTCSeconds())}`;
+  return formatDateTimeForDisplay(iso);
 }
 
 function saveStatusLabel(state: AutosaveState): string {

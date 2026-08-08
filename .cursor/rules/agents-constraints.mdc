@@ -1,0 +1,20 @@
+---
+description: 开工前必须阅读 AGENTS.md 与相关 docs，不得擅自扩大产品范围
+alwaysApply: true
+---
+
+# Security Triage Assistant 强制约束
+
+修改任何代码前，必须先阅读：
+
+1. `AGENTS.md`（最高优先级）
+2. 与本次任务相关的 `docs/` 文档（至少包括 `PRODUCT_BOUNDARY.md`、`DOMAIN_MODEL.md`；涉及架构/技术选型时读 `ARCHITECTURE.md`；涉及数据/AI 时读 `COMPLIANCE.md`；声称完成时对照 `ACCEPTANCE_CRITERIA.md`）
+
+若用户需求与上述约束冲突，以约束文件为准，不得自行扩大范围。
+
+关键红线：
+
+- 不实现 SIEM/SOC/采集/扫描/自动阻断/外部 AI/微服务等禁项
+- 缺失判断使用 `NORMAL | ABNORMAL | UNKNOWN`，禁止把 `UNKNOWN` 当成正常
+- 最终结论必须人工确认
+- 汇报使用简体中文，并遵循 `AGENTS.md` 第 13 节固定格式

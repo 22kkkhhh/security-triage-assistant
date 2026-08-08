@@ -52,7 +52,7 @@ async function main() {
     checklist,
     humanReview: {
       reviewer: "王研判",
-      finalConclusion: "AUTHORIZED_BUSINESS",
+      finalConclusion: "NORMAL_BUSINESS",
       humanRiskLevel: "LOW",
       conclusionNote: "smoke human review",
       adjustments: [],
@@ -76,7 +76,9 @@ async function main() {
     manual: view.initialChecklist.some((i) => i.label === "smoke-manual"),
     human: view.draft.humanReview?.conclusionNote,
     timeline: view.draft.timeline.some((e) => e.id === "smoke-tl-1"),
-    bc: view.draft.businessContext.businessJustification.includes("[smoke]"),
+    bc: (view.draft.businessContext.businessJustification ?? "").includes(
+      "[smoke]",
+    ),
     statusList: listed[0]?.status,
     pending: listed[0]?.pendingChecklistCount,
     url: `/cases/${created.id}`,

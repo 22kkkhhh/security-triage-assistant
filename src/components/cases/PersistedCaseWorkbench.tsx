@@ -24,6 +24,7 @@ import { SuggestedAssessmentBar } from "@/components/SuggestedAssessmentBar";
 import { TimelinePanel } from "@/components/TimelinePanel";
 import { Field } from "@/components/common";
 import { ReportEditor, type ReportSession } from "@/components/report/ReportEditor";
+import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import { CaseHeader } from "./CaseHeader";
 
 const emptyHumanReview = (): HumanReview => ({
@@ -245,7 +246,10 @@ export function PersistedCaseWorkbench({
         <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2 lg:grid-cols-4">
           <Field label="案件编号" value={initial.caseNumber} />
           <Field label="告警来源" value={draftBase.alert.source} />
-          <Field label="告警时间" value={draftBase.alert.occurredAt} />
+          <Field
+            label="告警时间"
+            value={formatDateTimeForDisplay(draftBase.alert.occurredAt)}
+          />
           <Field label="告警标题" value={draftBase.alert.title} />
         </div>
       </section>

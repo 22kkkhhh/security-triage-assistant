@@ -8,7 +8,11 @@ import type {
   RiskLevel,
   TimelineEvent,
 } from "@/domain/types";
+import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
+import { buildSecurityCaseDraft } from "@/services/normalization/buildSecurityCase";
+import type { NormalizedSecurityInput } from "@/services/normalization/types";
 import {
+  createCase,
   getCaseById,
   saveCaseState,
 } from "@/services/persistence/caseRepository";
@@ -115,4 +119,92 @@ export async function updateCaseStatusAction(
     return { ok: false, error: "保存数据格式无效" };
   }
   return saveCaseStateAction(caseId, { ...rawInput, status });
+}
+
+export type CreateCaseActionResult =
+  | { ok: true; id: string; caseNumber: string }
+  | { ok: false; error: string };
+
+const SOURCE_TYPES = [
+  "DATABASE_AUDIT",
+  "FIREWALL",
+  "AUTH",
+  "VPN",
+  "BASTION_HOST",
+  "DLP",
+  "API_SECURITY",
+  "MANUAL",
+  "OTHER",
+] as const;
+
+function parseNormalizedInput(
+  raw: unknown,
+): NormalizedSecurityInput | string {
+  if (!isObject(raw)) return "导入数据格式无效";
+  if (
+    typeof raw.sourceType !== "string" ||
+    !SOURCE_TYPES.includes(raw.sourceType as (typeof SOURCE_TYPES)[number])
+  ) {
+    return "数据来源类型无效";
+  }
+  if (!Array.isArray(raw.accessedSystems) || !Array.isArray(raw.sensitiveDataTypes)) {
+    return "标准化字段格式无效";
+  }
+  return raw as unknown as NormalizedSecurityInput;
+}
+
+/**
+ * 人工确认后创建 CaseRecord：
+ * 标准化输入 → SecurityCaseDraft → 规则分析 → createCase → 返回 id。
+ * 客户端应跳转 /cases/[id] 由服务端重新读取恢复，勿直接渲染返回对象。
+ */
+export async function createCaseAction(
+  rawInput: unknown,
+): Promise<CreateCaseActionResult> {
+  const parsed = parseNormalizedInput(rawInput);
+  if (typeof parsed === "string") {
+    return { ok: false, error: parsed };
+  }
+
+  try {
+    const caseName =
+      parsed.alertName?.trim() || "安全告警研判案件";
+    const draft = buildSecurityCaseDraft(parsed, "pending-create");
+    const namedDraft = {
+      ...draft,
+      name: caseName,
+      alert: {
+        ...draft.alert,
+        title: parsed.alertName?.trim() || caseName,
+      },
+    };
+    const analyzed = analyzeSecurityCase(namedDraft);
+
+    const created = await createCase({
+      draft: {
+        name: namedDraft.name,
+        createdAt: namedDraft.createdAt,
+        alert: namedDraft.alert,
+        dataContext: namedDraft.dataContext,
+        networkContext: namedDraft.networkContext,
+        identityContext: namedDraft.identityContext,
+        businessContext: namedDraft.businessContext,
+        humanReview: null,
+        timeline: namedDraft.timeline,
+      },
+      checklist: analyzed.checklist,
+      suggestedRiskLevel:
+        analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
+      status: "INVESTIGATING",
+    });
+
+    return {
+      ok: true,
+      id: created.id,
+      caseNumber: created.caseNumber,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "案件创建失败";
+    return { ok: false, error: message };
+  }
 }

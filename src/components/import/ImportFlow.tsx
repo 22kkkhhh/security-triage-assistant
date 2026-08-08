@@ -27,8 +27,11 @@ const methodOptions: { key: InputMethod; title: string; description: string }[] 
  */
 export function ImportFlow({
   onConfirmed,
+  confirming = false,
 }: {
-  onConfirmed: (input: NormalizedSecurityInput) => void;
+  onConfirmed: (input: NormalizedSecurityInput) => void | Promise<void>;
+  /** 创建案件进行中（由页面传入，用于禁用确认按钮） */
+  confirming?: boolean;
 }) {
   const [method, setMethod] = useState<InputMethod | null>(null);
   const [sourceType, setSourceType] = useState<ImportSourceType>("MANUAL");
@@ -41,7 +44,7 @@ export function ImportFlow({
     method === "MANUAL" ? "MANUAL" : sourceType;
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-5xl space-y-4">
       <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
         请勿在 Demo 环境导入真实生产安全日志或客户敏感数据。
       </div>
@@ -49,27 +52,33 @@ export function ImportFlow({
       {pending === null && (
         <section className="rounded-md border border-neutral-200 bg-white px-4 py-3">
           <h2 className="text-sm font-semibold text-neutral-900">选择输入方式</h2>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div
+            className="mt-3 flex flex-wrap gap-1 border-b border-neutral-200"
+            role="tablist"
+            aria-label="导入方式"
+          >
             {methodOptions.map((option) => (
               <button
                 key={option.key}
                 type="button"
+                role="tab"
+                aria-selected={method === option.key}
                 onClick={() => setMethod(option.key)}
-                className={`rounded-md border px-4 py-3 text-left ${
+                className={`-mb-px border-b-2 px-4 py-2.5 text-sm ${
                   method === option.key
-                    ? "border-slate-700 bg-slate-50"
-                    : "border-neutral-200 hover:border-neutral-400"
+                    ? "border-slate-800 font-medium text-slate-900"
+                    : "border-transparent text-neutral-600 hover:text-neutral-900"
                 }`}
               >
-                <div className="text-sm font-medium text-neutral-900">
-                  {option.title}
-                </div>
-                <div className="mt-1 text-xs text-neutral-500">
-                  {option.description}
-                </div>
+                {option.title}
               </button>
             ))}
           </div>
+          {method && (
+            <p className="mt-3 text-xs text-neutral-500">
+              {methodOptions.find((item) => item.key === method)?.description}
+            </p>
+          )}
 
           {method && method !== "MANUAL" && (
             <label className="mt-4 block max-w-xs text-sm">
@@ -137,6 +146,7 @@ export function ImportFlow({
             unrecognized={pending.unrecognized}
             onConfirm={onConfirmed}
             onBack={() => setPending(null)}
+            confirming={confirming}
           />
         </section>
       )}

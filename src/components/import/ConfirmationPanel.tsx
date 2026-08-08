@@ -23,12 +23,15 @@ export function ConfirmationPanel({
   unrecognized: initialUnrecognized,
   onConfirm,
   onBack,
+  confirming = false,
 }: {
   sourceType: ImportSourceType;
   initialPairs: RawKeyValue[];
   unrecognized: UnrecognizedItem[];
-  onConfirm: (input: NormalizedSecurityInput) => void;
+  onConfirm: (input: NormalizedSecurityInput) => void | Promise<void>;
   onBack: () => void;
+  /** 创建案件进行中：禁用确认按钮，防止重复提交 */
+  confirming?: boolean;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
@@ -161,17 +164,19 @@ export function ConfirmationPanel({
       <div className="flex justify-between">
         <button
           type="button"
-          className="rounded border border-neutral-300 px-4 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
+          className="rounded border border-neutral-300 px-4 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
           onClick={onBack}
+          disabled={confirming}
         >
           返回修改
         </button>
         <button
           type="button"
-          className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700"
-          onClick={() => onConfirm(preview.input)}
+          className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
+          disabled={confirming}
+          onClick={() => void onConfirm(preview.input)}
         >
-          确认并开始研判
+          {confirming ? "正在创建案件…" : "确认并开始研判"}
         </button>
       </div>
     </div>

@@ -18,6 +18,7 @@ import { FindingsSummary } from "./FindingsSummary";
 import { HumanReviewPanel } from "./HumanReviewPanel";
 import { SuggestedAssessmentBar } from "./SuggestedAssessmentBar";
 import { TimelinePanel } from "./TimelinePanel";
+import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import { Field } from "./common";
 
 export interface WorkbenchCase {
@@ -165,7 +166,10 @@ function CaseWorkbench({
         <div className="mt-2 grid grid-cols-1 gap-x-6 md:grid-cols-2 lg:grid-cols-4">
           <Field label="案件编号" value={draft.id} />
           <Field label="告警来源" value={draft.alert.source} />
-          <Field label="告警时间" value={draft.alert.occurredAt} />
+          <Field
+            label="告警时间"
+            value={formatDateTimeForDisplay(draft.alert.occurredAt)}
+          />
           <Field label="告警标题" value={draft.alert.title} />
         </div>
       </section>

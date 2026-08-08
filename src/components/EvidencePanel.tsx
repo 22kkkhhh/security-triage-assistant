@@ -1,5 +1,6 @@
 import { evidenceSourceTypeLabels } from "@/domain/labels";
 import type { Evidence } from "@/domain/types";
+import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import { Panel } from "./common";
 
 /**
@@ -21,7 +22,11 @@ export function EvidencePanel({ evidences }: { evidences: Evidence[] }) {
               <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
                 <span className="font-mono">{evidence.evidenceId}</span>
                 <span>{evidenceSourceTypeLabels[evidence.sourceType]}</span>
-                <span>{evidence.timestamp ?? "（无时间）"}</span>
+                <span>
+                  {evidence.timestamp
+                    ? formatDateTimeForDisplay(evidence.timestamp)
+                    : "（无时间）"}
+                </span>
                 <span className="rounded bg-neutral-200 px-1.5 py-0.5">
                   关联规则 {evidence.relatedRuleId}
                 </span>
