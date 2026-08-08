@@ -22,3 +22,8 @@ export * from './enums';
  * 案件持久化记录：索引字段 + 单一 caseState + 独立 reportDraft
  */
 export type CaseRecord = Prisma.CaseRecordModel
+/**
+ * Model CaseAuditLog
+ * 案件操作审计日志（与 Timeline 分离：记录研判人员/系统对案件的操作）
+ */
+export type CaseAuditLog = Prisma.CaseAuditLogModel

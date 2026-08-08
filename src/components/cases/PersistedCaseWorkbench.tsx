@@ -10,7 +10,18 @@ import type {
   RiskLevel,
   TimelineEvent,
 } from "@/domain/types";
+import {
+  addTimelineEventAction,
+  applyChecklistCommandAction,
+  changeCaseStatusAction,
+  updateBusinessContextAction,
+  updateHumanReviewAction,
+} from "@/app/(app)/cases/commandActions";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
+import {
+  hasStructuredBusinessContextChange,
+  hasStructuredHumanReviewChange,
+} from "@/services/caseCommands/structuredDiff";
 import { mergeChecklistOnRestore } from "@/services/persistence/caseMapper";
 import type { RestoredWorkbenchView } from "@/services/persistence/restoreWorkbench";
 import { useCaseAutosave } from "@/hooks/useCaseAutosave";
@@ -45,7 +56,7 @@ type LivePayload = {
 };
 
 /**
- * 持久化案件工作台：恢复 caseState → 本地编辑 → 自动保存。
+ * 持久化案件工作台：恢复 caseState → 本地编辑 → 自动保存 / 语义命令。
  * 分析结果现场派生；SuggestedAssessment 不覆盖 HumanReview。
  */
 export function PersistedCaseWorkbench({
@@ -70,6 +81,8 @@ export function PersistedCaseWorkbench({
     initial.draft.timeline,
   );
   const [navigationError, setNavigationError] = useState<string | null>(null);
+  const [commandError, setCommandError] = useState<string | null>(null);
+  const [staleNotice, setStaleNotice] = useState<string | null>(null);
 
   const draftBase = initial.draft;
 
@@ -98,7 +111,6 @@ export function PersistedCaseWorkbench({
     suggestedRiskLevel: initial.suggestedRiskLevel,
   });
 
-  // 与渲染结果对齐；事件 handler 内也会同步写入，保证 immediate 保存读到最新值
   useEffect(() => {
     payloadRef.current = {
       status,
@@ -138,14 +150,64 @@ export function PersistedCaseWorkbench({
     [draftBase],
   );
 
-  const { saveState, scheduleSave, flushSave, retrySave } = useCaseAutosave({
+  const applyCanonicalState = useCallback(
+    (payload: {
+      status: CaseStatus;
+      caseState: {
+        businessContext: BusinessContext;
+        humanReview: HumanReview | null;
+        checklist: ChecklistItem[];
+        timeline: TimelineEvent[];
+      };
+    }) => {
+      setStatus(payload.status);
+      setBusinessContext(payload.caseState.businessContext);
+      setHumanReview(payload.caseState.humanReview ?? emptyHumanReview());
+      setChecklistBase(payload.caseState.checklist);
+      setTimeline(payload.caseState.timeline);
+      const nextAnalyzed = analyzeSecurityCase({
+        ...draftBase,
+        businessContext: payload.caseState.businessContext,
+        humanReview: payload.caseState.humanReview,
+        timeline: payload.caseState.timeline,
+      });
+      payloadRef.current = {
+        status: payload.status,
+        businessContext: payload.caseState.businessContext,
+        humanReview: payload.caseState.humanReview ?? emptyHumanReview(),
+        checklist: payload.caseState.checklist,
+        timeline: payload.caseState.timeline,
+        suggestedRiskLevel:
+          nextAnalyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
+      };
+    },
+    [draftBase],
+  );
+
+  const {
+    saveState,
+    scheduleSave,
+    flushSave,
+    retrySave,
+    cancelPendingSave,
+    commitExternalSave,
+  } = useCaseAutosave({
     caseId: initial.caseId,
     getPayload,
     initialSavedAt: initial.updatedAt,
+    onStale: (payload) => {
+      applyCanonicalState({
+        status: payload.status,
+        caseState: payload.caseState,
+      });
+      setStaleNotice("案件已发生更新，已刷新到最新状态。");
+      setCommandError(null);
+    },
   });
 
   const handleBusinessContextChange = (next: BusinessContext) => {
-    setBusinessContext(next);
+    const prevBc = businessContext;
+    const prevChecklistBase = checklistBase;
     const nextAnalyzed = analyzeSecurityCase({
       ...draftBase,
       businessContext: next,
@@ -156,6 +218,12 @@ export function PersistedCaseWorkbench({
       checklistBase,
       nextAnalyzed.checklist,
     );
+    const structured = hasStructuredBusinessContextChange(
+      businessContext,
+      next,
+    );
+
+    setBusinessContext(next);
     setChecklistBase(nextChecklist);
     payloadRef.current = {
       ...payloadRef.current,
@@ -164,35 +232,135 @@ export function PersistedCaseWorkbench({
       suggestedRiskLevel:
         nextAnalyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
     };
-    const isTextHeavy =
-      next.businessJustification !== businessContext.businessJustification ||
-      next.changeTicketId !== businessContext.changeTicketId ||
-      next.businessOwner !== businessContext.businessOwner;
-    scheduleSave(isTextHeavy ? "debounce" : "immediate");
+
+    if (!structured) {
+      const isTextHeavy =
+        next.businessJustification !== prevBc.businessJustification ||
+        next.changeTicketId !== prevBc.changeTicketId ||
+        next.businessOwner !== prevBc.businessOwner;
+      scheduleSave(isTextHeavy ? "debounce" : "immediate");
+      return;
+    }
+
+    const operationId = crypto.randomUUID();
+    cancelPendingSave();
+    setCommandError(null);
+    void (async () => {
+      const result = await updateBusinessContextAction(
+        initial.caseId,
+        operationId,
+        getPayload(),
+      );
+      if (!result.ok) {
+        setBusinessContext(prevBc);
+        setChecklistBase(prevChecklistBase);
+        payloadRef.current = {
+          ...payloadRef.current,
+          businessContext: prevBc,
+          checklist: mergeChecklistOnRestore(
+            prevChecklistBase,
+            analyzeSecurityCase({
+              ...draftBase,
+              businessContext: prevBc,
+              humanReview,
+              timeline,
+            }).checklist,
+          ),
+        };
+        setCommandError(result.error || "业务核查信息更新失败，请重试。");
+        return;
+      }
+      commitExternalSave(result.updatedAt);
+    })();
   };
 
   const handleHumanReviewChange = (next: HumanReview) => {
+    const prev = humanReview;
+    const structured = hasStructuredHumanReviewChange(humanReview, next);
     setHumanReview(next);
     payloadRef.current = { ...payloadRef.current, humanReview: next };
-    const noteChanged =
-      next.conclusionNote !== humanReview.conclusionNote ||
-      next.reviewer !== humanReview.reviewer;
-    scheduleSave(noteChanged ? "debounce" : "immediate");
+
+    if (!structured) {
+      const noteChanged =
+        next.conclusionNote !== prev.conclusionNote ||
+        next.reviewer !== prev.reviewer;
+      scheduleSave(noteChanged ? "debounce" : "immediate");
+      return;
+    }
+
+    const operationId = crypto.randomUUID();
+    cancelPendingSave();
+    setCommandError(null);
+    void (async () => {
+      const result = await updateHumanReviewAction(
+        initial.caseId,
+        operationId,
+        getPayload(),
+      );
+      if (!result.ok) {
+        setHumanReview(prev);
+        payloadRef.current = { ...payloadRef.current, humanReview: prev };
+        setCommandError(result.error || "人工研判更新失败，请重试。");
+        return;
+      }
+      commitExternalSave(result.updatedAt);
+    })();
   };
 
   const handleStatusChange = (next: CaseStatus) => {
+    const prev = status;
     setStatus(next);
     payloadRef.current = { ...payloadRef.current, status: next };
-    scheduleSave("immediate");
+    const operationId = crypto.randomUUID();
+    cancelPendingSave();
+    setCommandError(null);
+    void (async () => {
+      const result = await changeCaseStatusAction(
+        initial.caseId,
+        next,
+        operationId,
+        getPayload(),
+      );
+      if (!result.ok) {
+        setStatus(prev);
+        payloadRef.current = { ...payloadRef.current, status: prev };
+        setCommandError(result.error || "状态修改失败，请重试。");
+        return;
+      }
+      commitExternalSave(result.updatedAt);
+    })();
   };
 
-  const commitChecklist = (
-    next: ChecklistItem[],
-    mode: "immediate" | "debounce",
+  const runChecklistCommand = (
+    action: "complete" | "reopen" | "add" | "delete",
+    itemId: string,
+    nextChecklist: ChecklistItem[],
+    prevChecklistBase: ChecklistItem[],
   ) => {
-    setChecklistBase(next);
-    payloadRef.current = { ...payloadRef.current, checklist: next };
-    scheduleSave(mode);
+    setChecklistBase(nextChecklist);
+    payloadRef.current = { ...payloadRef.current, checklist: nextChecklist };
+    const operationId = crypto.randomUUID();
+    cancelPendingSave();
+    setCommandError(null);
+    void (async () => {
+      const result = await applyChecklistCommandAction(
+        initial.caseId,
+        action,
+        itemId,
+        operationId,
+        getPayload(),
+      );
+      if (!result.ok) {
+        setChecklistBase(prevChecklistBase);
+        payloadRef.current = {
+          ...payloadRef.current,
+          checklist: prevChecklistBase,
+        };
+        setCommandError(result.error || "核查项更新失败，请重试。");
+        return;
+      }
+      commitExternalSave(result.updatedAt);
+    })();
   };
 
   const handleBack = async () => {
@@ -246,6 +414,32 @@ export function PersistedCaseWorkbench({
         onBack={() => void handleBack()}
       />
 
+      {staleNotice && (
+        <div className="rounded border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
+          {staleNotice}
+          <button
+            type="button"
+            className="ml-3 underline underline-offset-2"
+            onClick={() => setStaleNotice(null)}
+          >
+            关闭
+          </button>
+        </div>
+      )}
+
+      {commandError && (
+        <div className="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+          {commandError}
+          <button
+            type="button"
+            className="ml-3 underline underline-offset-2"
+            onClick={() => setCommandError(null)}
+          >
+            关闭
+          </button>
+        </div>
+      )}
+
       <section className="rounded-md border border-neutral-200 bg-white px-4 py-3">
         <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2 lg:grid-cols-4">
           <Field label="案件编号" value={initial.caseNumber} />
@@ -280,31 +474,38 @@ export function PersistedCaseWorkbench({
         <ChecklistPanel
           items={checklist}
           onToggle={(id) => {
-            commitChecklist(
-              checklist.map((item) =>
-                item.id === id
-                  ? { ...item, completed: !item.completed }
-                  : item,
-              ),
-              "immediate",
+            const current = checklist.find((item) => item.id === id);
+            if (!current) return;
+            const prevBase = checklistBase;
+            const next = checklist.map((item) =>
+              item.id === id
+                ? { ...item, completed: !item.completed }
+                : item,
+            );
+            runChecklistCommand(
+              current.completed ? "reopen" : "complete",
+              id,
+              next,
+              prevBase,
             );
           }}
           onEditNote={(id, note) => {
-            commitChecklist(
-              checklist.map((item) =>
-                item.id === id ? { ...item, note: note || null } : item,
-              ),
-              "debounce",
+            const next = checklist.map((item) =>
+              item.id === id ? { ...item, note: note || null } : item,
             );
+            setChecklistBase(next);
+            payloadRef.current = { ...payloadRef.current, checklist: next };
+            scheduleSave("debounce");
           }}
           onDelete={(id) => {
-            commitChecklist(
-              checklist.filter((item) => item.id !== id),
-              "immediate",
-            );
+            const prevBase = checklistBase;
+            const next = checklist.filter((item) => item.id !== id);
+            runChecklistCommand("delete", id, next, prevBase);
           }}
           onAdd={(item) => {
-            commitChecklist([...checklist, item], "immediate");
+            const prevBase = checklistBase;
+            const next = [...checklist, item];
+            runChecklistCommand("add", item.id, next, prevBase);
           }}
         />
       </div>
@@ -317,10 +518,28 @@ export function PersistedCaseWorkbench({
       <TimelinePanel
         events={timeline}
         onAdd={(event) => {
+          const prev = timeline;
           const next = [...timeline, event];
           setTimeline(next);
           payloadRef.current = { ...payloadRef.current, timeline: next };
-          scheduleSave("immediate");
+          const operationId = crypto.randomUUID();
+          cancelPendingSave();
+          setCommandError(null);
+          void (async () => {
+            const result = await addTimelineEventAction(
+              initial.caseId,
+              event.id,
+              operationId,
+              getPayload(),
+            );
+            if (!result.ok) {
+              setTimeline(prev);
+              payloadRef.current = { ...payloadRef.current, timeline: prev };
+              setCommandError(result.error || "时间线事件添加失败，请重试。");
+              return;
+            }
+            commitExternalSave(result.updatedAt);
+          })();
         }}
       />
 

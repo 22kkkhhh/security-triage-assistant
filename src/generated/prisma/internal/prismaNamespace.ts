@@ -397,7 +397,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
-  CaseRecord: 'CaseRecord'
+  CaseRecord: 'CaseRecord',
+  CaseAuditLog: 'CaseAuditLog'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -413,7 +414,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "caseRecord"
+    modelProps: "caseRecord" | "caseAuditLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -491,6 +492,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    CaseAuditLog: {
+      payload: Prisma.$CaseAuditLogPayload<ExtArgs>
+      fields: Prisma.CaseAuditLogFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CaseAuditLogFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CaseAuditLogFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload>
+        }
+        findFirst: {
+          args: Prisma.CaseAuditLogFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CaseAuditLogFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload>
+        }
+        findMany: {
+          args: Prisma.CaseAuditLogFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload>[]
+        }
+        create: {
+          args: Prisma.CaseAuditLogCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload>
+        }
+        createMany: {
+          args: Prisma.CaseAuditLogCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CaseAuditLogCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload>[]
+        }
+        delete: {
+          args: Prisma.CaseAuditLogDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload>
+        }
+        update: {
+          args: Prisma.CaseAuditLogUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload>
+        }
+        deleteMany: {
+          args: Prisma.CaseAuditLogDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CaseAuditLogUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CaseAuditLogUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload>[]
+        }
+        upsert: {
+          args: Prisma.CaseAuditLogUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CaseAuditLogPayload>
+        }
+        aggregate: {
+          args: Prisma.CaseAuditLogAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCaseAuditLog>
+        }
+        groupBy: {
+          args: Prisma.CaseAuditLogGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CaseAuditLogGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CaseAuditLogCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CaseAuditLogCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -545,10 +620,28 @@ export const CaseRecordScalarFieldEnum = {
   reportDraft: 'reportDraft',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  closedAt: 'closedAt'
+  closedAt: 'closedAt',
+  lastActivityAt: 'lastActivityAt'
 } as const
 
 export type CaseRecordScalarFieldEnum = (typeof CaseRecordScalarFieldEnum)[keyof typeof CaseRecordScalarFieldEnum]
+
+
+export const CaseAuditLogScalarFieldEnum = {
+  id: 'id',
+  caseId: 'caseId',
+  actionType: 'actionType',
+  actorType: 'actorType',
+  actorId: 'actorId',
+  actorName: 'actorName',
+  summary: 'summary',
+  changes: 'changes',
+  metadata: 'metadata',
+  operationId: 'operationId',
+  createdAt: 'createdAt'
+} as const
+
+export type CaseAuditLogScalarFieldEnum = (typeof CaseAuditLogScalarFieldEnum)[keyof typeof CaseAuditLogScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -805,6 +898,7 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
   caseRecord?: Prisma.CaseRecordOmit
+  caseAuditLog?: Prisma.CaseAuditLogOmit
 }
 
 /* Types for Logging */

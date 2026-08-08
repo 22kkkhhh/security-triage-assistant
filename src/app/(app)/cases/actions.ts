@@ -11,16 +11,26 @@ import type {
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
 import { buildSecurityCaseDraft } from "@/services/normalization/buildSecurityCase";
 import type { NormalizedSecurityInput } from "@/services/normalization/types";
+import { createCaseWithAudit } from "@/services/caseCommands";
 import {
-  createCase,
   getCaseById,
   saveCaseState,
+  StaleCaseStateError,
 } from "@/services/persistence/caseRepository";
 import type { SaveCaseStateInput } from "@/services/persistence/types";
 
 export type SaveCaseActionResult =
-  | { ok: true; updatedAt: string; status: CaseStatus }
-  | { ok: false; error: string };
+  | { ok: true; updatedAt: string; status: CaseStatus; stale?: boolean }
+  | {
+      ok: false;
+      error: string;
+      code?: "STALE";
+      /** STALE 时返回服务端真实版本，供客户端同步 baseUpdatedAt */
+      updatedAt?: string;
+      lastActivityAt?: string;
+      status?: CaseStatus;
+      caseState?: import("@/services/persistence/types").PersistedCaseState;
+    };
 
 const CASE_STATUSES: CaseStatus[] = [
   "NEW",
@@ -72,6 +82,8 @@ function parseSaveInput(raw: unknown): SaveCaseStateInput | string {
     timeline: raw.timeline as unknown as TimelineEvent[],
     suggestedRiskLevel: (raw.suggestedRiskLevel ?? null) as RiskLevel | null,
     status: raw.status as CaseStatus | undefined,
+    baseUpdatedAt:
+      typeof raw.baseUpdatedAt === "string" ? raw.baseUpdatedAt : null,
   };
 }
 
@@ -101,6 +113,21 @@ export async function saveCaseStateAction(
       status: saved.status,
     };
   } catch (error) {
+    if (error instanceof StaleCaseStateError) {
+      const latest = await getCaseById(caseId);
+      if (!latest) {
+        return { ok: false, error: "案件不存在", code: "STALE" };
+      }
+      return {
+        ok: false,
+        error: "案件已发生更新，已刷新到最新状态。",
+        code: "STALE",
+        updatedAt: latest.updatedAt,
+        lastActivityAt: latest.lastActivityAt,
+        status: latest.status,
+        caseState: latest.caseState,
+      };
+    }
     const message = error instanceof Error ? error.message : "保存失败";
     return { ok: false, error: message };
   }
@@ -122,7 +149,7 @@ export async function updateCaseStatusAction(
 }
 
 export type CreateCaseActionResult =
-  | { ok: true; id: string; caseNumber: string }
+  | { ok: true; id: string; caseNumber: string; alreadyApplied?: boolean }
   | { ok: false; error: string };
 
 const SOURCE_TYPES = [
@@ -155,15 +182,22 @@ function parseNormalizedInput(
 
 /**
  * 人工确认后创建 CaseRecord：
- * 标准化输入 → SecurityCaseDraft → 规则分析 → createCase → 返回 id。
- * 客户端应跳转 /cases/[id] 由服务端重新读取恢复，勿直接渲染返回对象。
+ * 标准化输入 → SecurityCaseDraft → 规则分析 → createCaseWithAudit → 返回 id。
+ * operationId：创建幂等；response 丢失后 retry 返回同一 caseId，不建第二条。
  */
 export async function createCaseAction(
   rawInput: unknown,
+  operationId?: unknown,
 ): Promise<CreateCaseActionResult> {
   const parsed = parseNormalizedInput(rawInput);
   if (typeof parsed === "string") {
     return { ok: false, error: parsed };
+  }
+  if (
+    operationId !== undefined &&
+    (typeof operationId !== "string" || !operationId.trim())
+  ) {
+    return { ok: false, error: "operationId 无效" };
   }
 
   try {
@@ -180,28 +214,40 @@ export async function createCaseAction(
     };
     const analyzed = analyzeSecurityCase(namedDraft);
 
-    const created = await createCase({
-      draft: {
-        name: namedDraft.name,
-        createdAt: namedDraft.createdAt,
-        alert: namedDraft.alert,
-        dataContext: namedDraft.dataContext,
-        networkContext: namedDraft.networkContext,
-        identityContext: namedDraft.identityContext,
-        businessContext: namedDraft.businessContext,
-        humanReview: null,
-        timeline: namedDraft.timeline,
+    const created = await createCaseWithAudit(
+      {
+        draft: {
+          name: namedDraft.name,
+          createdAt: namedDraft.createdAt,
+          alert: namedDraft.alert,
+          dataContext: namedDraft.dataContext,
+          networkContext: namedDraft.networkContext,
+          identityContext: namedDraft.identityContext,
+          businessContext: namedDraft.businessContext,
+          humanReview: null,
+          timeline: namedDraft.timeline,
+        },
+        checklist: analyzed.checklist,
+        suggestedRiskLevel:
+          analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
+        status: "INVESTIGATING",
       },
-      checklist: analyzed.checklist,
-      suggestedRiskLevel:
-        analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
-      status: "INVESTIGATING",
-    });
+      {
+        sourceType: parsed.sourceType,
+        operationId:
+          typeof operationId === "string" ? operationId.trim() : null,
+      },
+    );
+
+    if (!created.ok) {
+      return { ok: false, error: created.error };
+    }
 
     return {
       ok: true,
-      id: created.id,
-      caseNumber: created.caseNumber,
+      id: created.case.id,
+      caseNumber: created.case.caseNumber,
+      alreadyApplied: created.alreadyApplied,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "案件创建失败";

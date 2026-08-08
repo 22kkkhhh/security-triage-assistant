@@ -15,7 +15,9 @@ export type AutosaveAction =
   | { type: "MARK_DIRTY" }
   | { type: "SAVE_START"; seq: number }
   | { type: "SAVE_SUCCESS"; seq: number; savedAt: string }
-  | { type: "SAVE_ERROR"; seq: number; message: string };
+  | { type: "SAVE_ERROR"; seq: number; message: string }
+  | { type: "CANCEL_PENDING" }
+  | { type: "EXTERNAL_SAVED"; savedAt: string; seq: number };
 
 export const initialAutosaveState: AutosaveState = {
   status: "IDLE",
@@ -67,6 +69,21 @@ export function autosaveReducer(
         ...state,
         status: "ERROR",
         errorMessage: action.message,
+      };
+    case "CANCEL_PENDING":
+      // 清脏标记由 commitExternalSave / 调用方决定；此处仅打断待保存展示
+      return {
+        ...state,
+        errorMessage: null,
+      };
+    case "EXTERNAL_SAVED":
+      return {
+        ...state,
+        status: "SAVED",
+        saveSeq: action.seq,
+        completedSeq: action.seq,
+        lastSavedAt: action.savedAt,
+        errorMessage: null,
       };
     default:
       return state;

@@ -9,4 +9,5 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/CaseRecord'
+export type * from './models/CaseAuditLog'
 export type * from './commonInputTypes'

@@ -8,20 +8,25 @@ import type { NormalizedSecurityInput } from "@/services/normalization/types";
 
 /**
  * 新建研判客户端：复用 ImportFlow，确认后 createCaseAction → 跳转 /cases/[id]。
+ * 同一次确认动作复用 operationId，防止 response 丢失后重试创建第二条案件。
  */
 export function NewCaseClient() {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submittingRef = useRef(false);
+  const operationIdRef = useRef<string | null>(null);
 
   const handleConfirmed = async (input: NormalizedSecurityInput) => {
     if (submittingRef.current || creating) return;
     submittingRef.current = true;
     setCreating(true);
     setError(null);
+    if (!operationIdRef.current) {
+      operationIdRef.current = crypto.randomUUID();
+    }
     try {
-      const result = await createCaseAction(input);
+      const result = await createCaseAction(input, operationIdRef.current);
       if (!result.ok) {
         setError("案件创建失败，请重试。");
         setCreating(false);

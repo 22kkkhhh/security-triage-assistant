@@ -40,6 +40,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   const { prisma } = await import("@/lib/prisma");
+  await prisma.caseAuditLog.deleteMany();
   await prisma.caseRecord.deleteMany();
 });
 

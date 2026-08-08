@@ -51,7 +51,8 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  CaseRecord: 'CaseRecord'
+  CaseRecord: 'CaseRecord',
+  CaseAuditLog: 'CaseAuditLog'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -85,10 +86,28 @@ export const CaseRecordScalarFieldEnum = {
   reportDraft: 'reportDraft',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  closedAt: 'closedAt'
+  closedAt: 'closedAt',
+  lastActivityAt: 'lastActivityAt'
 } as const
 
 export type CaseRecordScalarFieldEnum = (typeof CaseRecordScalarFieldEnum)[keyof typeof CaseRecordScalarFieldEnum]
+
+
+export const CaseAuditLogScalarFieldEnum = {
+  id: 'id',
+  caseId: 'caseId',
+  actionType: 'actionType',
+  actorType: 'actorType',
+  actorId: 'actorId',
+  actorName: 'actorName',
+  summary: 'summary',
+  changes: 'changes',
+  metadata: 'metadata',
+  operationId: 'operationId',
+  createdAt: 'createdAt'
+} as const
+
+export type CaseAuditLogScalarFieldEnum = (typeof CaseAuditLogScalarFieldEnum)[keyof typeof CaseAuditLogScalarFieldEnum]
 
 
 export const SortOrder = {

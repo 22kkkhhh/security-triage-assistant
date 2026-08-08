@@ -60,6 +60,11 @@ export interface SaveCaseStateInput {
   timeline: TimelineEvent[];
   suggestedRiskLevel: RiskLevel | null;
   status?: CaseStatus;
+  /**
+   * 乐观并发：客户端上次已知 updatedAt。
+   * 若库中 updatedAt 更新，拒绝写入，防止 stale autosave 覆盖语义命令结果。
+   */
+  baseUpdatedAt?: string | null;
 }
 
 /** 领域层案件视图（不含派生分析结果） */
@@ -78,6 +83,8 @@ export interface PersistedCase {
   hasReport: boolean;
   /** 报告草稿最后写入时间；案件编辑不更新 */
   reportUpdatedAt: string | null;
+  /** 最后一次有意义的运营活动时间（Audit 成功写入时更新） */
+  lastActivityAt: string;
   caseState: PersistedCaseState;
   reportDraft: ReportData | null;
   createdAt: string;
@@ -100,6 +107,8 @@ export interface CaseListItem {
   pendingChecklistCount: number;
   hasReport: boolean;
   reportUpdatedAt: string | null;
+  /** 最后一次有意义的运营活动时间 */
+  lastActivityAt: string;
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;

@@ -66,7 +66,7 @@ export function BusinessContextPanel({
     <Panel
       title="业务合理性核查（可编辑，修改后自动重新分析）"
       extra={
-        <span className="text-xs text-neutral-400">演示用前端状态，不持久化</span>
+        <span className="text-xs text-neutral-400">结构化变更将写入案件并记入操作审计</span>
       }
     >
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

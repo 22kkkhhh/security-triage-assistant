@@ -1,4 +1,4 @@
-// Prisma 7 + SQLite（本地 Demo 专用）
+// Prisma 7 + SQLite（本地 Demo / MVP 专用）
 // 数据库 URL 配置于 prisma.config.ts / .env
 
 generator client {
@@ -43,8 +43,48 @@ model CaseRecord {
   updatedAt DateTime  @updatedAt
   closedAt  DateTime?
 
+  /// 最后一次有意义的运营活动时间（成功写入 Audit 时更新；创建时等于 createdAt）
+  lastActivityAt DateTime @default(now())
+
+  /// 操作审计（append-only）；删除策略 Restrict，禁止静默级联删除
+  auditLogs CaseAuditLog[]
+
   @@index([status])
   @@index([updatedAt])
+  @@index([lastActivityAt])
   @@index([username])
   @@index([sourceIp])
+}
+
+/// 案件操作审计日志（与 Timeline 分离：记录研判人员/系统对案件的操作）
+model CaseAuditLog {
+  id     String @id @default(cuid())
+  caseId String
+  case   CaseRecord @relation(fields: [caseId], references: [id], onDelete: Restrict)
+
+  /// AuditActionType（String 存储，Domain 侧 TS union）
+  actionType String
+
+  /// AuditActorType：SYSTEM | MANUAL | USER
+  actorType String
+  /// 未来登录用户 ID；当前 Demo 为 null
+  actorId   String?
+  /// 展示名：系统 / 研判人员名 /「未填写研判人员」；MANUAL 非可信认证身份
+  actorName String?
+
+  /// 面向 UI 的一句话中文摘要（短）
+  summary String
+
+  /// 结构化变化（短字段，禁止整案快照）
+  changes  Json?
+  /// 可选元数据（如 handoff 原文、export 文件名）
+  metadata Json?
+
+  /// 可选：未来显式语义操作去重
+  operationId String? @unique
+
+  createdAt DateTime @default(now())
+
+  @@index([caseId, createdAt])
+  @@index([actionType])
 }

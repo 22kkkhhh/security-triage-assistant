@@ -43,6 +43,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   const { prisma } = await import("@/lib/prisma");
+  await prisma.caseAuditLog.deleteMany();
   await prisma.caseRecord.deleteMany();
 });
 
@@ -76,6 +77,28 @@ describe("新建研判持久化（Step 4）", () => {
     expect(record).not.toBeNull();
     expect(record!.caseNumber).toMatch(/^INC-\d{8}-\d{3}$/);
     expect(record!.title).toBe("手工录入敏感查询告警");
+  });
+
+  it("创建成功同时产生 SYSTEM CASE_CREATED Audit", async () => {
+    const { listCaseAuditLogs } = await import(
+      "@/services/persistence/auditRepository"
+    );
+    const result = await createCaseAction(manualInput());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const logs = await listCaseAuditLogs({ caseId: result.id });
+    expect(logs.items).toHaveLength(1);
+    expect(logs.items[0]!.actionType).toBe("CASE_CREATED");
+    expect(logs.items[0]!.actorType).toBe("SYSTEM");
+    expect(logs.items[0]!.actorName).toBe("系统");
+  });
+
+  it("创建失败（非法输入）不产生 Audit", async () => {
+    const { prisma } = await import("@/lib/prisma");
+    const before = await prisma.caseAuditLog.count();
+    const result = await createCaseAction({ bogus: true });
+    expect(result.ok).toBe(false);
+    expect(await prisma.caseAuditLog.count()).toBe(before);
   });
 
   it("文本确认后的 draft 可创建 CaseRecord", async () => {

@@ -17,9 +17,21 @@ import type {
   SaveCaseStateInput,
 } from "./types";
 
+/** 可注入事务客户端（与 Audit 同事务） */
+export type CaseDbClient = Prisma.TransactionClient | typeof prisma;
+
 /** Domain 对象 → Prisma Json 字段（结构化克隆，去掉不可序列化内容） */
 function toJsonValue(value: PersistedCaseState | ReportData): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
+/** stale autosave 与语义命令竞态时拒绝覆盖 */
+export class StaleCaseStateError extends Error {
+  readonly code = "STALE" as const;
+  constructor(message = "案件状态已被更新，跳过过期保存") {
+    super(message);
+    this.name = "StaleCaseStateError";
+  }
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -68,10 +80,7 @@ function indexFieldsFromState(input: {
   };
 }
 
-/** 创建案件并持久化；返回领域视图 */
-export async function createCase(
-  input: CreateCaseInput,
-): Promise<PersistedCase> {
+function buildCreateRowData(input: CreateCaseInput, caseNumber: string) {
   const status: CaseStatus = input.status ?? "INVESTIGATING";
   const caseState = toPersistedCaseState({
     name: input.draft.name,
@@ -94,35 +103,44 @@ export async function createCase(
     suggestedRiskLevel: input.suggestedRiskLevel,
     status,
   });
+  return {
+    caseNumber,
+    ...indexes,
+    caseState: toJsonValue(caseState),
+    hasReport: false,
+    lastActivityAt: new Date(),
+  };
+}
 
+/** 在指定 client（可事务）内创建 CaseRecord 行 */
+export async function createCaseRecord(
+  input: CreateCaseInput,
+  client: CaseDbClient = prisma,
+): Promise<PersistedCase> {
   let caseNumber = await allocateCaseNumber();
   try {
-    const row = await prisma.caseRecord.create({
-      data: {
-        caseNumber,
-        ...indexes,
-        caseState: toJsonValue(caseState),
-        hasReport: false,
-      },
+    const row = await client.caseRecord.create({
+      data: buildCreateRowData(input, caseNumber),
     });
     return rowToPersistedCase(row);
   } catch (error) {
-    // 唯一键冲突：重新计算编号后重试一次
     const message = error instanceof Error ? error.message : String(error);
     if (!message.includes("Unique constraint") && !message.includes("UNIQUE")) {
       throw error;
     }
     caseNumber = await allocateCaseNumber();
-    const row = await prisma.caseRecord.create({
-      data: {
-        caseNumber,
-        ...indexes,
-        caseState: toJsonValue(caseState),
-        hasReport: false,
-      },
+    const row = await client.caseRecord.create({
+      data: buildCreateRowData(input, caseNumber),
     });
     return rowToPersistedCase(row);
   }
+}
+
+/** 创建案件并持久化（无 Audit；语义创建请用 createCaseWithAudit） */
+export async function createCase(
+  input: CreateCaseInput,
+): Promise<PersistedCase> {
+  return createCaseRecord(input, prisma);
 }
 
 export async function getCaseById(id: string): Promise<PersistedCase | null> {
@@ -137,13 +155,30 @@ export async function getCaseByCaseNumber(
   return row ? rowToPersistedCase(row) : null;
 }
 
-/** 保存案件可恢复状态（单一 caseState Source of Truth） */
+/**
+ * 保存案件可恢复状态（单一 caseState Source of Truth）。
+ * 普通 autosave 路径：不更新 lastActivityAt。
+ * 可注入事务客户端，供 Semantic Command 与 Audit 同提交。
+ */
 export async function saveCaseState(
   id: string,
   input: SaveCaseStateInput,
+  client: CaseDbClient = prisma,
 ): Promise<PersistedCase> {
-  const existing = await prisma.caseRecord.findUnique({ where: { id } });
+  const existing = await client.caseRecord.findUnique({ where: { id } });
   if (!existing) throw new Error(`案件不存在：${id}`);
+
+  if (input.baseUpdatedAt) {
+    const baseMs = new Date(input.baseUpdatedAt).getTime();
+    const currentMs = existing.updatedAt.getTime();
+    if (
+      Number.isFinite(baseMs) &&
+      Number.isFinite(currentMs) &&
+      currentMs > baseMs
+    ) {
+      throw new StaleCaseStateError();
+    }
+  }
 
   const status: CaseStatus =
     input.status ?? (existing.status as CaseStatus);
@@ -169,7 +204,7 @@ export async function saveCaseState(
     status,
   });
 
-  const row = await prisma.caseRecord.update({
+  const row = await client.caseRecord.update({
     where: { id },
     data: {
       ...indexes,
@@ -244,7 +279,7 @@ export async function listCases(
 
   const rows = await prisma.caseRecord.findMany({
     where,
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ lastActivityAt: "desc" }, { updatedAt: "desc" }],
   });
   return rows.map(rowToListItem);
 }

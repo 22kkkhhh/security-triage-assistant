@@ -77,4 +77,36 @@ describe("自动保存状态机", () => {
     expect(state.errorMessage).toBe("数据库写入失败");
     expect(state.lastSavedAt).toBe("2026-08-08T12:00:00.000Z");
   });
+
+  it("EXTERNAL_SAVED：语义命令成功后标记已保存并提升 saveSeq", () => {
+    let state = autosaveReducer(initialAutosaveState, { type: "MARK_DIRTY" });
+    state = autosaveReducer(state, {
+      type: "EXTERNAL_SAVED",
+      savedAt: "2026-08-08T14:00:00.000Z",
+      seq: 5,
+    });
+    expect(state.status).toBe("SAVED");
+    expect(state.lastSavedAt).toBe("2026-08-08T14:00:00.000Z");
+    expect(state.saveSeq).toBe(5);
+    expect(state.completedSeq).toBe(5);
+  });
+
+  it("语义命令 EXTERNAL_SAVED 之后，旧 autosave SUCCESS 不得覆盖", () => {
+    let state = autosaveReducer(initialAutosaveState, {
+      type: "SAVE_START",
+      seq: 1,
+    });
+    state = autosaveReducer(state, {
+      type: "EXTERNAL_SAVED",
+      savedAt: "2026-08-08T14:10:00.000Z",
+      seq: 2,
+    });
+    state = autosaveReducer(state, {
+      type: "SAVE_SUCCESS",
+      seq: 1,
+      savedAt: "2026-08-08T14:09:00.000Z",
+    });
+    expect(state.status).toBe("SAVED");
+    expect(state.lastSavedAt).toBe("2026-08-08T14:10:00.000Z");
+  });
 });

@@ -136,7 +136,7 @@ export default async function CasesPage({
                   <th className="px-4 py-3 font-medium">涉及账号</th>
                   <th className="px-4 py-3 font-medium">涉及系统</th>
                   <th className="px-4 py-3 font-medium">待核查</th>
-                  <th className="px-4 py-3 font-medium">最近更新</th>
+                  <th className="px-4 py-3 font-medium">最近活动</th>
                   <th className="px-4 py-3 font-medium">操作</th>
                 </tr>
               </thead>
@@ -195,7 +195,7 @@ export default async function CasesPage({
                         {item.pendingChecklistCount}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-neutral-600">
-                        {displayUpdatedAt(item.updatedAt)}
+                        {displayUpdatedAt(item.lastActivityAt)}
                       </td>
                       <td className="px-4 py-2">
                         <Link
