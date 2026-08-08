@@ -295,6 +295,9 @@ export async function applyChecklistCommand(input: {
     if (!oldItem) {
       return { ok: true, alreadyApplied: true, case: existing, audit: null };
     }
+    if (oldItem.origin === "SYSTEM") {
+      return { ok: false, error: "系统生成的核查事项不能删除。" };
+    }
     if (nextItem) {
       return { ok: false, error: "删除核查的目标状态仍包含该事项" };
     }

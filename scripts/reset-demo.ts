@@ -15,14 +15,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dbFile = path.join(root, "prisma", "dev.db");
 
 function removeDb(): boolean {
-  let removed = false;
   for (const suffix of ["", "-journal", "-wal", "-shm"]) {
     const file = `${dbFile}${suffix}`;
     if (!existsSync(file)) continue;
     try {
       unlinkSync(file);
       console.log("已删除", path.relative(root, file));
-      removed = true;
     } catch (error) {
       const code =
         error && typeof error === "object" && "code" in error

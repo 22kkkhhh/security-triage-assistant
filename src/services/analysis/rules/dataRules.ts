@@ -1,3 +1,4 @@
+import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import type { AnalysisRule, RuleEvaluation } from "../types";
 
 /** 单次查询超过该记录数且涉及敏感字段，视为大批量敏感数据访问 */
@@ -136,7 +137,10 @@ export const dataRules: AnalysisRule[] = [
         );
       }
       if (d.outsideBusinessHours === "ABNORMAL") {
-        const timeText = securityCase.alert.occurredAt ?? "（时间未知）";
+        // timestamp 字段仍存 ISO；嵌入用户可见文案时格式化为可读时间
+        const timeText = securityCase.alert.occurredAt
+          ? formatDateTimeForDisplay(securityCase.alert.occurredAt)
+          : "（时间未知）";
         return {
           status: "ABNORMAL",
           riskLevel: "MEDIUM",

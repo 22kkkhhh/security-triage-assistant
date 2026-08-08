@@ -191,7 +191,7 @@ export interface ChecklistItem {
 export interface TimelineEvent {
   id: string;
   occurredAt: string;
-  /** 事件类型，如：告警 / 认证 / 数据访问 / 网络通信 / 系统访问 / 人工处置 */
+  /** 事件事实类型，如：告警 / 认证 / 数据访问 / 网络通信 / 系统访问 / 其他（非研判操作） */
   eventType: string;
   title: string;
   description: string;

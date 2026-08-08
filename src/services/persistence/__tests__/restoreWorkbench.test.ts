@@ -191,7 +191,7 @@ describe("Workbench 恢复与持久化（Step 3）", () => {
     const humanEvent = {
       id: "human-tl-step3",
       occurredAt: "2026-08-08T21:10:00+08:00",
-      eventType: "人工处置",
+      eventType: "其他",
       title: "补充处置记录",
       description: "已通知业务方协助核查",
       operator: "王研判",

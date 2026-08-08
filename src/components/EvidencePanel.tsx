@@ -1,6 +1,9 @@
 import { evidenceSourceTypeLabels } from "@/domain/labels";
 import type { Evidence } from "@/domain/types";
-import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
+import {
+  formatDateTimeForDisplay,
+  formatDateTimesInDisplayText,
+} from "@/lib/formatDateTimeForDisplay";
 import { Panel } from "./common";
 
 /**
@@ -35,7 +38,7 @@ export function EvidencePanel({ evidences }: { evidences: Evidence[] }) {
                 {evidence.title}
               </div>
               <p className="mt-0.5 text-xs leading-5 text-neutral-600">
-                {evidence.summary}
+                {formatDateTimesInDisplayText(evidence.summary)}
               </p>
               {evidence.analystNote && (
                 <p className="mt-0.5 text-xs text-neutral-500">

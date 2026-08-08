@@ -420,7 +420,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
     const event = {
       id: "human-tl-test-1",
       occurredAt: "2026-08-08T12:00:00.000Z",
-      eventType: "人工处置",
+      eventType: "其他",
       title: "已通知业务方",
       description: "已电话联系业务负责人",
       operator: "王研判",

@@ -151,7 +151,7 @@ describe("案件持久化（Step 1）", () => {
       {
         id: "persist-tl-1",
         occurredAt: "2026-08-08T10:00:00+08:00",
-        eventType: "人工处置",
+        eventType: "其他",
         title: "保全日志",
         description: "已申请保全认证与数据库审计日志。",
         operator: "王研判",

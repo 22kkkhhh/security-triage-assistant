@@ -5,20 +5,21 @@ import type { TimelineEvent } from "@/domain/types";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import { Panel } from "./common";
 
+/** 事件事实类型；不含「人工处置」（运营操作应记入 AuditLog） */
 const eventTypeOptions = [
-  "人工处置",
   "认证",
   "数据访问",
   "网络通信",
   "系统访问",
   "告警",
   "其他",
-];
+] as const;
 
 let humanEventSequence = 0;
 
 /**
- * 事件时间线：查看系统事件 + 添加人工处置记录（仅前端 state）。
+ * 事件时间线：安全事件 / 业务事件事实历史。
+ * 人工可补充事件事实；研判操作请看 Activity Feed（AuditLog）。
  */
 export function TimelinePanel({
   events,
@@ -29,7 +30,7 @@ export function TimelinePanel({
 }) {
   const [time, setTime] = useState("");
   const [operator, setOperator] = useState("");
-  const [eventType, setEventType] = useState("人工处置");
+  const [eventType, setEventType] = useState<string>("其他");
   const [description, setDescription] = useState("");
 
   const sorted = [...events].sort((a, b) =>
@@ -57,7 +58,7 @@ export function TimelinePanel({
     <Panel title={`事件时间线（${sorted.length} 条）`}>
       {sorted.length === 0 && (
         <p className="text-sm text-neutral-500">
-          暂无时间线记录，可在下方添加人工处置记录。
+          暂无时间线记录，可在下方补充案件实际发生的事件事实。
         </p>
       )}
       <ol className="relative space-y-3 border-l border-neutral-200 pl-4">
@@ -77,7 +78,8 @@ export function TimelinePanel({
               </span>
               {event.source === "HUMAN" && (
                 <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">
-                  人工处置{event.operator ? ` · ${event.operator}` : ""}
+                  人工补充
+                  {event.operator ? ` · ${event.operator}` : ""}
                 </span>
               )}
             </div>
@@ -91,9 +93,12 @@ export function TimelinePanel({
         ))}
       </ol>
       <div className="mt-4 space-y-2 border-t border-neutral-100 pt-3">
-        <div className="text-xs font-medium text-neutral-500">
-          添加人工处置记录
+        <div className="text-xs font-medium text-neutral-700">
+          补充事件时间线
         </div>
+        <p className="text-xs leading-5 text-neutral-500">
+          用于补充案件实际发生的事件事实，不用于记录研判人员操作。
+        </p>
         <div className="flex flex-wrap gap-2">
           <input
             type="datetime-local"
@@ -104,7 +109,7 @@ export function TimelinePanel({
           <input
             className="w-32 rounded border border-neutral-300 px-2 py-1 text-sm"
             value={operator}
-            placeholder="操作人"
+            placeholder="录入人"
             onChange={(e) => setOperator(e.target.value)}
           />
           <select
@@ -123,7 +128,7 @@ export function TimelinePanel({
           <input
             className="min-w-0 flex-1 rounded border border-neutral-300 px-2 py-1 text-sm"
             value={description}
-            placeholder="处置说明…"
+            placeholder="事件事实说明…"
             onChange={(e) => setDescription(e.target.value)}
           />
           <button

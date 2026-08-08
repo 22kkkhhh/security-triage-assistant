@@ -56,13 +56,13 @@ async function runFullFlow(draft: SecurityCaseDraft) {
     confirmedAt: new Date().toISOString(),
   };
 
-  // 添加人工处置时间线
+  // 补充事件事实时间线
   const timeline = [
     ...analyzed.timeline,
     {
       id: "smoke-tl-1",
       occurredAt: "2026-08-08T10:00:00+08:00",
-      eventType: "人工处置",
+      eventType: "其他",
       title: "保全日志",
       description: "已申请保全认证与数据库审计日志。",
       operator: "王研判（虚构研判人员）",
@@ -106,7 +106,7 @@ describe("端到端冒烟", () => {
     expect(unrecognized).toEqual([]);
     const draft = buildSecurityCaseDraft(input, "smoke-text");
     const { report, spec } = await runFullFlow(draft);
-    // 人工结论进入报告，人工处置记录进入时间线表格
+    // 人工结论进入报告，人工补充事件事实进入时间线表格
     expect(report.sections.find((s) => s.key === "conclusion")?.content).toMatch(
       /疑似安全事件/,
     );

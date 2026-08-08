@@ -11,7 +11,10 @@ import {
   type SensitiveFinding,
 } from "@/services/reporting/masking";
 import { useReportAutosave } from "@/hooks/useReportAutosave";
-import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
+import {
+  formatDateTimeForDisplay,
+  formatDateTimesInDisplayText,
+} from "@/lib/formatDateTimeForDisplay";
 import type { AutosaveState } from "@/hooks/autosaveState";
 import { Panel } from "@/components/common";
 import type { ReportDraftBundle } from "@/services/persistence/reportDraftService";
@@ -429,7 +432,9 @@ function EvidenceSelector({
               · 关联规则 {evidence.relatedRuleId}
             </span>
             <div className="text-sm text-neutral-900">{evidence.title}</div>
-            <div className="text-xs text-neutral-600">{evidence.summary}</div>
+            <div className="text-xs text-neutral-600">
+              {formatDateTimesInDisplayText(evidence.summary)}
+            </div>
           </div>
         </li>
       ))}
@@ -507,7 +512,7 @@ function ReportPreview({
                         : "（无时间）"}
                     </td>
                     <td className="border border-neutral-200 px-2 py-1">
-                      {e.summary}
+                      {formatDateTimesInDisplayText(e.summary)}
                     </td>
                     <td className="border border-neutral-200 px-2 py-1 font-mono">
                       {e.relatedRuleId}

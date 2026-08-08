@@ -78,13 +78,15 @@ export function ChecklistPanel({
                 onChange={(e) => onEditNote(item.id, e.target.value)}
               />
             </div>
-            <button
-              type="button"
-              className="shrink-0 rounded px-2 py-0.5 text-xs text-neutral-400 hover:bg-red-50 hover:text-red-600"
-              onClick={() => onDelete(item.id)}
-            >
-              删除
-            </button>
+            {item.origin === "MANUAL" && (
+              <button
+                type="button"
+                className="shrink-0 rounded px-2 py-0.5 text-xs text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                onClick={() => onDelete(item.id)}
+              >
+                删除
+              </button>
+            )}
           </li>
         ))}
         {items.length === 0 && (

@@ -206,7 +206,7 @@ export function buildReportData(input: BuildReportInput): ReportData {
     {
       key: "timelineIntro",
       title: sectionTitles.timelineIntro,
-      content: `事件处置过程共记录 ${timeline.length} 条（含人工处置记录），详见下表。`,
+      content: `事件时间线共记录 ${timeline.length} 条（含系统与人工补充的事件事实），详见下表。`,
     },
     {
       key: "impactAnalysis",

@@ -116,10 +116,11 @@ Client
 | --- | --- |
 | `CaseState`（`caseState`） | 当前可恢复的案件研判快照（告警上下文、业务核查、Checklist、HumanReview、Timeline 等） |
 | `ReportDraft` | 独立持久化的调查报告草稿；不等于案件快照，也不等于 Audit |
-| `Timeline` | **安全事件 / 处置过程**历史（发生了什么） |
-| `AuditLog`（`CaseAuditLog`） | **运营操作**历史（谁对案件做了什么） |
+| `Timeline` | **案件事件事实历史**（安全事件 / 业务事件本身发生了什么） |
+| `AuditLog`（`CaseAuditLog`） | **案件运营操作历史**（研判人员对案件执行了什么操作） |
 
 禁止把 Audit 当作 Timeline，也禁止把 Timeline 当作操作审计。
+人工补充 Timeline 并不代表「人工处置事件」；`source=HUMAN` 仅表示录入来源。
 
 时间戳语义：
 

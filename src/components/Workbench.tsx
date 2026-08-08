@@ -30,7 +30,7 @@ export interface WorkbenchCase {
 /**
  * 安全事件研判工作台（Demo）。
  * 业务上下文修改后自动重新运行规则分析；
- * 核查清单与人工处置记录仅保存在浏览器 state，刷新后丢失。
+ * 核查清单与事件时间线补充在未持久化演示路径中仅保存在浏览器 state。
  * 系统建议与人工研判严格分离，系统分析不覆盖 HumanReview。
  */
 export function Workbench({

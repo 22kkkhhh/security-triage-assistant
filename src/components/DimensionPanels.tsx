@@ -49,7 +49,8 @@ function RuleList({
                     key={id}
                     className="border-l-2 border-neutral-300 pl-2 text-xs leading-5 text-neutral-500"
                   >
-                    证据 {id}：{evidence.summary}
+                    证据 {id}：
+                    {formatDateTimesInDisplayText(evidence.summary)}
                   </p>
                 );
               })}

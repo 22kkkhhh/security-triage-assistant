@@ -20,6 +20,10 @@ import {
   type SensitiveFinding,
 } from "@/services/reporting/masking";
 import { buildReportData } from "@/services/reporting/reportBuilder";
+import {
+  formatDateTimeForDisplay,
+  formatDateTimesInDisplayText,
+} from "@/lib/formatDateTimeForDisplay";
 import { Panel } from "../common";
 
 export interface ReportSession {
@@ -262,11 +266,15 @@ function EvidenceSelector({
             </span>{" "}
             <span className="text-xs text-neutral-500">
               {evidenceSourceTypeLabels[evidence.sourceType]} ·{" "}
-              {evidence.timestamp ?? "（无时间）"} · 关联规则{" "}
-              {evidence.relatedRuleId}
+              {evidence.timestamp
+                ? formatDateTimeForDisplay(evidence.timestamp)
+                : "（无时间）"}{" "}
+              · 关联规则 {evidence.relatedRuleId}
             </span>
             <div className="text-sm text-neutral-900">{evidence.title}</div>
-            <div className="text-xs text-neutral-600">{evidence.summary}</div>
+            <div className="text-xs text-neutral-600">
+              {formatDateTimesInDisplayText(evidence.summary)}
+            </div>
           </div>
         </li>
       ))}
@@ -333,8 +341,14 @@ function ReportPreview({
                   <tr key={e.evidenceId}>
                     <td className="border border-neutral-200 px-2 py-1 font-mono">{e.evidenceId}</td>
                     <td className="border border-neutral-200 px-2 py-1">{evidenceSourceTypeLabels[e.sourceType]}</td>
-                    <td className="border border-neutral-200 px-2 py-1">{e.timestamp ?? "（无时间）"}</td>
-                    <td className="border border-neutral-200 px-2 py-1">{e.summary}</td>
+                    <td className="border border-neutral-200 px-2 py-1">
+                      {e.timestamp
+                        ? formatDateTimeForDisplay(e.timestamp)
+                        : "（无时间）"}
+                    </td>
+                    <td className="border border-neutral-200 px-2 py-1">
+                      {formatDateTimesInDisplayText(e.summary)}
+                    </td>
                     <td className="border border-neutral-200 px-2 py-1 font-mono">{e.relatedRuleId}</td>
                   </tr>
                 ))}
