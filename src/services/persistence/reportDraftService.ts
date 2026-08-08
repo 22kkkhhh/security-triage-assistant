@@ -5,10 +5,7 @@ import {
   mergeChecklistOnRestore,
   toSecurityCaseDraft,
 } from "./caseMapper";
-import {
-  getCaseById,
-  saveReportDraft,
-} from "./caseRepository";
+import { getCaseById, saveReportDraft } from "./caseRepository";
 import type { PersistedCase } from "./types";
 
 export interface ReportWorkbenchContext {
@@ -30,6 +27,16 @@ export interface ReportDraftBundle {
   humanRiskLevel: PersistedCase["humanRiskLevel"];
   humanConclusion: PersistedCase["humanConclusion"];
 }
+
+export type ReportPageLoad =
+  | { status: "not_found" }
+  | {
+      status: "no_report";
+      caseId: string;
+      caseNumber: string;
+      title: string;
+    }
+  | { status: "ready"; bundle: ReportDraftBundle };
 
 function toBundle(
   record: PersistedCase,
@@ -59,7 +66,8 @@ function buildContext(record: PersistedCase): ReportWorkbenchContext {
   };
 }
 
-function buildInitialReport(record: PersistedCase): ReportData {
+/** 从当前案件状态构建初稿（不写入 DB） */
+export function buildInitialReportFromRecord(record: PersistedCase): ReportData {
   const draft = toSecurityCaseDraft(record.id, record.caseState);
   const analyzed = analyzeSecurityCase(draft);
   const checklist = mergeChecklistOnRestore(
@@ -77,7 +85,6 @@ function buildInitialReport(record: PersistedCase): ReportData {
     checklist,
     timeline: record.caseState.timeline,
   });
-  // 使用 CaseRecord 稳定案件编号，覆盖报告构建器基于草稿 id 的临时编号
   return {
     ...report,
     caseNumber: record.caseNumber,
@@ -90,8 +97,28 @@ function buildInitialReport(record: PersistedCase): ReportData {
 }
 
 /**
- * 获取或首次创建报告草稿。
- * 已有 reportDraft 时绝不调用 buildReportData 覆盖人工编辑。
+ * 报告页加载：只读，绝不在 GET 时创建 reportDraft。
+ */
+export async function loadReportPage(caseId: string): Promise<ReportPageLoad> {
+  const record = await getCaseById(caseId);
+  if (!record) return { status: "not_found" };
+  if (!record.reportDraft) {
+    return {
+      status: "no_report",
+      caseId: record.id,
+      caseNumber: record.caseNumber,
+      title: record.title,
+    };
+  }
+  return {
+    status: "ready",
+    bundle: toBundle(record, record.reportDraft, false),
+  };
+}
+
+/**
+ * @deprecated v1.2 请使用 createReportDraftCommand。
+ * 已有 reportDraft 时绝不覆盖。
  */
 export async function getOrCreateReportDraft(
   caseId: string,
@@ -103,15 +130,13 @@ export async function getOrCreateReportDraft(
     return toBundle(record, record.reportDraft, false);
   }
 
-  // 并发保护：生成前再次读取，若已有草稿则直接返回
   const again = await getCaseById(caseId);
   if (!again) return null;
   if (again.reportDraft) {
     return toBundle(again, again.reportDraft, false);
   }
 
-  const report = buildInitialReport(again);
-  // 写入前再读一次，避免双写覆盖
+  const report = buildInitialReportFromRecord(again);
   const beforeWrite = await getCaseById(caseId);
   if (beforeWrite?.reportDraft) {
     return toBundle(beforeWrite, beforeWrite.reportDraft, false);

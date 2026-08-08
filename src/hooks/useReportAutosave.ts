@@ -2,23 +2,27 @@
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { saveReportDraftAction } from "@/app/(app)/cases/reportActions";
+import type { ReportData } from "@/domain/types";
 import {
   autosaveReducer,
   initialAutosaveState,
   type AutosaveState,
 } from "./autosaveState";
-import type { ReportData } from "@/domain/types";
 
 const DEFAULT_DEBOUNCE_MS = 1800;
 
 /**
- * 报告草稿自动保存（与案件 autosave 状态机一致，保存目标为 reportDraft）。
+ * 报告草稿自动保存：
+ * - 本页生命周期内第一次真实 dirty 的成功保存 → REPORT_UPDATED（一次）
+ * - 后续 autosave 只更新 reportDraft / reportUpdatedAt，不刷 Audit / lastActivityAt
+ * - 使用 baseReportUpdatedAt 防并发覆盖
  */
 export function useReportAutosave(options: {
   caseId: string;
   getReport: () => ReportData;
   debounceMs?: number;
   initialSavedAt?: string | null;
+  onStale?: () => void;
 }) {
   const { caseId, debounceMs = DEFAULT_DEBOUNCE_MS } = options;
   const [state, dispatch] = useReducer(autosaveReducer, {
@@ -27,13 +31,21 @@ export function useReportAutosave(options: {
     lastSavedAt: options.initialSavedAt ?? null,
   });
   const getReportRef = useRef(options.getReport);
+  const onStaleRef = useRef(options.onStale);
   const seqRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef(state);
+  const editOperationIdRef = useRef<string | null>(null);
+  const auditRecordedRef = useRef(false);
+  const staleLockedRef = useRef(false);
 
   useEffect(() => {
     getReportRef.current = options.getReport;
   }, [options.getReport]);
+
+  useEffect(() => {
+    onStaleRef.current = options.onStale;
+  }, [options.onStale]);
 
   useEffect(() => {
     stateRef.current = state;
@@ -47,19 +59,45 @@ export function useReportAutosave(options: {
   };
 
   const runSave = useCallback(async (): Promise<boolean> => {
+    if (staleLockedRef.current) return false;
     clearTimer();
     const seq = ++seqRef.current;
     dispatch({ type: "SAVE_START", seq });
     try {
-      const result = await saveReportDraftAction(caseId, getReportRef.current());
+      const auditOperationId =
+        !auditRecordedRef.current && editOperationIdRef.current
+          ? editOperationIdRef.current
+          : null;
+      const result = await saveReportDraftAction(
+        caseId,
+        getReportRef.current(),
+        {
+          baseReportUpdatedAt: stateRef.current.lastSavedAt,
+          auditOperationId,
+        },
+      );
       if (!result.ok) {
+        if (result.code === "STALE_REPORT") {
+          staleLockedRef.current = true;
+          clearTimer();
+          onStaleRef.current?.();
+          dispatch({
+            type: "SAVE_ERROR",
+            seq,
+            message: result.error,
+          });
+          return false;
+        }
         dispatch({ type: "SAVE_ERROR", seq, message: result.error });
         return false;
+      }
+      if (result.audited) {
+        auditRecordedRef.current = true;
       }
       dispatch({
         type: "SAVE_SUCCESS",
         seq,
-        savedAt: result.updatedAt,
+        savedAt: result.reportUpdatedAt,
       });
       return true;
     } catch (error) {
@@ -72,6 +110,10 @@ export function useReportAutosave(options: {
 
   const scheduleSave = useCallback(
     (mode: "debounce" | "immediate" = "debounce") => {
+      if (staleLockedRef.current) return;
+      if (!editOperationIdRef.current) {
+        editOperationIdRef.current = crypto.randomUUID();
+      }
       dispatch({ type: "MARK_DIRTY" });
       if (mode === "immediate") {
         void runSave();
@@ -86,6 +128,7 @@ export function useReportAutosave(options: {
   );
 
   const flushSave = useCallback(async (): Promise<boolean> => {
+    if (staleLockedRef.current) return false;
     clearTimer();
     const current = stateRef.current;
     if (current.status === "SAVED" || current.status === "IDLE") {
@@ -101,5 +144,6 @@ export function useReportAutosave(options: {
     scheduleSave,
     flushSave,
     retrySave: runSave,
+    isStaleLocked: () => staleLockedRef.current,
   };
 }

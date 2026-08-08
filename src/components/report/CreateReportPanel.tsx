@@ -1,0 +1,71 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createReportDraftAction } from "@/app/(app)/cases/reportActions";
+
+/**
+ * 案件尚未生成报告时的显式创建入口（GET 无副作用）。
+ */
+export function CreateReportPanel({
+  caseId,
+  caseNumber,
+  title,
+}: {
+  caseId: string;
+  caseNumber: string;
+  title: string;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const operationIdRef = useRef<string | null>(null);
+
+  const handleCreate = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    if (!operationIdRef.current) {
+      operationIdRef.current = crypto.randomUUID();
+    }
+    try {
+      const result = await createReportDraftAction(
+        caseId,
+        operationIdRef.current,
+      );
+      if (!result.ok) {
+        setError(result.error || "报告初稿生成失败，请重试。");
+        setBusy(false);
+        return;
+      }
+      router.refresh();
+      router.push(`/cases/${caseId}/report`);
+    } catch {
+      setError("报告初稿生成失败，请重试。");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-4 rounded-md border border-neutral-200 bg-white px-6 py-8">
+      <div className="font-mono text-xs text-neutral-500">{caseNumber}</div>
+      <h1 className="text-xl font-semibold text-neutral-900">{title}</h1>
+      <p className="text-sm text-neutral-600">
+        当前案件尚未生成调查报告。
+      </p>
+      {error && (
+        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {error}
+        </div>
+      )}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void handleCreate()}
+        className="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
+      >
+        {busy ? "正在生成…" : "生成报告"}
+      </button>
+    </div>
+  );
+}

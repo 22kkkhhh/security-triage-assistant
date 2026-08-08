@@ -219,15 +219,43 @@ export async function saveCaseState(
   return rowToPersistedCase(row);
 }
 
+/** stale report autosave：禁止用旧草稿覆盖较新 reportUpdatedAt */
+export class StaleReportDraftError extends Error {
+  readonly code = "STALE_REPORT" as const;
+  constructor(message = "报告已在其他页面发生更新") {
+    super(message);
+    this.name = "StaleReportDraftError";
+  }
+}
+
 /**
  * 保存人工报告草稿。
  * 一旦写入，恢复时不得用 buildReportData 覆盖。
+ * 不更新 lastActivityAt（有意义的报告活动由 Audit Command 负责）。
  */
 export async function saveReportDraft(
   id: string,
   reportDraft: ReportData,
+  client: CaseDbClient = prisma,
+  options?: { baseReportUpdatedAt?: string | null },
 ): Promise<PersistedCase> {
-  const row = await prisma.caseRecord.update({
+  const existing = await client.caseRecord.findUnique({ where: { id } });
+  if (!existing) throw new Error(`案件不存在：${id}`);
+
+  if (options?.baseReportUpdatedAt) {
+    const baseMs = new Date(options.baseReportUpdatedAt).getTime();
+    const currentMs = existing.reportUpdatedAt?.getTime() ?? 0;
+    if (
+      existing.reportUpdatedAt &&
+      Number.isFinite(baseMs) &&
+      Number.isFinite(currentMs) &&
+      currentMs > baseMs
+    ) {
+      throw new StaleReportDraftError();
+    }
+  }
+
+  const row = await client.caseRecord.update({
     where: { id },
     data: {
       reportDraft: toJsonValue(reportDraft),

@@ -17,6 +17,7 @@ import {
   updateBusinessContextAction,
   updateHumanReviewAction,
 } from "@/app/(app)/cases/commandActions";
+import { createReportDraftAction } from "@/app/(app)/cases/reportActions";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
 import {
   hasStructuredBusinessContextChange,
@@ -379,7 +380,11 @@ export function PersistedCaseWorkbench({
     router.push("/cases");
   };
 
+  const createReportOperationIdRef = useRef<string | null>(null);
+
   const goToReport = async () => {
+    setNavigationError(null);
+    setCommandError(null);
     if (
       saveState.status === "DIRTY" ||
       saveState.status === "SAVING" ||
@@ -391,7 +396,29 @@ export function PersistedCaseWorkbench({
         return;
       }
     }
-    router.push(`/cases/${initial.caseId}/report`);
+
+    if (hasReport) {
+      router.push(`/cases/${initial.caseId}/report`);
+      return;
+    }
+
+    if (!createReportOperationIdRef.current) {
+      createReportOperationIdRef.current = crypto.randomUUID();
+    }
+    try {
+      const result = await createReportDraftAction(
+        initial.caseId,
+        createReportOperationIdRef.current,
+      );
+      if (!result.ok) {
+        setCommandError(result.error || "报告初稿生成失败，请重试。");
+        return;
+      }
+      commitExternalSave(result.updatedAt);
+      router.push(`/cases/${initial.caseId}/report`);
+    } catch {
+      setCommandError("报告初稿生成失败，请重试。");
+    }
   };
 
   return (

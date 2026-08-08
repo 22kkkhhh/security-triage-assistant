@@ -2,16 +2,51 @@
 
 import type { ReportData } from "@/domain/types";
 import {
-  getCaseById,
-  saveReportDraft,
-} from "@/services/persistence/caseRepository";
+  createReportDraftCommand,
+  exportReportCommand,
+  saveReportDraftCommand,
+} from "@/services/caseCommands";
 import {
-  getOrCreateReportDraft,
-  getReportExportPayload,
-} from "@/services/persistence/reportDraftService";
+  getCaseById,
+  StaleReportDraftError,
+} from "@/services/persistence/caseRepository";
 
 export type SaveReportActionResult =
-  | { ok: true; updatedAt: string; reportUpdatedAt: string }
+  | {
+      ok: true;
+      alreadyApplied?: boolean;
+      updatedAt: string;
+      reportUpdatedAt: string;
+      lastActivityAt: string;
+      audited: boolean;
+    }
+  | {
+      ok: false;
+      error: string;
+      code?: "STALE_REPORT";
+      reportUpdatedAt?: string | null;
+    };
+
+export type CreateReportActionResult =
+  | {
+      ok: true;
+      alreadyApplied: boolean;
+      caseId: string;
+      updatedAt: string;
+      reportUpdatedAt: string | null;
+      lastActivityAt: string;
+    }
+  | { ok: false; error: string };
+
+export type ExportReportActionResult =
+  | {
+      ok: true;
+      alreadyApplied: boolean;
+      fileBase64: string;
+      fileName: string;
+      lastActivityAt: string;
+      reportUpdatedAt: string | null;
+    }
   | { ok: false; error: string };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -32,10 +67,38 @@ function parseReportData(raw: unknown): ReportData | string {
   return raw as unknown as ReportData;
 }
 
-/** 保存完整 reportDraft；不修改 caseState / HumanReview / Checklist */
+/** 显式生成报告初稿 */
+export async function createReportDraftAction(
+  caseId: string,
+  operationId: unknown,
+): Promise<CreateReportActionResult> {
+  if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
+  if (typeof operationId !== "string" || !operationId.trim()) {
+    return { ok: false, error: "operationId 无效" };
+  }
+  const result = await createReportDraftCommand({
+    caseId,
+    operationId: operationId.trim(),
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+  return {
+    ok: true,
+    alreadyApplied: result.alreadyApplied,
+    caseId: result.case.id,
+    updatedAt: result.case.updatedAt,
+    reportUpdatedAt: result.case.reportUpdatedAt,
+    lastActivityAt: result.case.lastActivityAt,
+  };
+}
+
+/** 保存完整 reportDraft；可选本会话首次审计 */
 export async function saveReportDraftAction(
   caseId: string,
   rawReport: unknown,
+  options?: {
+    baseReportUpdatedAt?: string | null;
+    auditOperationId?: string | null;
+  },
 ): Promise<SaveReportActionResult> {
   if (!caseId || typeof caseId !== "string" || !caseId.trim()) {
     return { ok: false, error: "案件 ID 无效" };
@@ -46,49 +109,71 @@ export async function saveReportDraftAction(
   }
 
   try {
-    const existing = await getCaseById(caseId);
-    if (!existing) return { ok: false, error: "案件不存在" };
-    const saved = await saveReportDraft(caseId, parsed);
+    const result = await saveReportDraftCommand({
+      caseId,
+      reportDraft: parsed,
+      baseReportUpdatedAt: options?.baseReportUpdatedAt ?? null,
+      auditOperationId: options?.auditOperationId ?? null,
+    });
+    if (!result.ok) {
+      if (result.error.includes("其他页面") || result.error.includes("已发生更新")) {
+        const latest = await getCaseById(caseId);
+        return {
+          ok: false,
+          error:
+            "报告已在其他页面发生更新。为避免覆盖，请刷新后重新确认内容。",
+          code: "STALE_REPORT",
+          reportUpdatedAt: latest?.reportUpdatedAt ?? null,
+        };
+      }
+      return { ok: false, error: result.error };
+    }
     return {
       ok: true,
-      updatedAt: saved.reportUpdatedAt ?? saved.updatedAt,
-      reportUpdatedAt: saved.reportUpdatedAt ?? saved.updatedAt,
+      alreadyApplied: result.alreadyApplied,
+      updatedAt: result.case.reportUpdatedAt ?? result.case.updatedAt,
+      reportUpdatedAt: result.case.reportUpdatedAt ?? result.case.updatedAt,
+      lastActivityAt: result.case.lastActivityAt,
+      audited: Boolean(result.audit),
     };
   } catch (error) {
+    if (error instanceof StaleReportDraftError) {
+      const latest = await getCaseById(caseId);
+      return {
+        ok: false,
+        error:
+          "报告已在其他页面发生更新。为避免覆盖，请刷新后重新确认内容。",
+        code: "STALE_REPORT",
+        reportUpdatedAt: latest?.reportUpdatedAt ?? null,
+      };
+    }
     const message = error instanceof Error ? error.message : "报告保存失败";
     return { ok: false, error: message };
   }
 }
 
-/** 服务端确保草稿存在（页面也可直接调用 getOrCreateReportDraft） */
-export async function ensureReportDraftAction(caseId: string) {
-  if (!caseId?.trim()) {
-    return { ok: false as const, error: "案件 ID 无效" };
+/** 统一导出：报告页与报告中心共用 */
+export async function exportReportAction(
+  caseId: string,
+  operationId: unknown,
+  maskSensitive: unknown = true,
+): Promise<ExportReportActionResult> {
+  if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
+  if (typeof operationId !== "string" || !operationId.trim()) {
+    return { ok: false, error: "operationId 无效" };
   }
-  try {
-    const bundle = await getOrCreateReportDraft(caseId);
-    if (!bundle) return { ok: false as const, error: "案件不存在" };
-    return { ok: true as const, freshlyCreated: bundle.freshlyCreated };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "报告初稿生成失败，请重试。";
-    return { ok: false as const, error: message };
-  }
-}
-
-/** 报告中心/导出：仅返回已保存 reportDraft，绝不临时 build */
-export async function getReportExportPayloadAction(caseId: string) {
-  if (!caseId?.trim()) {
-    return { ok: false as const, error: "案件 ID 无效" };
-  }
-  try {
-    const payload = await getReportExportPayload(caseId);
-    if (!payload) {
-      return { ok: false as const, error: "报告草稿不存在" };
-    }
-    return { ok: true as const, ...payload };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "读取报告失败";
-    return { ok: false as const, error: message };
-  }
+  const result = await exportReportCommand({
+    caseId,
+    operationId: operationId.trim(),
+    maskSensitive: maskSensitive !== false,
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+  return {
+    ok: true,
+    alreadyApplied: result.alreadyApplied,
+    fileBase64: result.fileBase64,
+    fileName: result.fileName,
+    lastActivityAt: result.lastActivityAt,
+    reportUpdatedAt: result.reportUpdatedAt,
+  };
 }

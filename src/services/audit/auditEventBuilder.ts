@@ -312,23 +312,33 @@ export function buildReportCreatedAudit(input: {
 }): BuiltAuditEvent {
   return withActor(manualActor(input.reviewer), {
     actionType: "REPORT_CREATED",
-    summary: `创建报告草稿 ${input.caseNumber}`,
-    changes: { caseNumber: input.caseNumber },
-    metadata: null,
+    summary: "生成调查报告初稿",
+    changes: null,
+    metadata: { caseNumber: input.caseNumber },
     operationId: input.operationId ?? null,
   });
 }
 
 export function buildReportUpdatedAudit(input: {
   caseNumber: string;
+  reportUpdatedAtFrom?: string | null;
+  reportUpdatedAtTo?: string | null;
   reviewer?: string | null;
   operationId?: string | null;
 }): BuiltAuditEvent {
   return withActor(manualActor(input.reviewer), {
     actionType: "REPORT_UPDATED",
-    summary: `更新报告草稿 ${input.caseNumber}`,
-    changes: { caseNumber: input.caseNumber },
-    metadata: null,
+    summary: "更新调查报告",
+    changes:
+      input.reportUpdatedAtFrom || input.reportUpdatedAtTo
+        ? {
+            reportUpdatedAt: {
+              from: input.reportUpdatedAtFrom ?? null,
+              to: input.reportUpdatedAtTo ?? null,
+            },
+          }
+        : null,
+    metadata: { caseNumber: input.caseNumber },
     operationId: input.operationId ?? null,
   });
 }
@@ -341,9 +351,12 @@ export function buildReportExportedAudit(input: {
 }): BuiltAuditEvent {
   return withActor(manualActor(input.reviewer), {
     actionType: "REPORT_EXPORTED",
-    summary: `导出调查分析报告 ${input.caseNumber}`,
-    changes: { caseNumber: input.caseNumber },
-    metadata: input.fileName ? { fileName: input.fileName } : null,
+    summary: "导出调查报告",
+    changes: null,
+    metadata: {
+      caseNumber: input.caseNumber,
+      ...(input.fileName ? { fileName: input.fileName } : {}),
+    },
     operationId: input.operationId ?? null,
   });
 }

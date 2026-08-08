@@ -4,10 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { evidenceSourceTypeLabels } from "@/domain/labels";
 import type { Evidence, ReportData, TimelineEvent } from "@/domain/types";
-import {
-  generateDocxBlob,
-  suggestDocxFileName,
-} from "@/services/reporting/docxGenerator";
+import { exportReportAction } from "@/app/(app)/cases/reportActions";
 import {
   scanSensitive,
   sensitiveTypeLabels,
@@ -41,13 +38,21 @@ export function PersistedReportEditor({
   );
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [staleNotice, setStaleNotice] = useState<string | null>(null);
+  const exportOperationIdRef = useRef<string | null>(null);
 
   const getReport = useCallback(() => reportRef.current, []);
-  const { saveState, scheduleSave, flushSave, retrySave } = useReportAutosave({
-    caseId: bundle.caseId,
-    getReport,
-    initialSavedAt: bundle.reportUpdatedAt,
-  });
+  const { saveState, scheduleSave, flushSave, retrySave, isStaleLocked } =
+    useReportAutosave({
+      caseId: bundle.caseId,
+      getReport,
+      initialSavedAt: bundle.reportUpdatedAt,
+      onStale: () => {
+        setStaleNotice(
+          "报告已在其他页面发生更新。为避免覆盖，请刷新后重新确认内容。",
+        );
+      },
+    });
 
   const commitReport = (
     next: ReportData,
@@ -112,24 +117,36 @@ export function PersistedReportEditor({
   };
 
   const doExport = async (maskSensitive: boolean) => {
+    if (!exportOperationIdRef.current) {
+      exportOperationIdRef.current = crypto.randomUUID();
+    }
     try {
-      const blob = await generateDocxBlob(
-        reportRef.current,
-        {
-          evidences: bundle.context.evidences,
-          timeline: bundle.context.timeline,
-        },
-        { maskSensitive },
+      const result = await exportReportAction(
+        bundle.caseId,
+        exportOperationIdRef.current,
+        maskSensitive,
       );
+      if (!result.ok) {
+        setExportError(result.error || "Word 报告导出失败，请重试。");
+        setExportFindings(null);
+        return;
+      }
+      const bytes = Uint8Array.from(atob(result.fileBase64), (c) =>
+        c.charCodeAt(0),
+      );
+      const blob = new Blob([bytes], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = suggestDocxFileName(reportRef.current);
+      link.download = result.fileName;
       link.click();
       URL.revokeObjectURL(url);
       setExportFindings(null);
+      exportOperationIdRef.current = null;
     } catch {
-      setExportError("Word 导出失败，请重试。");
+      setExportError("Word 报告导出失败，请重试。");
       setExportFindings(null);
     }
   };
@@ -146,12 +163,25 @@ export function PersistedReportEditor({
         onRetry={() => {
           setNavigationError(null);
           setExportError(null);
-          void retrySave();
+          if (!isStaleLocked()) void retrySave();
         }}
         onExport={() => void handleExportClick()}
         mode={mode}
         onToggleMode={() => setMode(mode === "edit" ? "preview" : "edit")}
       />
+
+      {staleNotice && (
+        <div className="rounded border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          {staleNotice}
+          <button
+            type="button"
+            className="ml-3 underline underline-offset-2"
+            onClick={() => window.location.reload()}
+          >
+            刷新页面
+          </button>
+        </div>
+      )}
 
       {mode === "edit" ? (
         <>

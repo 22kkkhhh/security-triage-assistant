@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
+import { CreateReportPanel } from "@/components/report/CreateReportPanel";
 import { PersistedReportEditor } from "@/components/report/PersistedReportEditor";
-import { getOrCreateReportDraft } from "@/services/persistence/reportDraftService";
+import { loadReportPage } from "@/services/persistence/reportDraftService";
 
 export const dynamic = "force-dynamic";
 
 /**
  * 报告编辑页：
- * - reportDraft 已存在 → 直接加载，绝不 rebuild
- * - 不存在 → 首次 buildReportData 并持久化
+ * - reportDraft 已存在 → 加载编辑器，绝不 rebuild
+ * - 不存在 → 展示显式生成入口（GET 无创建副作用）
  */
 export default async function CaseReportPage({
   params,
@@ -15,15 +16,21 @@ export default async function CaseReportPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let bundle;
-  try {
-    bundle = await getOrCreateReportDraft(id);
-  } catch {
-    throw new Error("报告初稿生成失败，请重试。");
-  }
-  if (!bundle) {
+  const loaded = await loadReportPage(id);
+
+  if (loaded.status === "not_found") {
     notFound();
   }
 
-  return <PersistedReportEditor bundle={bundle} />;
+  if (loaded.status === "no_report") {
+    return (
+      <CreateReportPanel
+        caseId={loaded.caseId}
+        caseNumber={loaded.caseNumber}
+        title={loaded.title}
+      />
+    );
+  }
+
+  return <PersistedReportEditor bundle={loaded.bundle} />;
 }

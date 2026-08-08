@@ -9,6 +9,13 @@ export {
 } from "./caseCommands";
 
 export {
+  createReportDraftCommand,
+  exportReportCommand,
+  saveReportDraftCommand,
+  type ExportReportCommandResult,
+} from "./reportCommands";
+
+export {
   hasStructuredBusinessContextChange,
   hasStructuredHumanReviewChange,
 } from "./structuredDiff";

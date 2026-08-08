@@ -1,51 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { getReportExportPayloadAction } from "@/app/(app)/cases/reportActions";
-import {
-  generateDocxBlob,
-  suggestDocxFileName,
-} from "@/services/reporting/docxGenerator";
-import { scanSensitive } from "@/services/reporting/masking";
+import { useRef, useState } from "react";
+import { exportReportAction } from "@/app/(app)/cases/reportActions";
 
 /**
- * 报告中心导出：仅使用已保存 reportDraft，绝不临时 buildReportData。
+ * 报告中心导出：与报告页共用 exportReportCommand / exportReportAction。
  */
 export function ReportExportButton({ caseId }: { caseId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const operationIdRef = useRef<string | null>(null);
 
   const handleExport = async () => {
     setBusy(true);
     setError(null);
+    if (!operationIdRef.current) {
+      operationIdRef.current = crypto.randomUUID();
+    }
     try {
-      const payload = await getReportExportPayloadAction(caseId);
-      if (!payload.ok) {
-        setError(payload.error);
+      const result = await exportReportAction(
+        caseId,
+        operationIdRef.current,
+        true,
+      );
+      if (!result.ok) {
+        setError(result.error || "Word 报告导出失败，请重试。");
         return;
       }
-      const plain = [
-        payload.report.title,
-        ...payload.report.sections.map((s) => s.content),
-      ].join("\n");
-      const findings = scanSensitive(plain);
-      const maskSensitive = findings.length > 0;
-      const blob = await generateDocxBlob(
-        payload.report,
-        {
-          evidences: payload.evidences,
-          timeline: payload.timeline,
-        },
-        { maskSensitive },
+      const bytes = Uint8Array.from(atob(result.fileBase64), (c) =>
+        c.charCodeAt(0),
       );
+      const blob = new Blob([bytes], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = suggestDocxFileName(payload.report);
+      link.download = result.fileName;
       link.click();
       URL.revokeObjectURL(url);
+      operationIdRef.current = null;
     } catch {
-      setError("Word 导出失败，请重试。");
+      setError("Word 报告导出失败，请重试。");
     } finally {
       setBusy(false);
     }
