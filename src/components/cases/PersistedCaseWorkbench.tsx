@@ -25,8 +25,15 @@ import {
 } from "@/services/caseCommands/structuredDiff";
 import { mergeChecklistOnRestore } from "@/services/persistence/caseMapper";
 import type { RestoredWorkbenchView } from "@/services/persistence/restoreWorkbench";
-import type { CaseComplianceChecklistView } from "@/services/knowledge/caseComplianceChecklist";
+import type {
+  CaseComplianceChecklistItem,
+  CaseComplianceChecklistView,
+} from "@/services/knowledge/caseComplianceChecklist";
 import type { CaseCompliancePanelView } from "@/services/knowledge/caseCompliancePanel";
+import {
+  createChecklistItemFromComplianceSuggestion,
+  hasSuggestionInChecklist,
+} from "@/services/checklist/fromComplianceSuggestion";
 import { useCaseAutosave } from "@/hooks/useCaseAutosave";
 import { BusinessContextPanel } from "@/components/BusinessContextPanel";
 import { ChecklistPanel } from "@/components/ChecklistPanel";
@@ -113,6 +120,9 @@ export function PersistedCaseWorkbench({
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [staleNotice, setStaleNotice] = useState<string | null>(null);
+  const [pendingSuggestionKey, setPendingSuggestionKey] = useState<
+    string | null
+  >(null);
   const activityPanelRef = useRef<CaseActivityPanelHandle>(null);
 
   /** Command 返回的 Audit 局部合并进 Feed，避免 router.refresh 冲掉未保存输入 */
@@ -451,9 +461,13 @@ export function PersistedCaseWorkbench({
     itemId: string,
     nextChecklist: ChecklistItem[],
     prevChecklistBase: ChecklistItem[],
+    options?: { suggestionKey?: string },
   ) => {
     setChecklistBase(nextChecklist);
     payloadRef.current = { ...payloadRef.current, checklist: nextChecklist };
+    if (options?.suggestionKey) {
+      setPendingSuggestionKey(options.suggestionKey);
+    }
     const operationId = crypto.randomUUID();
     const baseUpdatedAt = getPersistedUpdatedAt();
     cancelPendingSave();
@@ -467,6 +481,9 @@ export function PersistedCaseWorkbench({
         getCommandPayload(),
         baseUpdatedAt,
       );
+      if (options?.suggestionKey) {
+        setPendingSuggestionKey(null);
+      }
       if (!result.ok) {
         if (applyCommandStale(result)) return;
         setChecklistBase(prevChecklistBase);
@@ -479,9 +496,41 @@ export function PersistedCaseWorkbench({
         );
         return;
       }
+      // 幂等已加入：以服务端 canonical checklist 为准
+      if (result.caseState?.checklist) {
+        setChecklistBase(result.caseState.checklist);
+        payloadRef.current = {
+          ...payloadRef.current,
+          checklist: result.caseState.checklist,
+        };
+      }
       commitExternalSave(result.updatedAt);
       mergeReturnedAudit(result.audit);
     })();
+  };
+
+  const addedSuggestionKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const item of checklist) {
+      const key = item.sourceRef?.suggestionKey;
+      if (item.sourceKind === "KNOWLEDGE_SUGGESTED" && key) {
+        keys.add(key);
+      }
+    }
+    return keys;
+  }, [checklist]);
+
+  const handleAddComplianceSuggestion = (
+    suggestion: CaseComplianceChecklistItem,
+  ) => {
+    if (!capabilities.canWriteChecklist) return;
+    if (hasSuggestionInChecklist(checklistBase, suggestion.key)) return;
+    const prevBase = checklistBase;
+    const created = createChecklistItemFromComplianceSuggestion(suggestion);
+    const next = [...checklistBase, created];
+    runChecklistCommand("add", created.id, next, prevBase, {
+      suggestionKey: suggestion.key,
+    });
   };
 
   const handleBack = async () => {
@@ -630,7 +679,13 @@ export function PersistedCaseWorkbench({
 
       <CaseCompliancePanel view={compliancePanel} />
 
-      <CaseComplianceChecklistPanel view={complianceChecklist} />
+      <CaseComplianceChecklistPanel
+        view={complianceChecklist}
+        addedSuggestionKeys={addedSuggestionKeys}
+        canWrite={capabilities.canWriteChecklist}
+        pendingSuggestionKey={pendingSuggestionKey}
+        onAddSuggestion={handleAddComplianceSuggestion}
+      />
 
       <BusinessContextPanel
         businessContext={businessContext}

@@ -79,6 +79,10 @@ export function ChecklistPanel({
                   <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700">
                     系统生成 · {item.relatedRuleId}
                   </span>
+                ) : item.sourceKind === "KNOWLEDGE_SUGGESTED" ? (
+                  <span className="rounded bg-teal-50 px-1.5 py-0.5 text-xs text-teal-800">
+                    合规建议
+                  </span>
                 ) : (
                   <span className="rounded bg-purple-50 px-1.5 py-0.5 text-xs text-purple-700">
                     人工新增

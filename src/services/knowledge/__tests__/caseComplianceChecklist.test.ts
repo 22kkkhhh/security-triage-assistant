@@ -339,11 +339,15 @@ describe("CaseComplianceChecklistPanel UI 契约", () => {
     expect(panel).not.toMatch(/必须认定违法|已构成违规|责任成立/);
   });
 
-  it("工作台接入只读视图；页面一次 load 双视图", () => {
+  it("工作台接入建议视图与加入清单；页面一次 load 双视图", () => {
     expect(workbench).toContain("CaseComplianceChecklistPanel");
     expect(workbench).toContain("complianceChecklist");
+    expect(workbench).toContain("handleAddComplianceSuggestion");
+    expect(workbench).toContain("canWriteChecklist");
     expect(workbench).not.toContain("resolveCaseCompliance");
     expect(page).toContain("loadCaseComplianceWorkbenchViews");
     expect(page).toContain("complianceChecklist={complianceViews.checklist}");
+    expect(panel).toContain("加入核查清单");
+    expect(panel).toContain("已加入");
   });
 });

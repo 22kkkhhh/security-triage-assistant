@@ -11,7 +11,19 @@ import {
 } from "@/services/knowledge/caseComplianceChecklist";
 import { formatCaseComplianceRelevanceLabel } from "@/services/knowledge/caseCompliancePanel";
 
-function ChecklistRow({ item }: { item: CaseComplianceChecklistItem }) {
+function ChecklistRow({
+  item,
+  alreadyAdded,
+  canWrite,
+  adding,
+  onAdd,
+}: {
+  item: CaseComplianceChecklistItem;
+  alreadyAdded: boolean;
+  canWrite: boolean;
+  adding: boolean;
+  onAdd: (item: CaseComplianceChecklistItem) => void;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -25,14 +37,30 @@ function ChecklistRow({ item }: { item: CaseComplianceChecklistItem }) {
             </p>
           )}
         </div>
-        <button
-          type="button"
-          className="shrink-0 text-xs text-slate-700 underline underline-offset-2"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? "收起依据" : "依据"}
-        </button>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {alreadyAdded ? (
+            <span className="rounded border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600">
+              已加入
+            </span>
+          ) : canWrite ? (
+            <button
+              type="button"
+              className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+              disabled={adding}
+              onClick={() => onAdd(item)}
+            >
+              {adding ? "加入中…" : "加入核查清单"}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="text-xs text-slate-700 underline underline-offset-2"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? "收起依据" : "依据"}
+          </button>
+        </div>
       </div>
 
       {open && (
@@ -79,12 +107,21 @@ function ChecklistRow({ item }: { item: CaseComplianceChecklistItem }) {
 }
 
 /**
- * 只读「建议核查事项」：展示服务端聚合的 CaseComplianceChecklistView。
+ * 「建议核查事项」：展示服务端聚合视图；可 opt-in 加入现有 Case Checklist。
  */
 export function CaseComplianceChecklistPanel({
   view,
+  addedSuggestionKeys,
+  canWrite = false,
+  pendingSuggestionKey = null,
+  onAddSuggestion,
 }: {
   view: CaseComplianceChecklistView;
+  /** 已在 Case Checklist 中的 suggestionKey 集合 */
+  addedSuggestionKeys: ReadonlySet<string>;
+  canWrite?: boolean;
+  pendingSuggestionKey?: string | null;
+  onAddSuggestion?: (item: CaseComplianceChecklistItem) => void;
 }) {
   return (
     <Panel
@@ -113,7 +150,14 @@ export function CaseComplianceChecklistPanel({
               </h3>
               <ul className="space-y-2">
                 {group.items.map((item) => (
-                  <ChecklistRow key={item.key} item={item} />
+                  <ChecklistRow
+                    key={item.key}
+                    item={item}
+                    alreadyAdded={addedSuggestionKeys.has(item.key)}
+                    canWrite={canWrite && Boolean(onAddSuggestion)}
+                    adding={pendingSuggestionKey === item.key}
+                    onAdd={(suggestion) => onAddSuggestion?.(suggestion)}
+                  />
                 ))}
               </ul>
             </section>

@@ -403,6 +403,22 @@ export async function applyChecklistCommand(input: {
     if (!nextItem || nextItem.origin !== "MANUAL") {
       return { ok: false, error: "仅允许新增人工核查事项" };
     }
+    // 同一 Case + suggestionKey 幂等（不同 itemId / operationId 也不得重复加入）
+    const suggestionKey = nextItem.sourceRef?.suggestionKey;
+    if (
+      nextItem.sourceKind === "KNOWLEDGE_SUGGESTED" &&
+      typeof suggestionKey === "string" &&
+      suggestionKey.length > 0
+    ) {
+      const dup = oldItems.find(
+        (i) =>
+          i.sourceKind === "KNOWLEDGE_SUGGESTED" &&
+          i.sourceRef?.suggestionKey === suggestionKey,
+      );
+      if (dup) {
+        return { ok: true, alreadyApplied: true, case: existing, audit: null };
+      }
+    }
     built = buildChecklistAddedAudit({
       itemId: nextItem.id,
       label: nextItem.label,
@@ -411,7 +427,23 @@ export async function applyChecklistCommand(input: {
     });
     built = {
       ...built,
-      changes: { ...(built.changes ?? {}), origin: nextItem.origin },
+      changes: {
+        ...(built.changes ?? {}),
+        origin: nextItem.origin,
+        ...(nextItem.sourceKind
+          ? {
+              sourceKind: nextItem.sourceKind,
+              suggestionKey: nextItem.sourceRef?.suggestionKey ?? null,
+            }
+          : {}),
+      },
+      metadata:
+        nextItem.sourceKind === "KNOWLEDGE_SUGGESTED" && nextItem.sourceRef
+          ? {
+              sourceKind: nextItem.sourceKind,
+              sourceRef: nextItem.sourceRef,
+            }
+          : built.metadata,
     };
   } else if (input.action === "delete") {
     if (!oldItem) {

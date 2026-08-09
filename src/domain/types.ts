@@ -181,6 +181,21 @@ export interface Evidence {
   includedInReport: boolean;
 }
 
+/** 合规建议写入 Checklist 时的来源（可选；存在 caseState JSON，无 Prisma 表变更） */
+export type ChecklistSourceKind = "KNOWLEDGE_SUGGESTED";
+
+export type ChecklistSourceRef = {
+  /** CaseComplianceChecklistItem.key，如 CONTEXT:destinationRegion */
+  suggestionKey: string;
+  kind: "CONTEXT" | "EVIDENCE" | "CHECKLIST";
+  controlCodes: string[];
+  clauseRefs: Array<{
+    clauseKey: string;
+    documentCanonicalCode: string;
+  }>;
+  relevance: string;
+};
+
 /** 人工核查清单项 */
 export interface ChecklistItem {
   id: string;
@@ -188,9 +203,12 @@ export interface ChecklistItem {
   label: string;
   completed: boolean;
   note: string | null;
-  /** SYSTEM = 规则自动生成；MANUAL = 人工新增 */
+  /** SYSTEM = 规则自动生成；MANUAL = 人工新增（含合规建议 opt-in） */
   origin: "SYSTEM" | "MANUAL";
   relatedRuleId: string | null;
+  /** 可选：来自合规建议时标记；不扩展 origin enum */
+  sourceKind?: ChecklistSourceKind;
+  sourceRef?: ChecklistSourceRef;
 }
 
 /** 处置与研判时间线事件 */

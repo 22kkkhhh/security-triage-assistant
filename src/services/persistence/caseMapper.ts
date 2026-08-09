@@ -120,12 +120,22 @@ export function mergeChecklistOnRestore(
         completed: existing.completed,
         note: existing.note,
         origin: existing.origin,
+        ...(existing.sourceKind
+          ? {
+              sourceKind: existing.sourceKind,
+              sourceRef: existing.sourceRef,
+            }
+          : {}),
       });
       seen.add(key);
     } else {
-      // 检查是否按 label 命中（label 去重场景）
+      // 仅 SYSTEM↔SYSTEM 按 label 去重；不得吞掉合规建议 MANUAL 项
       const byLabel = persisted.find(
-        (item) => item.label === fresh.label && !seen.has(checklistMergeKey(item)),
+        (item) =>
+          item.label === fresh.label &&
+          item.origin === "SYSTEM" &&
+          item.sourceKind !== "KNOWLEDGE_SUGGESTED" &&
+          !seen.has(checklistMergeKey(item)),
       );
       if (byLabel) {
         merged.push({
@@ -142,11 +152,17 @@ export function mergeChecklistOnRestore(
     }
   }
 
-  // 保留未匹配的已保存项（含人工新增与用户已编辑的系统项）
+  // 保留未匹配的已保存项（含人工新增、合规建议与用户已编辑的系统项）
   for (const item of persisted) {
     const key = checklistMergeKey(item);
     if (seen.has(key)) continue;
-    if (merged.some((m) => m.id === item.id || m.label === item.label)) continue;
+    if (merged.some((m) => m.id === item.id)) continue;
+    // 合规建议项：即使 label 与系统项相同也必须保留
+    if (item.sourceKind === "KNOWLEDGE_SUGGESTED") {
+      merged.push(item);
+      continue;
+    }
+    if (merged.some((m) => m.label === item.label)) continue;
     merged.push(item);
   }
 

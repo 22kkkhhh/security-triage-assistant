@@ -332,18 +332,14 @@ type ComplianceReferenceSnapshot = {
 
 现有：`origin: "SYSTEM" | "MANUAL"`。
 
-**v1.4.0 建议：**
+**v1.4.0 落地（Step 6）：**
 
-- 不立刻扩展 enum（降低 migration 风险）
-- 加入项时 `origin=MANUAL`
-- 在 note 或并行 metadata（若 Snapshot allowlist 允许扩展）记录：  
-  `sourceKind=KNOWLEDGE_SUGGESTED`, `sourceRef={controlId,clauseId}`
-
-若实现期发现 note 不可靠，再单独立项扩展：
-
-`origin: "SYSTEM" | "MANUAL" | "KNOWLEDGE_SUGGESTED"`
-
-**仅设计，本 Step 不改 Domain。**
+- **不**扩展 `origin` enum；加入项时 `origin=MANUAL`
+- **不**使用 `note` 存 provenance（备注可被 Snapshot 覆盖）
+- Domain 可选字段（写入 `caseState` JSON，无 Prisma migration）：  
+  `sourceKind=KNOWLEDGE_SUGGESTED`  
+  `sourceRef={ suggestionKey, kind, controlCodes, clauseRefs, relevance }`
+- 去重键：`suggestionKey`（= `CaseComplianceChecklistItem.key`）
 
 ---
 

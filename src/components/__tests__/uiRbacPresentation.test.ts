@@ -79,14 +79,20 @@ describe("Case Workbench Viewer presentation", () => {
     expect(src).not.toContain('role === "VIEWER"');
   });
 
-  it("PersistedCaseWorkbench：合规参考/核查清单只读接入，不在前端 resolve Knowledge", () => {
+  it("PersistedCaseWorkbench：合规参考/建议接入；加入清单受 canWriteChecklist", () => {
     const src = readSrc("components/cases/PersistedCaseWorkbench.tsx");
     expect(src).toContain("CaseCompliancePanel");
     expect(src).toContain("CaseComplianceChecklistPanel");
     expect(src).toContain("compliancePanel");
     expect(src).toContain("complianceChecklist");
+    expect(src).toContain("canWriteChecklist");
+    expect(src).toContain("handleAddComplianceSuggestion");
     expect(src).not.toContain("resolveCaseCompliance");
     expect(src).not.toContain("loadCaseComplianceWorkbenchViews");
+    const panel = readSrc("components/cases/CaseComplianceChecklistPanel.tsx");
+    expect(panel).toContain("加入核查清单");
+    expect(panel).toContain("已加入");
+    expect(panel).toContain("canWrite");
   });
 });
 

@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { caseA, caseB } from "@/domain/demo";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
 import { createManualChecklistItem } from "@/services/checklist/generateChecklist";
+import { createChecklistItemFromComplianceSuggestion } from "@/services/checklist/fromComplianceSuggestion";
 import {
   addTimelineEventCommand,
   applyChecklistCommand,
@@ -14,6 +15,7 @@ import {
   updateBusinessContextCommand,
   updateHumanReviewCommand,
 } from "@/services/caseCommands";
+import type { CaseComplianceChecklistItem } from "@/services/knowledge/caseComplianceChecklist";
 import { resetPrismaClient } from "@/lib/prisma";
 import { listCaseAuditLogs } from "@/services/persistence/auditRepository";
 import {
@@ -541,5 +543,139 @@ describe("caseCommands（v1.2 Step 2）", () => {
     );
     expect(a.suggestedAssessment).toBeTruthy();
     expect(b.suggestedAssessment).toBeTruthy();
+  });
+
+  it("合规建议 → ChecklistItem 成功写入 + audit metadata", async () => {
+    const created = await seedCaseA();
+    const suggestion: CaseComplianceChecklistItem = {
+      key: "CHECKLIST:verify-ticket",
+      sourceKey: "verify-ticket",
+      label: "核实该操作是否存在有效授权工单",
+      kind: "CHECKLIST",
+      priority: 10,
+      controlCodes: ["CTRL-BUSINESS-AUTH-01"],
+      clauseRefs: [
+        { clauseKey: "article-27", documentCanonicalCode: "CN-DSL" },
+      ],
+      relevance: "RELEVANT",
+      relationTypes: ["CONTROL_SUPPORT"],
+      ruleIds: ["DATA-003"],
+      supportingRuleIds: [],
+      evidenceIds: [],
+    };
+    const item = createChecklistItemFromComplianceSuggestion(suggestion, "s6a");
+    const next = [...created.caseState.checklist, item];
+    const result = await applyChecklistCommand({
+      caseId: created.id,
+      action: "add",
+      itemId: item.id,
+      operationId: "op-ks-add-1",
+      baseUpdatedAt: created.updatedAt,
+      nextCaseState: toNextState(created, { checklist: next }),
+      actor: systemActor(),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.audit?.actionType).toBe("CHECKLIST_ADDED");
+    expect(result.audit?.metadata).toMatchObject({
+      sourceKind: "KNOWLEDGE_SUGGESTED",
+      sourceRef: { suggestionKey: "CHECKLIST:verify-ticket" },
+    });
+    const stored = result.case.caseState.checklist.find((x) => x.id === item.id);
+    expect(stored?.sourceKind).toBe("KNOWLEDGE_SUGGESTED");
+    expect(stored?.sourceRef?.suggestionKey).toBe("CHECKLIST:verify-ticket");
+  });
+
+  it("同一 Case 重复 suggestionKey 幂等；不同 Case 可分别加入", async () => {
+    const a = await seedCaseA();
+    const bAnalyzed = analyzeSecurityCase(caseB);
+    const b = await createCase({
+      draft: caseB,
+      checklist: bAnalyzed.checklist,
+      suggestedRiskLevel:
+        bAnalyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
+    });
+
+    const suggestion: CaseComplianceChecklistItem = {
+      key: "CONTEXT:destinationRegion",
+      sourceKey: "destinationRegion",
+      label: "核实导出数据类型及数据去向",
+      kind: "CONTEXT",
+      priority: 1,
+      controlCodes: ["CTRL-DATA-EXPORT-01"],
+      clauseRefs: [
+        { clauseKey: "article-31", documentCanonicalCode: "CN-DSL" },
+      ],
+      relevance: "INSUFFICIENT_CONTEXT",
+      relationTypes: ["POSSIBLE_OBLIGATION"],
+      ruleIds: ["NETWORK-002"],
+      supportingRuleIds: [],
+      evidenceIds: [],
+    };
+
+    const itemA1 = createChecklistItemFromComplianceSuggestion(
+      suggestion,
+      "caseA1",
+    );
+    const addA1 = await applyChecklistCommand({
+      caseId: a.id,
+      action: "add",
+      itemId: itemA1.id,
+      operationId: "op-ks-a1",
+      baseUpdatedAt: a.updatedAt,
+      nextCaseState: toNextState(a, {
+        checklist: [...a.caseState.checklist, itemA1],
+      }),
+      actor: systemActor(),
+    });
+    expect(addA1.ok).toBe(true);
+    if (!addA1.ok) return;
+
+    // 不同 itemId / operationId，相同 suggestionKey → 幂等不重复
+    const itemA2 = createChecklistItemFromComplianceSuggestion(
+      suggestion,
+      "caseA2",
+    );
+    const addA2 = await applyChecklistCommand({
+      caseId: a.id,
+      action: "add",
+      itemId: itemA2.id,
+      operationId: "op-ks-a2",
+      baseUpdatedAt: addA1.case.updatedAt,
+      nextCaseState: toNextState(addA1.case, {
+        checklist: [...addA1.case.caseState.checklist, itemA2],
+      }),
+      actor: systemActor(),
+    });
+    expect(addA2.ok && addA2.alreadyApplied).toBe(true);
+    expect(
+      addA2.ok &&
+        addA2.case.caseState.checklist.filter(
+          (x) => x.sourceRef?.suggestionKey === suggestion.key,
+        ),
+    ).toHaveLength(1);
+
+    const itemB = createChecklistItemFromComplianceSuggestion(
+      suggestion,
+      "caseB1",
+    );
+    const addB = await applyChecklistCommand({
+      caseId: b.id,
+      action: "add",
+      itemId: itemB.id,
+      operationId: "op-ks-b1",
+      baseUpdatedAt: b.updatedAt,
+      nextCaseState: toNextState(b, {
+        checklist: [...b.caseState.checklist, itemB],
+      }),
+      actor: systemActor(),
+    });
+    expect(addB.ok).toBe(true);
+    if (!addB.ok) return;
+    expect(
+      addB.case.caseState.checklist.some(
+        (x) => x.sourceRef?.suggestionKey === suggestion.key,
+      ),
+    ).toBe(true);
   });
 });

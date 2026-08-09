@@ -127,17 +127,17 @@
 
 ---
 
-## Step 6 — Checklist / Evidence Suggestions (Opt-in)
+## Step 6 — Compliance Suggestions → Case ChecklistItem（本提交）
 
-**目标：** 「加入核查清单」Server Action（把建议项写入 Case ChecklistItem）。
+**目标：** 将 Step 5 建议项 opt-in 写入现有 Case ChecklistItem（无第二套状态机 / 无新表）。
 
-- 去重 + operationId  
-- 来源 metadata  
-- 建议证据只展示  
+- `origin=MANUAL` + `sourceKind=KNOWLEDGE_SUGGESTED` + `sourceRef`（caseState JSON，无 Prisma migration）  
+- 同一 Case + suggestionKey 幂等；复用 `CHECKLIST_WRITE` / `applyChecklistCommand`  
+- Knowledge 重算不删除/修改已加入项  
 
-**不做：** 自动批量添加。
+**不做：** 自动批量加入、扩 pack、RAG/Admin UI。
 
-**出口：** 确认后写入；取消则 Case 不变。
+**出口：** CaseComplianceChecklistPanel「加入核查清单」+ 幂等/merge 测试。
 
 ---
 
