@@ -8,6 +8,9 @@
  * 不得通过静态 mapping 反推新的安全事件；不写回静态 Mapping。
  */
 import {
+  collectInvestigationContextAvailableKeys,
+} from "@/domain/investigationContext";
+import {
   selectApplicableVersionAt,
   selectCurrentApplicableVersion,
   resolveMissingContext,
@@ -202,46 +205,12 @@ export function collectHitRuleIds(
 
 /**
  * 从 Case 上下文收集「已提供」的 context keys（存在性，无 value DSL）。
+ * 委托 Investigation Context Catalog，与 resolveInvestigationContext 共享规则。
  */
 export function collectAvailableContextKeys(
   draft: SecurityCaseDraft | SecurityCase,
 ): string[] {
-  const keys: string[] = [];
-  const { dataContext: d, networkContext: n, identityContext: i, businessContext: b, alert } =
-    draft;
-
-  if (alert.occurredAt) keys.push("occurredAt");
-  if (d.accessedRecordCount != null) keys.push("accessedRecordCount");
-  if (d.sensitiveFieldTypes.length > 0) keys.push("dataCategory");
-  if (d.databaseName) keys.push("databaseName");
-  if (d.tableName) keys.push("tableName");
-  if (i.loginSourceIp) keys.push("loginSourceIp");
-  if (i.accountName) keys.push("accountName");
-  if (i.accessedSystems.length > 0) keys.push("accessedSystems");
-  if (i.failedLoginAttempts != null) keys.push("failedLoginAttempts");
-  if (n.outboundTransferBytes != null) keys.push("outboundVolume");
-  if (n.externalDestination) {
-    keys.push("externalDestination");
-    // pack 使用 destinationRegion 表示去向/目的地线索
-    keys.push("destinationRegion");
-  }
-  if (n.internalSourceIp) keys.push("internalSourceIp");
-  if (b.changeTicketId) keys.push("changeTicketId");
-  if (b.businessOwner) keys.push("businessOwner");
-  if (
-    b.ownerVerification === "CONFIRMED" ||
-    b.ownerVerification === "NOT_CONFIRMED"
-  ) {
-    keys.push("businessOwnerConfirmed");
-  }
-  if (b.businessJustification) keys.push("businessJustification");
-  if (
-    b.plannedTaskStatus === "CONFIRMED" ||
-    b.plannedTaskStatus === "NOT_FOUND"
-  ) {
-    keys.push("plannedTaskStatus");
-  }
-  return keys;
+  return collectInvestigationContextAvailableKeys(draft);
 }
 
 /**
