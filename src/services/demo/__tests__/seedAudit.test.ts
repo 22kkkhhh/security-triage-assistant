@@ -54,59 +54,65 @@ afterAll(async () => {
 });
 
 describe("Demo Seed Audit（v1.2 RC）", () => {
-  it("幂等：重复 seed 不新增 Audit；lastActivityAt = MAX(createdAt)", async () => {
-    runSeed();
-    const { prisma } = await import("@/lib/prisma");
-    await resetPrismaClient(TEST_DB_URL);
+  it(
+    "幂等：重复 seed 不新增 Audit；lastActivityAt = MAX(createdAt)",
+    async () => {
+      runSeed();
+      const { prisma } = await import("@/lib/prisma");
+      await resetPrismaClient(TEST_DB_URL);
 
-    const count1 = await prisma.caseAuditLog.count();
-    const a1 = await prisma.caseRecord.findUniqueOrThrow({
-      where: { id: "demo-case-a" },
-    });
-    const b1 = await prisma.caseRecord.findUniqueOrThrow({
-      where: { id: "demo-case-b" },
-    });
-
-    expect(a1.humanConclusion).toBe("NORMAL_BUSINESS");
-    expect(a1.hasReport).toBe(true);
-    expect(a1.status).toBe("CLOSED");
-    expect(b1.humanConclusion).toBe("SUSPECTED_SECURITY_INCIDENT");
-    expect(b1.hasReport).toBe(false);
-    expect(b1.status).toBe("PENDING_VERIFICATION");
-
-    const aAudits1 = await prisma.caseAuditLog.count({
-      where: { caseId: "demo-case-a" },
-    });
-    const bAudits1 = await prisma.caseAuditLog.count({
-      where: { caseId: "demo-case-b" },
-    });
-    expect(aAudits1).toBe(6);
-    expect(bAudits1).toBe(4);
-
-    runSeed();
-    await resetPrismaClient(TEST_DB_URL);
-    const count2 = await prisma.caseAuditLog.count();
-    expect(count2).toBe(count1);
-
-    for (const caseId of ["demo-case-a", "demo-case-b"] as const) {
-      const record = await prisma.caseRecord.findUniqueOrThrow({
-        where: { id: caseId },
+      const count1 = await prisma.caseAuditLog.count();
+      const a1 = await prisma.caseRecord.findUniqueOrThrow({
+        where: { id: "demo-case-a" },
       });
-      const maxAudit = await prisma.caseAuditLog.findFirst({
-        where: { caseId },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      const b1 = await prisma.caseRecord.findUniqueOrThrow({
+        where: { id: "demo-case-b" },
       });
-      expect(maxAudit).not.toBeNull();
-      expect(record.lastActivityAt.getTime()).toBe(maxAudit!.createdAt.getTime());
-    }
 
-    // 重复 seed 不得把 lastActivityAt 刷成「现在」
-    const a2 = await prisma.caseRecord.findUniqueOrThrow({
-      where: { id: "demo-case-a" },
-    });
-    expect(a2.lastActivityAt.getTime()).toBe(a1.lastActivityAt.getTime());
-    expect(a2.lastActivityAt.getTime()).toBeLessThan(Date.now() - 60_000);
-  });
+      expect(a1.humanConclusion).toBe("NORMAL_BUSINESS");
+      expect(a1.hasReport).toBe(true);
+      expect(a1.status).toBe("CLOSED");
+      expect(b1.humanConclusion).toBe("SUSPECTED_SECURITY_INCIDENT");
+      expect(b1.hasReport).toBe(false);
+      expect(b1.status).toBe("PENDING_VERIFICATION");
+
+      const aAudits1 = await prisma.caseAuditLog.count({
+        where: { caseId: "demo-case-a" },
+      });
+      const bAudits1 = await prisma.caseAuditLog.count({
+        where: { caseId: "demo-case-b" },
+      });
+      expect(aAudits1).toBe(6);
+      expect(bAudits1).toBe(4);
+
+      runSeed();
+      await resetPrismaClient(TEST_DB_URL);
+      const count2 = await prisma.caseAuditLog.count();
+      expect(count2).toBe(count1);
+
+      for (const caseId of ["demo-case-a", "demo-case-b"] as const) {
+        const record = await prisma.caseRecord.findUniqueOrThrow({
+          where: { id: caseId },
+        });
+        const maxAudit = await prisma.caseAuditLog.findFirst({
+          where: { caseId },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        });
+        expect(maxAudit).not.toBeNull();
+        expect(record.lastActivityAt.getTime()).toBe(
+          maxAudit!.createdAt.getTime(),
+        );
+      }
+
+      // 重复 seed 不得把 lastActivityAt 刷成「现在」
+      const a2 = await prisma.caseRecord.findUniqueOrThrow({
+        where: { id: "demo-case-a" },
+      });
+      expect(a2.lastActivityAt.getTime()).toBe(a1.lastActivityAt.getTime());
+      expect(a2.lastActivityAt.getTime()).toBeLessThan(Date.now() - 60_000);
+    },
+    60_000,
+  );
 
   it("Audit payload 最小化：不含完整案件/报告/敏感全文", async () => {
     const { prisma } = await import("@/lib/prisma");

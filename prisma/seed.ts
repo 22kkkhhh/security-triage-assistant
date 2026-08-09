@@ -33,6 +33,11 @@ import {
   systemActor,
   type BuiltAuditEvent,
 } from "../src/services/audit/auditEventBuilder";
+import {
+  countKnowledgeTables,
+  importCuratedKnowledgePack,
+} from "../src/services/knowledge/pack/importCuratedKnowledgePack";
+import { countPackEntities } from "../src/services/knowledge/pack/curatedPack";
 
 function toJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -387,6 +392,32 @@ async function main() {
     console.log("  Demo Users：production 已跳过。");
   }
   console.log("  说明：Seed 中所有人员均为虚构 Demo 数据。");
+
+  // v1.4 Step 2A：Curated Knowledge Pack（幂等；不含 PDF 全文灌库）
+  // 兼容 forward-migration 测试：Knowledge 表尚未创建时跳过
+  const knowledgeTable = await prisma.$queryRawUnsafe<Array<{ name: string }>>(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name='ComplianceDocument'`,
+  );
+  if (knowledgeTable.length === 0) {
+    console.log("  Knowledge Pack：跳过（ComplianceDocument 表不存在，可能处于 migration 前向中间态）");
+  } else {
+    const expected = countPackEntities();
+    const imported = await importCuratedKnowledgePack();
+    const knowledgeCounts = await countKnowledgeTables();
+    console.log(
+      `  Knowledge Pack：documents=${imported.documents} versions=${imported.versions} clauses=${imported.clauses} controls=${imported.controls} ruleControlMappings=${imported.ruleControlMappings} controlClauseMappings=${imported.controlClauseMappings}`,
+    );
+    console.log(
+      `  Knowledge DB：documents=${knowledgeCounts.documents} versions=${knowledgeCounts.versions} clauses=${knowledgeCounts.clauses} controls=${knowledgeCounts.controls} ruleMaps=${knowledgeCounts.ruleControlMappings} clauseMaps=${knowledgeCounts.controlClauseMappings}`,
+    );
+    if (
+      knowledgeCounts.documents < expected.documents ||
+      knowledgeCounts.clauses < expected.clauses ||
+      knowledgeCounts.controls < expected.controls
+    ) {
+      throw new Error("Knowledge Pack seed 后计数低于 pack 期望值");
+    }
+  }
 }
 
 main()

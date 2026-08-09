@@ -40,16 +40,19 @@
 
 ## Step 2 — Curated Knowledge Pack + Import
 
-**目标：** 受控 pack + CLI/seed 导入 PUBLISHED 数据。
+### Step 2A（进行中/本提交）
 
-- 3–5 文档、20–30 条款  
-- Controls + mappings（人工复核）  
-- `SOURCES` 溯源记录  
-- Demo 可复位  
+**目标：** 受控 pack + 幂等 importer + seed。
 
-**不做：** 上传中心、AI 抽取。
+- 5 文档（CSL / DSL / PIPL / NDSL 条例 / GB/T 22239）  
+- ~20–30 精选条款；GB/T **SUMMARY_ONLY**  
+- Controls + RuleControl + ControlClause mappings（APPROVED）  
+- `docs/law/SOURCES.md` 溯源；PDF 不入库  
+- `importCuratedKnowledgePack` + `db:seed`  
 
-**出口：** `db:seed` / import 幂等；权利门禁测试。
+**不做：** UI、RAG、Admin、爬虫、SecurityRule 表、改 Step 1 schema。
+
+**出口：** pack 校验 + 幂等导入测试；seed twice；Case A/B audit 不变。
 
 ---
 

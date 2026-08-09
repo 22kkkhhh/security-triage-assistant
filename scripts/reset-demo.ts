@@ -40,6 +40,13 @@ function removeDb(): boolean {
 
 async function truncateDemoTables() {
   const { prisma } = await import("../src/lib/prisma");
+  // Knowledge：先清 mapping，再实体（Restrict FK）
+  await prisma.controlClauseMapping.deleteMany();
+  await prisma.ruleControlMapping.deleteMany();
+  await prisma.complianceClause.deleteMany();
+  await prisma.complianceDocumentVersion.deleteMany();
+  await prisma.complianceControl.deleteMany();
+  await prisma.complianceDocument.deleteMany();
   await prisma.caseAuditLog.deleteMany();
   await prisma.caseRecord.deleteMany();
   await prisma.session.deleteMany();
@@ -47,7 +54,7 @@ async function truncateDemoTables() {
   await prisma.verification.deleteMany();
   await prisma.user.deleteMany();
   await prisma.$disconnect();
-  console.log("已清空 CaseAuditLog / CaseRecord / Auth tables。");
+  console.log("已清空 Case / Auth / Knowledge tables。");
 }
 
 console.log("=== 本地 Demo 数据库复位 ===");

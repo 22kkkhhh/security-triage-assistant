@@ -1,18 +1,18 @@
-# 依赖
+# ä¾èµ
 /node_modules
 
-# Next.js 构建产物
+# Next.js æå»ºäº§ç©
 /.next
 /out
 
-# 生产构建
+# çäº§æå»º
 /build
 
-# 环境变量（保留示例）
+# ç¯å¢åéï¼ä¿çç¤ºä¾ï¼
 .env*
 !.env.example
 
-# SQLite 运行时数据库（禁止提交）
+# SQLite è¿è¡æ¶æ°æ®åºï¼ç¦æ­¢æäº¤ï¼
 /prisma/*.db
 /prisma/*.db-journal
 /prisma/*.db-wal
@@ -20,10 +20,10 @@
 *.db
 *.db-journal
 
-# 浏览器验证运行时产物（截图 / JSON 等，不得提交）
+# æµè§å¨éªè¯è¿è¡æ¶äº§ç©ï¼æªå¾ / JSON ç­ï¼ä¸å¾æäº¤ï¼
 /scripts/.browser-verify/
 
-# 调试日志
+# è°è¯æ¥å¿
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -32,10 +32,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# 系统文件
+# ç³»ç»æä»¶
 .DS_Store
 Thumbs.db
 
-# Better Auth / ��ʱ������
+# Better Auth / ÁÙÊ±Éú³ÉÎï
 /scripts/.tmp/
+
+# v1.4 本地法规/标准 PDF 参考件（禁止提交全文二进制；元数据见 docs/law/SOURCES.md）
+/docs/law/*.pdf
+/docs/law/*.PDF
 
