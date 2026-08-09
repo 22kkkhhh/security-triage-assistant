@@ -272,7 +272,11 @@ type UserRole = "ADMIN" | "ANALYST" | "VIEWER";
 - `CASE_SNAPSHOT_WRITE`：仅 ANALYST / ADMIN（与 Snapshot allowlist 叠加）
 - 「至少一个 enabled ADMIN」是未来用户管理 invariant，不在本 foundation 的 `authorize()` 内实现
 
-本段仅为领域 foundation；不代表 Authentication / Login / RBAC 运行时已上线。
+`toAuthUser()`（`src/services/auth/toAuthUser.ts`）是 Better Auth / Prisma User → `AuthUser` 的唯一 mapper：  
+非法 role（含小写 `admin` / 多角色逗号串）、缺失 username、非 boolean `enabled` → fail closed。
+
+Persistence（Step 2）已加入 User/Session/Account/Verification；密码仅存 `Account.password`。  
+本段仍不代表 Login / Session 强制 / Server RBAC 已上线。
 
 ---
 

@@ -27,3 +27,23 @@ export type CaseRecord = Prisma.CaseRecordModel
  * 案件操作审计日志（与 Timeline 分离：记录研判人员/系统对案件的操作）
  */
 export type CaseAuditLog = Prisma.CaseAuditLogModel
+/**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel
+/**
+ * Model Session
+ * 
+ */
+export type Session = Prisma.SessionModel
+/**
+ * Model Account
+ * 
+ */
+export type Account = Prisma.AccountModel
+/**
+ * Model Verification
+ * 
+ */
+export type Verification = Prisma.VerificationModel

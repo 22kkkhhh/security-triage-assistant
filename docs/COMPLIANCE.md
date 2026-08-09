@@ -57,11 +57,14 @@ v1.2 提供案件级操作留痕，**不等于**生产级合规审计系统。
 
 当前局限：
 
-- 无认证；`MANUAL` actorName 不可信为真实身份
+- v1.3 Step 2 已加入 Better Auth 持久化 foundation，但 **尚未** 强制 Login / Session / Server Action 授权；现有研判路径仍可能以 `MANUAL` actor 运行
+- `MANUAL` actorName 不可信为真实身份；未来 USER Actor 才绑定真实 `User.id`
 - SQLite 本地库；无独立审计库
-- 无 RBAC / 无防篡改 / 无不可抵赖保证
+- 无防篡改 / 无不可抵赖保证
 
-生产需要：认证身份、RBAC、服务端可信 Actor、库表权限隔离、
+`BETTER_AUTH_SECRET` 必须为高熵密钥，仅存在于本地 `.env`（不得提交仓库）。
+
+生产需要：强制认证、RBAC 服务端接入、可信 Actor、库表权限隔离、
 集中审计、完整性保护、备份与保留策略。
 
 Audit payload 必须最小化：禁止无意写入完整案件快照、完整报告草稿、

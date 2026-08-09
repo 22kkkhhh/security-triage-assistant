@@ -35,3 +35,7 @@ next-env.d.ts
 # 绯荤粺鏂囦欢
 .DS_Store
 Thumbs.db
+
+# Better Auth / 临时生成物
+/scripts/.tmp/
+

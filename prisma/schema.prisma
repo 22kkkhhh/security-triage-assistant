@@ -12,7 +12,7 @@ datasource db {
 
 /// 案件持久化记录：索引字段 + 单一 caseState + 独立 reportDraft
 model CaseRecord {
-  id       String @id @default(cuid())
+  id         String @id @default(cuid())
   /// 稳定案件编号，如 INC-20260808-001；创建后永不变更
   caseNumber String @unique
   title      String
@@ -29,8 +29,8 @@ model CaseRecord {
   /// 全部涉及系统，以 | 拼接，便于 contains 搜索，例如：HR 系统|ERP 系统|CRM_PROD
   systemsSearchText String?
 
-  pendingChecklistCount Int     @default(0)
-  hasReport             Boolean @default(false)
+  pendingChecklistCount Int       @default(0)
+  hasReport             Boolean   @default(false)
   /// 报告草稿最后写入时间；仅 saveReportDraft / 首次生成时更新，案件编辑不改动
   reportUpdatedAt       DateTime?
 
@@ -58,7 +58,7 @@ model CaseRecord {
 
 /// 案件操作审计日志（与 Timeline 分离：记录研判人员/系统对案件的操作）
 model CaseAuditLog {
-  id     String @id @default(cuid())
+  id     String     @id @default(cuid())
   caseId String
   case   CaseRecord @relation(fields: [caseId], references: [id], onDelete: Restrict)
 
@@ -67,8 +67,9 @@ model CaseAuditLog {
 
   /// AuditActorType：SYSTEM | MANUAL | USER
   actorType String
-  /// 未来登录用户 ID；当前 Demo 为 null
+  /// 登录用户 ID；MANUAL / SYSTEM 为 null；USER 时指向 User.id
   actorId   String?
+  actor     User?   @relation(fields: [actorId], references: [id], onDelete: Restrict)
   /// 展示名：系统 / 研判人员名 /「未填写研判人员」；MANUAL 非可信认证身份
   actorName String?
 
@@ -87,4 +88,89 @@ model CaseAuditLog {
 
   @@index([caseId, createdAt])
   @@index([actionType])
+  @@index([actorId])
+}
+
+// ---------------------------------------------------------------------------
+// Better Auth identity / session（v1.3 Step 2）
+// Schema 对照自：npx auth@1.6.26 generate → scripts/.tmp/better-auth-schema.prisma
+// User.role 唯一物理 SoT：ADMIN | ANALYST | VIEWER（与 domain/auth 同名）
+// enabled：产品启用状态（server-owned）；banned* 为 Admin Plugin schema 字段，产品不调用
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String         @id
+  name            String
+  email           String
+  emailVerified   Boolean        @default(false)
+  image           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  username        String?
+  displayUsername String?
+  /// Security Triage UserRole 唯一 SoT：ADMIN | ANALYST | VIEWER
+  role            String?
+  /// Admin Plugin schema 字段；产品禁用态使用 enabled，不走 ban/unban
+  banned          Boolean?       @default(false)
+  banReason       String?
+  banExpires      DateTime?
+  /// 产品账号启用状态；DB NOT NULL + default true；input=false（server-owned）
+  enabled         Boolean        @default(true)
+  sessions        Session[]
+  accounts        Account[]
+  caseAuditLogs   CaseAuditLog[]
+
+  @@unique([email])
+  @@unique([username])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  /// Credential 密码哈希（Better Auth 管理）；禁止业务层 passwordHash
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }

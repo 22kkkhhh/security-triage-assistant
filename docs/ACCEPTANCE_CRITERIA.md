@@ -125,4 +125,14 @@ Domain foundation（Step 1）自动化必须证明：
 - [ ] Auth Domain 不依赖 Better Auth package
 - [ ] Server Actions 尚未强制 authorize（待后续 Authorization 接入 Step）
 
-尚未验收（后续 Step）：Login、Session、User 持久化、Trusted Actor、用户管理 UI。
+Persistence foundation（Step 2）自动化必须证明：
+
+- [ ] Better Auth + Prisma 7 adapter 可创建 credential 用户（signup disabled）
+- [ ] Admin createUser 可设置 username（canonical lowercase）且无需绕过认证库
+- [ ] `User.role` 单 SoT；`toAuthUser` 拒绝非法/多角色
+- [ ] `enabled` 默认 true 且 create 路径 server-owned
+- [ ] Admin ACL 无 delete / impersonate；ANALYST/VIEWER 无 admin lifecycle
+- [ ] CaseAuditLog USER FK Restrict；MANUAL/SYSTEM actorId null 兼容
+- [ ] formal Prisma migration `add_auth_identity` 可从空库与 v1.2.1 forward
+
+尚未验收（后续 Step）：Login UI、Session 强制、Server Action authorize、Trusted Actor、用户管理 UI。

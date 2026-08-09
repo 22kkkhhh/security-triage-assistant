@@ -150,28 +150,34 @@ Client
 
 ---
 
-## Auth Domain Foundation（v1.3 Step 1）
+## Auth Domain & Persistence Foundation（v1.3 Step 1–2）
 
-业务授权模型独立于未来的 Better Auth 集成，定义于 `src/domain/auth.ts`：
+业务授权模型独立于 Better Auth 内部 ACL，定义于 `src/domain/auth.ts`：
 
 ```text
-Authenticated identity（后续 Better Auth）
-  → AuthUser（Security Triage trusted object）
+Better Auth（credential + username + admin lifecycle）
+  → Prisma User / Session / Account / Verification
+  → toAuthUser() → AuthUser
   → ROLE_PERMISSIONS / hasPermission / authorize
   → Case / Report / User Server Actions（后续接入）
 ```
 
-当前状态：
+已建立：
 
-- 已建立：`AuthUser` / `UserRole`（ADMIN | ANALYST | VIEWER）/ `Permission` / Role 映射 / `authorize`
-- **尚未**：Login、Session、Prisma User、Server Action 授权接入、Trusted Actor
+- Domain：`AuthUser` / `UserRole` / `Permission` / `authorize`
+- Persistence：Better Auth 1.6.26 + `@better-auth/prisma-adapter` + Prisma 7 SQLite adapter
+- `User.role` 唯一物理 SoT：`ADMIN | ANALYST | VIEWER`（与 Domain 同名）
+- `enabled` server-owned（产品禁用态；不使用 banned 产品状态机）
+- `CaseAuditLog.actorId` → optional `User` FK（`onDelete: Restrict`）
+- Admin Plugin ACL：仅 auth lifecycle；**禁止** delete / impersonate
 
-写边界两层仍独立：
+**尚未完成（不得宣称系统已需登录）**：
 
-1. Authorization（谁能进入动作）
-2. Snapshot Payload Allowlist（能改哪些非语义字段）
+- Login UI / Session cookie 保护 / HTTP `/api/auth`
+- Server Action `authorize` 接入
+- Trusted Actor / `reviewedByUserId`
 
-AuthUser 只能由 Server 派生；Client 不得提交 role / enabled 等作为可信身份。
+写边界两层仍独立：Authorization + Snapshot Payload Allowlist。
 
 ---
 
