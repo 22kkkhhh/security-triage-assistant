@@ -282,18 +282,13 @@ describe("Viewer 写拒绝 + 无副作用", () => {
     ],
     [
       "HUMAN_REVIEW_WRITE",
-      async (caseId: string, updatedAt: string, state: SaveCaseStateInput) =>
+      async (caseId: string, updatedAt: string) =>
         updateHumanReviewAction(
           caseId,
           randomUUID(),
           {
-            ...state,
-            humanReview: {
-              reviewer: "x",
-              finalConclusion: "NORMAL_BUSINESS",
-              humanRiskLevel: "LOW",
-              conclusionNote: null,
-            },
+            finalConclusion: "NORMAL_BUSINESS",
+            humanRiskLevel: "LOW",
           },
           updatedAt,
         ),
@@ -707,7 +702,10 @@ describe("Permission 入口覆盖", () => {
         updateHumanReviewAction(
           created.id,
           randomUUID(),
-          state,
+          {
+            finalConclusion: "NORMAL_BUSINESS",
+            humanRiskLevel: "LOW",
+          },
           latest!.updatedAt,
         ),
       TIMELINE_WRITE: () =>

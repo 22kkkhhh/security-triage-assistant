@@ -10,6 +10,7 @@ import {
   updateHumanReviewCommand,
   type ChecklistCommandAction,
 } from "@/services/caseCommands";
+import { parseHumanReviewSemanticInput } from "@/services/caseCommands/humanReviewSemantic";
 import { userActor } from "@/services/audit/auditEventBuilder";
 import {
   requirePermission,
@@ -34,6 +35,8 @@ export type SemanticCommandActionResult =
       updatedAt: string;
       lastActivityAt: string;
       status: CaseStatus;
+      /** 成功后的 canonical caseState（含 Server-owned HumanReview 责任人） */
+      caseState: PersistedCaseState;
       /** 本次新产生或幂等命中的 Audit；无实际变化时为 null */
       audit: CaseAuditLogView | null;
     }
@@ -116,6 +119,7 @@ function toResult(
     updatedAt: result.case.updatedAt,
     lastActivityAt: result.case.lastActivityAt,
     status: result.case.status,
+    caseState: result.case.caseState,
     audit: result.audit,
   };
 }
@@ -235,10 +239,14 @@ export async function updateBusinessContextAction(
   );
 }
 
+/**
+ * HumanReview Semantic Action：仅接受 finalConclusion / humanRiskLevel。
+ * reviewer / reviewedByUserId / conclusionNote 等一律 runtime reject。
+ */
 export async function updateHumanReviewAction(
   caseId: string,
   operationId: unknown,
-  rawNextState: unknown,
+  rawSemantic: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
   let user;
@@ -253,17 +261,18 @@ export async function updateHumanReviewAction(
   }
   const base = parseBaseUpdatedAt(baseUpdatedAt);
   if (!base) return { ok: false, error: "baseUpdatedAt 无效" };
-  const nextCaseState = parseNextState(rawNextState);
-  if (typeof nextCaseState === "string") {
-    return { ok: false, error: nextCaseState };
+  const semantic = parseHumanReviewSemanticInput(rawSemantic);
+  if (typeof semantic === "string") {
+    return { ok: false, error: semantic };
   }
   return toResult(
     await updateHumanReviewCommand({
       caseId,
       operationId: operationId.trim(),
-      nextCaseState,
       baseUpdatedAt: base,
       actor: userActor(user),
+      finalConclusion: semantic.finalConclusion,
+      humanRiskLevel: semantic.humanRiskLevel,
     }),
   );
 }

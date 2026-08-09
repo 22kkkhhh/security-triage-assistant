@@ -109,6 +109,7 @@ function CaseWorkbench({
   const [humanReview, setHumanReview] = useState<HumanReview>(
     draft.humanReview ?? {
       reviewer: null,
+      reviewedByUserId: null,
       finalConclusion: null,
       humanRiskLevel: null,
       conclusionNote: null,

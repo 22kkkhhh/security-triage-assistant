@@ -333,24 +333,17 @@ describe("Command USER Actor 覆盖", () => {
       caseId: latest.id,
       operationId: randomUUID(),
       baseUpdatedAt: latest.updatedAt,
-      nextCaseState: toNextState(latest, {
-        humanReview: {
-          reviewer: "董事长",
-          finalConclusion: nextConclusion,
-          humanRiskLevel: "MEDIUM",
-          conclusionNote: null,
-          confirmedAt: null,
-          adjustments: latest.caseState.humanReview?.adjustments ?? [],
-        },
-      }),
       actor: userActor(USER_A),
+      finalConclusion: nextConclusion,
+      humanRiskLevel: "MEDIUM",
     });
     expect(hr.ok).toBe(true);
     if (!hr.ok) throw new Error(hr.error);
     expect(hr.audit?.actorType).toBe("USER");
     expect(hr.audit?.actorId).toBe(USER_A.id);
     expect(hr.audit?.actorName).toBe("张三");
-    expect(hr.audit?.actorName).not.toBe("董事长");
+    expect(hr.case.caseState.humanReview?.reviewer).toBe("张三");
+    expect(hr.case.caseState.humanReview?.reviewedByUserId).toBe(USER_A.id);
     latest = hr.case;
 
     const eventId = randomUUID();
@@ -848,29 +841,41 @@ describe("USER FK Restrict", () => {
 });
 
 describe("reviewer / businessOwner spoof via Action", () => {
-  it("HR / BC Action Audit 使用 AuthUser 而非案件文本", async () => {
+  it("HR semantic 注入 reviewer → reject；合法 HR Audit 使用 AuthUser", async () => {
     const created = await seedCase("spoof-action");
+    const spoof = await runWithTestAuthUser(USER_A, () =>
+      updateHumanReviewAction(
+        created.id,
+        randomUUID(),
+        {
+          finalConclusion: "SUSPECTED_SECURITY_INCIDENT",
+          humanRiskLevel: "HIGH",
+          reviewer: "伪造研判员",
+        },
+        created.updatedAt,
+      ),
+    );
+    expect(spoof.ok).toBe(false);
+    if (!spoof.ok) {
+      expect(spoof.error).toMatch(/不允许字段/);
+    }
+
     const hr = await runWithTestAuthUser(USER_A, () =>
       updateHumanReviewAction(
         created.id,
         randomUUID(),
-        toNextState(created, {
-          humanReview: {
-            reviewer: "伪造研判员",
-            finalConclusion: "SUSPECTED_SECURITY_INCIDENT",
-            humanRiskLevel: "HIGH",
-            conclusionNote: null,
-            confirmedAt: null,
-            adjustments: created.caseState.humanReview?.adjustments ?? [],
-          },
-        }),
+        {
+          finalConclusion: "SUSPECTED_SECURITY_INCIDENT",
+          humanRiskLevel: "HIGH",
+        },
         created.updatedAt,
       ),
     );
     expect(hr.ok).toBe(true);
     if (hr.ok && hr.audit) {
       expect(hr.audit.actorName).toBe("张三");
-      expect(hr.audit.actorName).not.toBe("伪造研判员");
+      expect(hr.caseState.humanReview?.reviewer).toBe("张三");
+      expect(hr.caseState.humanReview?.reviewedByUserId).toBe(USER_A.id);
     }
 
     const latest = await getCaseById(created.id);

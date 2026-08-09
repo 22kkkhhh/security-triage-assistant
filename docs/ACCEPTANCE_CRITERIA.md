@@ -161,4 +161,13 @@ Trusted Actor / operationId ownership（Step 5）自动化必须证明：
 - [x] Seed CASE_CREATED 仍可为 SYSTEM；Legacy MANUAL 不迁移
 - [x] displayName 变更不改写旧 Audit actorName
 
-尚未验收（后续 Step）：HumanReview responsibility、用户管理 UI、密码自助修改、UI RBAC。
+HumanReview Responsibility（Step 6）自动化必须证明：
+
+- [x] `reviewer` / `reviewedByUserId` 仅 Server 在 semantic change 时写入
+- [x] Snapshot / Semantic payload 注入 reviewer 或 reviewedByUserId → reject
+- [x] note-only / Status / BC / Checklist / Timeline / Handoff 不抢责任人
+- [x] NO-OP / same-user retry / cross-user replay / OCC stale 不改责任人
+- [x] Legacy reviewer 无 reviewedByUserId 可加载；首轮 semantic 建立认证责任
+- [x] Report 使用 reviewer 快照；已有 ReportDraft 不自动同步
+
+尚未验收（后续 Step）：用户管理 UI、密码自助修改、UI RBAC。

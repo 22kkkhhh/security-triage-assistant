@@ -402,28 +402,47 @@ describe("caseCommands（v1.2 Step 2）", () => {
 
   it("HumanReview 结论/风险变化审计；不存 note 全文；单独 note autosave 不刷", async () => {
     const created = await seedCaseA();
-    const hr = {
-      reviewer: "王研判",
-      finalConclusion: "SUSPECTED_SECURITY_INCIDENT" as const,
-      humanRiskLevel: "HIGH" as const,
-      conclusionNote: "这是很长的研判说明，不应进入 Audit changes",
-      adjustments: [],
-      confirmedAt: new Date().toISOString(),
-    };
+    await saveCaseState(created.id, {
+      ...toNextState(created, {
+        humanReview: {
+          ...(created.caseState.humanReview ?? {
+            reviewer: null,
+            reviewedByUserId: null,
+            finalConclusion: null,
+            humanRiskLevel: null,
+            conclusionNote: null,
+            adjustments: [],
+            confirmedAt: null,
+          }),
+          conclusionNote: "这是很长的研判说明，不应进入 Audit changes",
+        },
+      }),
+    });
+    const withNote = await getCaseById(created.id);
+    expect(withNote).toBeTruthy();
+
     const r = await updateHumanReviewCommand({
       caseId: created.id,
       operationId: "op-hr-1",
-      baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { humanReview: hr }), actor: systemActor()
-});
+      baseUpdatedAt: withNote!.updatedAt,
+      actor: systemActor(),
+      finalConclusion: "SUSPECTED_SECURITY_INCIDENT",
+      humanRiskLevel: "HIGH",
+    });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.audit?.actionType).toBe("HUMAN_REVIEW_UPDATED");
     expect(JSON.stringify(r.audit?.changes)).not.toContain("很长的研判说明");
+    expect(r.case.caseState.humanReview?.conclusionNote).toBe(
+      "这是很长的研判说明，不应进入 Audit changes",
+    );
 
     await saveCaseState(created.id, {
       ...toNextState(r.case, {
-        humanReview: { ...hr, conclusionNote: "又改了说明" },
+        humanReview: {
+          ...r.case.caseState.humanReview!,
+          conclusionNote: "又改了说明",
+        },
       }),
     });
     const logs = await listCaseAuditLogs({ caseId: created.id });

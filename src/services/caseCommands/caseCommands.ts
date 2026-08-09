@@ -524,13 +524,21 @@ export async function updateBusinessContextCommand(input: {
   });
 }
 
-/** HumanReview 结构化结论变更 */
+/**
+ * HumanReview 结构化结论变更。
+ *
+ * Client 仅提交 finalConclusion / humanRiskLevel。
+ * 真实 semantic change 时 Server 写入责任人：
+ * reviewer = actorName 快照，reviewedByUserId = USER.actorId（SYSTEM 为 null）。
+ * conclusionNote / adjustments / confirmedAt 保留 canonical，不被 Client 覆盖。
+ */
 export async function updateHumanReviewCommand(input: {
   caseId: string;
   operationId: string;
-  nextCaseState: NextCaseStateInput;
   baseUpdatedAt: string;
   actor: AuditActor;
+  finalConclusion: FinalConclusion | null;
+  humanRiskLevel: RiskLevel | null;
 }): Promise<CommandResult> {
   const actor = requireActor(input.actor);
   if ("ok" in actor && actor.ok === false) return actor;
@@ -551,11 +559,10 @@ export async function updateHumanReviewCommand(input: {
   if (!existing) return { ok: false, error: "案件不存在" };
 
   const oldHr = asPersistedState(existing).humanReview;
-  const nextHr = input.nextCaseState.humanReview;
   const oldConclusion = oldHr?.finalConclusion ?? null;
-  const nextConclusion = nextHr?.finalConclusion ?? null;
+  const nextConclusion = input.finalConclusion;
   const oldRisk = oldHr?.humanRiskLevel ?? null;
-  const nextRisk = nextHr?.humanRiskLevel ?? null;
+  const nextRisk = input.humanRiskLevel;
 
   const conclusionChanged = oldConclusion !== nextConclusion;
   const riskChanged = oldRisk !== nextRisk;
@@ -568,6 +575,27 @@ export async function updateHumanReviewCommand(input: {
       audit: null,
     };
   }
+
+  const responsibility =
+    trusted.actorType === "USER"
+      ? {
+          reviewer: trusted.actorName,
+          reviewedByUserId: trusted.actorId,
+        }
+      : {
+          reviewer: trusted.actorName,
+          reviewedByUserId: null as string | null,
+        };
+
+  const nextHumanReview = {
+    reviewer: responsibility.reviewer,
+    reviewedByUserId: responsibility.reviewedByUserId,
+    finalConclusion: nextConclusion,
+    humanRiskLevel: nextRisk,
+    conclusionNote: oldHr?.conclusionNote ?? null,
+    adjustments: oldHr?.adjustments ?? [],
+    confirmedAt: oldHr?.confirmedAt ?? null,
+  };
 
   const built = buildHumanReviewUpdatedAudit({
     finalConclusion: conclusionChanged
@@ -594,10 +622,20 @@ export async function updateHumanReviewCommand(input: {
     changes.humanRiskLevel = { from: oldRisk, to: nextRisk };
   }
 
+  const nextCaseState: NextCaseStateInput = {
+    caseData: existing.caseState.caseData,
+    businessContext: existing.caseState.businessContext,
+    checklist: existing.caseState.checklist,
+    humanReview: nextHumanReview,
+    timeline: existing.caseState.timeline,
+    suggestedRiskLevel: existing.suggestedRiskLevel,
+    status: existing.status,
+  };
+
   return commitStateAndAudit({
     caseId: input.caseId,
     baseUpdatedAt: base,
-    nextCaseState: input.nextCaseState,
+    nextCaseState,
     built: {
       ...built,
       changes,

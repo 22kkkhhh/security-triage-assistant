@@ -69,7 +69,7 @@
 说明：页面已要求登录；Case/Report/Activity **Server Authorization** 与 **Trusted USER Actor** 已接入（Step 4–5）。  
 VIEWER 可查看案件与报告，但写操作与 Word 导出会被服务端拒绝。  
 认证写操作 Audit 绑定当前用户；跨用户重放 `operationId` 会被拒绝。  
-**HumanReview responsibility / UI RBAC / 用户管理尚未完成**，勿当作完整 v1.3 上线。
+**HumanReview 责任人（Step 6）已绑定认证用户快照**；UI RBAC / 用户管理尚未完成，勿当作完整 v1.3 上线。
 
 ## 五、核心流程
 

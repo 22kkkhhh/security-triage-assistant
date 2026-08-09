@@ -10,6 +10,7 @@ import { Panel } from "./common";
 
 /**
  * 人工最终研判：与系统建议严格分离，系统建议不得自动覆盖本区域内容。
+ * reviewer / reviewedByUserId 为 Server-owned 责任人快照，客户端只读展示。
  */
 export function HumanReviewPanel({
   humanReview,
@@ -21,6 +22,14 @@ export function HumanReviewPanel({
   const update = (patch: Partial<HumanReview>) =>
     onChange({ ...humanReview, ...patch });
 
+  const responsibilityLabel = humanReview.reviewer?.trim()
+    ? humanReview.reviewer
+    : "尚未形成最终研判责任人";
+  const showLegacyHint =
+    Boolean(humanReview.reviewer?.trim()) &&
+    (humanReview.reviewedByUserId == null ||
+      humanReview.reviewedByUserId === "");
+
   return (
     <Panel
       title="人工最终研判"
@@ -31,15 +40,15 @@ export function HumanReviewPanel({
       }
     >
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <label className="block text-sm">
-          <span className="text-neutral-500">研判人员</span>
-          <input
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1 text-sm"
-            value={humanReview.reviewer ?? ""}
-            placeholder="（未填写）"
-            onChange={(e) => update({ reviewer: e.target.value.trim() || null })}
-          />
-        </label>
+        <div className="block text-sm">
+          <span className="text-neutral-500">当前研判责任人</span>
+          <p className="mt-1 rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-800">
+            {responsibilityLabel}
+          </p>
+          {showLegacyHint ? (
+            <p className="mt-1 text-xs text-neutral-400">历史未认证记录</p>
+          ) : null}
+        </div>
         <label className="block text-sm">
           <span className="text-neutral-500">最终结论</span>
           <select

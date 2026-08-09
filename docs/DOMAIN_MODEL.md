@@ -193,6 +193,29 @@ type FinalConclusion =
 
 `INCONCLUSIVE` 为正式保留值，用于证据不足以形成结论的场景。
 
+责任人字段（v1.3 Step 6）：
+
+```ts
+interface HumanReview {
+  reviewer: string | null;              // 当前最终研判责任人 displayName 快照
+  reviewedByUserId?: string | null;     // 认证责任人 User.id（Legacy 可缺失）
+  finalConclusion: FinalConclusion | null;
+  humanRiskLevel: RiskLevel | null;
+  conclusionNote: string | null;        // Snapshot-owned 自由文本
+  // ...
+}
+```
+
+语义：
+
+- `reviewer` = **当前最终研判责任人**的 displayName 快照（非 Audit Actor 来源）
+- `reviewedByUserId` = 在 v1.3 认证路径下建立的 User.id；JSON 引用，无 Prisma FK
+- 仅当 `finalConclusion` 和/或 `humanRiskLevel` 发生真实变化时，Server 根据 authenticated User 写入二者
+- `conclusionNote` 仅 Snapshot 可写，**不**改变责任人、不产生 `HUMAN_REVIEW_UPDATED`
+- Legacy：仅有 `reviewer` 字符串、`reviewedByUserId` 缺失/null 完全合法；不得按姓名匹配 User 或加载时自动回填
+- 与 Audit Actor 解耦：Audit 记录「谁执行了历史操作」；HumanReview 记录「当前最终研判责任是谁」
+- SuggestedAssessment / Case 创建 / Handoff / Status / BC / Checklist / Timeline 均不得设置责任人
+
 ---
 
 ## 其他对象职责（简要）
@@ -285,7 +308,10 @@ Trusted Actor（Step 5）：认证用户触发的 Case/Report Audit 使用 `USER
 不再从 `HumanReview.reviewer` 推导。Legacy `MANUAL` / Seed `SYSTEM` 仍兼容。
 `operationId` 幂等含 actor ownership（跨用户重放拒绝）。
 
-仍未完成：HumanReview responsibility、UI RBAC、用户管理。
+HumanReview Responsibility（Step 6）：`reviewer` / `reviewedByUserId` 由 Server
+在语义变更时写入；Client / Snapshot 不得伪造。与 Audit Actor 概念分离。
+
+仍未完成：UI RBAC、用户管理、密码自助修改。
 
 ---
 

@@ -99,15 +99,21 @@ src/
 Snapshot-owned（案件路径）示例：
 
 - `businessContext.businessJustification` / `changeTicketId` / `businessOwner`
-- `humanReview.conclusionNote`
-- `humanReview.reviewer`（temporary compatibility，待 Trusted Actor 改为 Server-owned）
+- `humanReview.conclusionNote`（不改变研判责任人）
 - checklist **note only**（按 `checklistId`）
+
+禁止经 Snapshot 写入：`humanReview.reviewer` / `reviewedByUserId` /
+`finalConclusion` / `humanRiskLevel`（runtime reject，不静默忽略）。
 
 ### B. Semantic Command
 
 用于：明确业务动作（状态变更、Checklist 完成/重开/增删、结构化业务核查、结构化人工结论、添加 Timeline、交接、报告创建/导出会话首次更新/导出等）。
 
 Semantic-owned 字段**只能**由 Command 修改，例如：`status`、结构化 BusinessContext、`finalConclusion` / `humanRiskLevel`、checklist 完成态/增删/身份字段、timeline、`caseData`、`suggestedRiskLevel`。
+
+HumanReview Semantic Command 仅接受 `finalConclusion` / `humanRiskLevel`；
+真实变化时 Server 写入责任人快照（`reviewer` + `reviewedByUserId`），并产生
+`HUMAN_REVIEW_UPDATED` Audit。NO-OP 不抢责任人。
 
 ```text
 Client
@@ -189,9 +195,18 @@ Client
 - Seed / 系统创建仍可使用 `SYSTEM`；历史 `MANUAL` Audit 原样兼容
 - Trusted Actor ≠ 防篡改 / 不可抵赖合规审计
 
+Audit Actor vs HumanReview Responsibility（Step 6）：
+
+| 概念 | 含义 |
+| --- | --- |
+| Audit Actor | 某次历史操作由谁执行（append-only 事件） |
+| HumanReview Responsibility | 当前最终研判责任是谁（`reviewer` 快照 + 可选 `reviewedByUserId`） |
+
+二者不得互相推导：不得用 `reviewer` 填 Audit Actor；不得从 Audit 反推当前责任人。
+Report Builder 继续使用 `HumanReview.reviewer` 快照；已有 ReportDraft 不随责任人自动同步。
+
 **尚未完成（不得宣称 v1.3 已完成）**：
 
-- HumanReview responsibility / `reviewedByUserId`（Step 6）
 - Admin User Management UI / 密码自助修改
 - UI RBAC（隐藏无权限按钮；Step 7）
 

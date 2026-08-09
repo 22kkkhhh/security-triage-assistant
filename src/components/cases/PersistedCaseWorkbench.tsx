@@ -46,6 +46,7 @@ import { CaseHeader } from "./CaseHeader";
 
 const emptyHumanReview = (): HumanReview => ({
   reviewer: null,
+  reviewedByUserId: null,
   finalConclusion: null,
   humanRiskLevel: null,
   conclusionNote: null,
@@ -339,16 +340,14 @@ export function PersistedCaseWorkbench({
     payloadRef.current = { ...payloadRef.current, humanReview: next };
 
     if (!structured) {
-      const noteChanged =
-        next.conclusionNote !== prev.conclusionNote ||
-        next.reviewer !== prev.reviewer;
-      scheduleSave(noteChanged ? "debounce" : "immediate", {
-        humanReview: {
-          conclusionNote: next.conclusionNote,
-          // temporary compatibility：Trusted Actor 落地前仍允许 Snapshot 写 reviewer
-          reviewer: next.reviewer,
-        },
-      });
+      const noteChanged = next.conclusionNote !== prev.conclusionNote;
+      if (noteChanged) {
+        scheduleSave("debounce", {
+          humanReview: {
+            conclusionNote: next.conclusionNote,
+          },
+        });
+      }
       return;
     }
 
@@ -360,7 +359,10 @@ export function PersistedCaseWorkbench({
       const result = await updateHumanReviewAction(
         initial.caseId,
         operationId,
-        getCommandPayload(),
+        {
+          finalConclusion: next.finalConclusion,
+          humanRiskLevel: next.humanRiskLevel,
+        },
         baseUpdatedAt,
       );
       if (!result.ok) {
@@ -372,6 +374,12 @@ export function PersistedCaseWorkbench({
         );
         return;
       }
+      const serverHr = result.caseState.humanReview ?? emptyHumanReview();
+      setHumanReview(serverHr);
+      payloadRef.current = {
+        ...payloadRef.current,
+        humanReview: serverHr,
+      };
       commitExternalSave(result.updatedAt);
       mergeReturnedAudit(result.audit);
     })();

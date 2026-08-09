@@ -1,8 +1,8 @@
 /**
- * Case Snapshot Autosave 写边界（v1.3 Step 0）。
+ * Case Snapshot Autosave 写边界（v1.3 Step 0 / Step 6）。
  *
  * Snapshot 仅允许 silent 写入 allowlisted 非语义字段。
- * Semantic-owned 字段必须走 Semantic Command + Audit。
+ * Semantic-owned 字段与责任人字段必须走 Semantic Command + Audit。
  */
 
 import type {
@@ -21,12 +21,10 @@ export type CaseSnapshotBusinessContextPatch = {
 
 /**
  * Snapshot 允许的人工研判自由文本字段。
- * reviewer：v1.3 Trusted Actor 落地前的临时兼容字段（temporary compatibility）。
+ * reviewer / reviewedByUserId / finalConclusion / humanRiskLevel 均禁止。
  */
 export type CaseSnapshotHumanReviewPatch = {
   conclusionNote?: string | null;
-  /** @temporary compatibility — 后续改为 Server-owned Trusted Actor */
-  reviewer?: string | null;
 };
 
 export type CaseSnapshotChecklistNotePatch = {
@@ -57,7 +55,7 @@ const BC_KEYS = new Set([
   "businessOwner",
 ]);
 
-const HR_KEYS = new Set(["conclusionNote", "reviewer"]);
+const HR_KEYS = new Set(["conclusionNote"]);
 
 const CHECKLIST_NOTE_KEYS = new Set(["checklistId", "note"]);
 
@@ -84,6 +82,7 @@ function parseNullableString(
 function emptyHumanReview(): HumanReview {
   return {
     reviewer: null,
+    reviewedByUserId: null,
     finalConclusion: null,
     humanRiskLevel: null,
     conclusionNote: null,
@@ -164,11 +163,6 @@ export function parseCaseSnapshotPatch(
       );
       if (!v.ok) return v.error;
       hr.conclusionNote = v.value;
-    }
-    if (raw.humanReview.reviewer !== undefined) {
-      const v = parseNullableString(raw.humanReview.reviewer, "reviewer");
-      if (!v.ok) return v.error;
-      hr.reviewer = v.value;
     }
     if (Object.keys(hr).length > 0) {
       patch.humanReview = hr;
@@ -288,13 +282,6 @@ export function applyCaseSnapshotPatch(
       !sameNullableString(base.conclusionNote, p.conclusionNote)
     ) {
       nextHr = { ...nextHr, conclusionNote: p.conclusionNote };
-      changed = true;
-    }
-    if (
-      p.reviewer !== undefined &&
-      !sameNullableString(base.reviewer, p.reviewer)
-    ) {
-      nextHr = { ...nextHr, reviewer: p.reviewer };
       changed = true;
     }
     humanReview = nextHr;

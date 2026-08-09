@@ -205,9 +205,21 @@ export interface TimelineEvent {
   source: "SYSTEM" | "HUMAN";
 }
 
-/** 人工最终结论与修正 */
+/**
+ * 人工最终结论与修正。
+ *
+ * reviewer = 当前最终研判责任人 displayName 快照（Server-owned）
+ * reviewedByUserId = 认证责任人 User.id（可选；Legacy 可缺失 / null）
+ * 二者仅在 finalConclusion / humanRiskLevel 真实变化时由 Server 写入。
+ */
 export interface HumanReview {
+  /** 当前最终研判责任人 displayName 快照；不随 User 改名自动更新 */
   reviewer: string | null;
+  /**
+   * 当前最终研判责任人 authenticated User.id。
+   * Legacy v1.2 数据可为 missing / null；JSON 引用，无 Prisma FK。
+   */
+  reviewedByUserId?: string | null;
   finalConclusion: FinalConclusion | null;
   /** 人工认定的风险等级，可与系统建议不同 */
   humanRiskLevel: RiskLevel | null;

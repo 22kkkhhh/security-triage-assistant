@@ -242,22 +242,10 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       caseId: v1.id,
       operationId: "cc-hr-stale",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, {
-        humanReview: {
-          ...(v1.caseState.humanReview ?? {
-            reviewer: null,
-            finalConclusion: null,
-            humanRiskLevel: null,
-            conclusionNote: null,
-            adjustments: [],
-            confirmedAt: null,
-          }),
-          finalConclusion: "INCONCLUSIVE",
-          humanRiskLevel: "MEDIUM",
-        },
-        checklist: v1.caseState.checklist,
-      }), actor: systemActor()
-});
+      actor: systemActor(),
+      finalConclusion: "INCONCLUSIVE",
+      humanRiskLevel: "MEDIUM",
+    });
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
     expect(stale.code).toBe("STALE");

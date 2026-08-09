@@ -165,12 +165,34 @@ describe("parseCaseSnapshotPatch allowlist", () => {
       },
       humanReview: {
         conclusionNote: "备注",
-        reviewer: "李研判（Mock）",
       },
       checklistNotes: [{ checklistId: "c1", note: "核查备注" }],
       baseUpdatedAt: "2026-08-09T00:00:00.000Z",
     });
     expect(typeof parsed).not.toBe("string");
+  });
+
+  it("Snapshot 注入 reviewer / reviewedByUserId → reject", () => {
+    expect(
+      parseCaseSnapshotPatch({
+        humanReview: { reviewer: "董事长" },
+      }),
+    ).toMatch(/不允许字段/);
+    expect(
+      parseCaseSnapshotPatch({
+        humanReview: { reviewedByUserId: "user-admin" },
+      }),
+    ).toMatch(/不允许字段/);
+    expect(
+      parseCaseSnapshotPatch({
+        humanReview: { finalConclusion: "NORMAL_BUSINESS" },
+      }),
+    ).toMatch(/不允许字段/);
+    expect(
+      parseCaseSnapshotPatch({
+        humanReview: { humanRiskLevel: "HIGH" },
+      }),
+    ).toMatch(/不允许字段/);
   });
 });
 
@@ -448,20 +470,14 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
     expect(bc.audit?.actionType).toBe("BUSINESS_CONTEXT_UPDATED");
     current = bc.case;
 
-    const hr = {
-      reviewer: "研判员（Mock）",
-      finalConclusion: "SUSPECTED_SECURITY_INCIDENT" as const,
-      humanRiskLevel: "HIGH" as const,
-      conclusionNote: "建议进一步核查",
-      adjustments: [],
-      confirmedAt: new Date().toISOString(),
-    };
     const human = await updateHumanReviewCommand({
       caseId: current.id,
       operationId: "sem-hr",
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, { humanReview: hr }), actor: systemActor()
-});
+      actor: systemActor(),
+      finalConclusion: "SUSPECTED_SECURITY_INCIDENT",
+      humanRiskLevel: "HIGH",
+    });
     expect(human.ok).toBe(true);
     if (!human.ok) return;
     expect(human.audit?.actionType).toBe("HUMAN_REVIEW_UPDATED");
