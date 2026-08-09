@@ -2,8 +2,9 @@
 
 数据与网络安全联合研判及案件运营助手。
 
-当前稳定版本：**v1.3.0**（2026-08-09；本地可运行的安全研判与案件运营 **MVP / Prototype**）。  
-不是 Production-ready 企业平台 / Enterprise IAM。
+当前稳定版本：**v1.4.0**（2026-08-10；本地可运行的安全研判与案件运营 **MVP / Prototype**）。  
+在 v1.3 身份认证之上增加 **Case 集成合规知识**（引用 / 核查建议 / 报告快照 / 官方来源导航）。  
+不是 Production-ready 企业平台 / Enterprise IAM；**不是**法律意见或合规认证系统。
 
 ## 一、项目是什么
 
@@ -53,7 +54,17 @@
 - Vitest
 - docx（原生可编辑 Word）
 
-### 开发登录（v1.3.0）
+### v1.4 合规知识（Case 集成）
+
+- 研判命中规则 → Control → Clause 关联参考（只读辅助，非违法认定）
+- 报告创建时固化 Snapshot；知识库后续更新不改写已有草稿
+- 建议核查事项可 opt-in 写入现有 Checklist；**不会**因规则命中自动批量写入
+- GB/T 22239 仅 SUMMARY_ONLY；官方链接来自 pack provenance + allowlist
+- **未包含：** 独立知识中心浏览 UI、规则库扩至 25–30、RAG/PDF 全文
+
+详见 `docs/v1.4/RELEASE_CHECKLIST.md`。
+
+### 开发登录（v1.3+）
 
 `npm run db:seed`（非 production）会幂等创建 Demo Users：
 

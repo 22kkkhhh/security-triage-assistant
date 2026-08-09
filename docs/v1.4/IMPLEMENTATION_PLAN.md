@@ -56,7 +56,7 @@
 
 ---
 
-## Step 3 — Knowledge Center Read UI
+## Step 3 — Knowledge Center Read UI（**延期至 v1.4.1+**）
 
 **目标：** `/knowledge` 列表 + 文档/条款阅读。
 
@@ -67,6 +67,8 @@
 **不做：** Case panel、Report 章节。
 
 **出口：** 三角色可读；未登录拒绝。
+
+**v1.4.0 说明：** 未实现独立浏览 UI；Case 面板 + Report Snapshot 已覆盖研判主路径。
 
 ---
 
@@ -164,7 +166,7 @@
 
 ---
 
-## Step 8 — Rule Library Expansion
+## Step 8 — Rule Library Expansion（**延期至 v1.4.1+**）
 
 **目标：** 可运行规则扩至约 25–30。
 
@@ -176,16 +178,18 @@
 
 **出口：** 规则单测 + 与 Control 映射更新。
 
+**v1.4.0 说明：** executable 规则仍为 11 条（`allRules`）；pack 已为现有规则建立 Control 映射。
+
 ---
 
-## Step 9 — Hardening / v1.4 Release
+## Step 9 — Hardening / v1.4 Release（**本冻结完成**）
 
 **目标：** 全量回归、文档宣称、demo 路径、tag 准备。
 
 - v1.3 安全回归  
 - Case A/B 语义  
 - 无法律结论文案扫描  
-- Release Gate  
+- Release Gate → [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md)  
 
 ---
 

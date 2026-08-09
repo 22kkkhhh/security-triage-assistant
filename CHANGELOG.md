@@ -2,6 +2,23 @@
 
 本项目采用轻量变更记录。版本号遵循语义化约定；未打正式 tag 的条目以 `-rc` 标记。
 
+## v1.4.0 — 2026-08-10
+
+Added（Case 集成合规知识切片）:
+- Knowledge additive schema：Document / Version / Clause / Control / RuleControlMapping / ControlClauseMapping
+- Curated Knowledge Pack（5 文档 / 26 条款 / GB/T 22239 SUMMARY_ONLY）+ 幂等 seed 导入
+- Case 运行时 Rule→Control→Clause 解析（Findings + `ComplianceReferenceSnapshot`；无 Finding 表）
+- 报告创建时固化 Snapshot；DOCX「法规与制度关联」三节 + 免责声明
+- Case UI：合规参考面板、建议核查清单、opt-in 写入现有 ChecklistItem（`KNOWLEDGE_SUGGESTED`）
+- 官方来源导航：provenance URL + 域名 allowlist；SUMMARY_ONLY 不提供原文条款假入口
+- `KNOWLEDGE_READ` Permission（三角色可读）
+
+Deferred / Known Limitations:
+- 无独立 Knowledge Center 浏览 UI（原 Step 3）
+- 可执行规则仍为 11 条（原 Step 8 扩量延期）
+- 无 RAG / 法规搜索 / PDF viewer / Knowledge Admin / SystemAuditLog
+- 继承 v1.3 Known Limitations（无 Case ACL / MFA / SSO 等）
+
 ## v1.3.0 — 2026-08-09
 
 Added:

@@ -225,7 +225,15 @@ User Admin 边界（Step 8）：
 - password set 与 session revoke 在 Better Auth 侧为独立 API；部分失败须显式提示，不得回滚已成功的 `enabled=false`
 - 无 SystemAuditLog：Login / 改密 / 用户管理操作尚无独立全局审计（Known Limitation）
 
-**v1.3.0（2026-08-09）已正式发布。**
+**v1.3.0（2026-08-09）已正式发布。**  
+**v1.4.0（2026-08-10）已正式发布（Case 集成合规知识切片）。**
+
+v1.4 架构要点（不得扩大宣称）：
+
+- executable SecurityRule SoT 仍在 TypeScript `allRules`；Knowledge 仅存 RuleId→Control 映射字符串
+- Case Findings / Report Snapshot 为 Domain/JSON，无独立 Prisma Finding 表
+- 报告仅在创建草稿时解析 Knowledge；此后消费 frozen `complianceReferences`
+- Case UI 不在 Client 侧重跑 resolver / 不直连 Prisma
 
 已知限制（不得宣称已具备）：
 
@@ -236,6 +244,7 @@ User Admin 边界（Step 8）：
 - SQLite 本地；不等于 PostgreSQL 生产就绪 / HA
 - UI capability 可能 stale；Server Authorization 为最终安全边界
 - PostgreSQL isolation 语义需在后续 migration 后重新验证 last-ADMIN concurrency
+- v1.4：无独立 `/knowledge` 浏览 UI；可执行规则仍为 11 条；无法规搜索 / RAG / PDF viewer
 
 ---
 

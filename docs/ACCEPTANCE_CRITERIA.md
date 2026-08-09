@@ -201,3 +201,21 @@ Release Hardening（Step 9）必须证明：
 - [x] production build smoke + 三角色 HTTP/页面冒烟
 
 **v1.3.0 正式 release / annotated tag 在 Final Release Gate 完成。**
+
+## v1.4 验收条件（Security Compliance Knowledge — v1.4.0）
+
+范围：**Case 集成合规知识切片**（非完整独立 Knowledge Center 产品）。明细见 `docs/v1.4/RELEASE_CHECKLIST.md`。
+
+- [x] Knowledge additive migration only；无 Finding/Snapshot/SecurityRule 表
+- [x] executable Rule SoT 仍为 TypeScript registry
+- [x] Curated pack + seed 幂等；GB/T 22239 SUMMARY_ONLY；PDF 不入库
+- [x] Case resolve → Snapshot → Report DOCX；创建后不重解析
+- [x] Case UI 合规参考 / 建议核查 / opt-in Checklist；无自动批量写入
+- [x] 官方 source URL = provenance + allowlist；无前端硬编码旁路
+- [x] 禁止自动「已违法 / 已违规 / 法律责任成立 / 合规结论：不合规」结论文案
+- [x] `KNOWLEDGE_READ`；VIEWER/ANALYST/ADMIN 矩阵不回归
+- [x] fresh migrate + seed×2；v1.3.0 forward；lint / tsc / test / build / samples
+- [ ] 独立 Knowledge Center 浏览 UI（延期）
+- [ ] 可执行规则扩至约 25–30（延期）
+
+**v1.4.0 正式 release / annotated tag 在本 Release Gate 文档收口后由维护者打 tag。**
