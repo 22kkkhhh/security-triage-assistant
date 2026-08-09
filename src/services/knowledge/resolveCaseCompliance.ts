@@ -58,6 +58,85 @@ const RELEVANCE_RANK: Record<CaseComplianceRelevance, number> = {
   INSUFFICIENT_CONTEXT: 3,
 };
 
+const RELEVANCE_ORDER: readonly CaseComplianceRelevance[] = [
+  "DIRECT",
+  "RELEVANT",
+  "POSSIBLE",
+  "INSUFFICIENT_CONTEXT",
+];
+
+function compareFindingsByRelevanceThenKey(
+  a: CaseComplianceFinding,
+  b: CaseComplianceFinding,
+): number {
+  const rr = RELEVANCE_RANK[a.relevance] - RELEVANCE_RANK[b.relevance];
+  if (rr !== 0) return rr;
+  const cc = a.controlCode.localeCompare(b.controlCode);
+  if (cc !== 0) return cc;
+  return a.clauseKey.localeCompare(b.clauseKey);
+}
+
+/**
+ * Top-N 截断：在总量上限内按 relevance 档位分层配额，
+ * 避免 RELEVANT 占满额度后 POSSIBLE / INSUFFICIENT_CONTEXT 从 Snapshot 消失
+ * （报告三节依赖 Snapshot 分档；Step 4 可再增强 Case UI 策略）。
+ */
+export function selectTopFindingsByRelevance(
+  findings: readonly CaseComplianceFinding[],
+  topN: number,
+): CaseComplianceFinding[] {
+  if (topN <= 0) return [];
+  if (findings.length <= topN) return [...findings];
+
+  const groups: Record<CaseComplianceRelevance, CaseComplianceFinding[]> = {
+    DIRECT: [],
+    RELEVANT: [],
+    POSSIBLE: [],
+    INSUFFICIENT_CONTEXT: [],
+  };
+  for (const f of findings) {
+    groups[f.relevance].push(f);
+  }
+
+  const nonEmpty = RELEVANCE_ORDER.filter((r) => groups[r].length > 0);
+  if (nonEmpty.length === 0) return [];
+
+  const base = Math.floor(topN / nonEmpty.length);
+  let remainder = topN % nonEmpty.length;
+  const quotas = new Map<CaseComplianceRelevance, number>();
+  for (const r of nonEmpty) {
+    // 先按档位均分理想配额，再按实际条数裁剪并回填，避免额度浪费
+    const ideal = base + (remainder > 0 ? 1 : 0);
+    if (remainder > 0) remainder -= 1;
+    quotas.set(r, ideal);
+  }
+
+  let unused = 0;
+  for (const r of nonEmpty) {
+    const want = quotas.get(r) ?? 0;
+    const have = groups[r].length;
+    if (have < want) {
+      unused += want - have;
+      quotas.set(r, have);
+    }
+  }
+  for (const r of nonEmpty) {
+    if (unused <= 0) break;
+    const have = groups[r].length;
+    const cur = quotas.get(r) ?? 0;
+    const add = Math.min(unused, have - cur);
+    quotas.set(r, cur + add);
+    unused -= add;
+  }
+
+  const selected: CaseComplianceFinding[] = [];
+  for (const r of RELEVANCE_ORDER) {
+    selected.push(...groups[r].slice(0, quotas.get(r) ?? 0));
+  }
+  selected.sort(compareFindingsByRelevanceThenKey);
+  return selected;
+}
+
 export type KnowledgeResolutionGraph = {
   documentsById: Map<string, ComplianceDocument>;
   versionsById: Map<string, ComplianceDocumentVersion>;
@@ -415,16 +494,10 @@ export function resolveCaseComplianceFromGraph(
     });
   }
 
-  findings.sort((a, b) => {
-    const rr = RELEVANCE_RANK[a.relevance] - RELEVANCE_RANK[b.relevance];
-    if (rr !== 0) return rr;
-    const cc = a.controlCode.localeCompare(b.controlCode);
-    if (cc !== 0) return cc;
-    return a.clauseKey.localeCompare(b.clauseKey);
-  });
+  findings.sort(compareFindingsByRelevanceThenKey);
 
   const topN = input.topN ?? 12;
-  const limited = findings.slice(0, topN);
+  const limited = selectTopFindingsByRelevance(findings, topN);
 
   const snapshots: ComplianceReferenceSnapshot[] = limited.map((f) => {
     const version = [

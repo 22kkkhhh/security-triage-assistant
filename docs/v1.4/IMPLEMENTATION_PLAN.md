@@ -98,25 +98,29 @@
 
 ---
 
-## Step 4 — Compliance Relevance Engine（后续增强）
+## Step 4 — Case UI：Compliance Reference Panel（本提交）
 
-**目标：** 在 Step 2B 基础上增强排序截断、Case UI Top-N 策略与更细 evidence 绑定。
+**目标：** Case 详情页只读展示后端已解析的合规参考（复用 Step 2B `selectTopFindingsByRelevance`，Top-N=8）。
 
-**不做：** 自动写 Checklist。
+- 分组：相关合规参考 / 可能相关要求 / 需补充上下文  
+- 空分组不渲染；全空简洁空态  
+- GB/T 标注「标准要求摘要/控制参考」；ruleId 仅展开审计区可见  
+- 前端不重跑 Rule→Control→Clause，不扩 pack / Prisma  
 
-**出口：** Case B 稳定 3–6 findings（UI 展示断言）。
+**不做：** 自动写 Checklist、法规搜索、编辑入口、原文锚点跳转（Step 5/6）。
+
+**出口：** CaseCompliancePanel + Case A/B 分组测试。
 
 ---
 
-## Step 5 — Case-aware Compliance Panel
+## Step 5 — Case-aware Compliance Panel（后续增强）
 
-**目标：** 工作台「法规与制度关联」UI。
+**目标：** 工作台增强（原文锚点、更细 evidence 绑定等）。
 
-- 展示 findings  
 - 跳转 Knowledge 原文锚点  
-- Disclaimer  
+- Disclaimer 细化  
 
-**不做：** Report 快照（可预留选择态）。
+**不做：** Report 快照重算。
 
 **出口：** VIEWER 只读；ANALYST 可见建议但不自动写入。
 

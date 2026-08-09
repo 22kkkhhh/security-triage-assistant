@@ -79,11 +79,21 @@ ReportDraft (existing)
    - 查 RuleControlMapping → Controls
    - 查 ControlClauseMapping → Clauses（限定 DocumentVersion 对 CaseRelevantDate 有效）
 4. 计算 relevance + rationale + missingContext + suggestions
-5. 排序截断：默认 Top N（建议 6，可配置）供 Case UI
+5. 排序截断：默认 Top N（当前实现默认 12，可配置）
+   - **分层配额**：按 `DIRECT / RELEVANT / POSSIBLE / INSUFFICIENT_CONTEXT` 均分额度后再回填，
+     避免 RELEVANT 占满 Top-N 导致报告「可能相关要求 / 建议进一步核实」两节恒为空
+   - Case UI 更激进的展示策略留待 Step 4
 ```
 
 **Live Knowledge：** Case 页每次打开可重算（computed view）。  
 **Historical Snapshot：** 仅 Report 固化。
+
+### Relevance 分布说明（curated pack / Case A·B）
+
+静态 `ControlClauseMapping`（31）：约 `CONTROL_SUPPORT` 21 / `POSSIBLE_OBLIGATION` 5 / `ESCALATION_TRIGGER` 5。  
+`ContextRequirement` 主要挂在 **Control**（10 个中 9 个非空）；Clause 本身无该字段；仅少数 CCM（出境相关）叠加 mapping 级上下文。  
+Case A/B 在全量 findings 下本就可能出现 POSSIBLE / INSUFFICIENT_CONTEXT；若截断未分层，默认 Top-N 会只留下 RELEVANT——这是截断策略问题，不是「案件天然无 POSSIBLE」。  
+同条款多控制折叠时取更强 relevance，故 Case B 的 BUSINESS-AUTH 缺工单可能在折叠后不再单独显示为 INSUFFICIENT（已被其他控制的 RELEVANT 覆盖）——属自然结果，不为报表丰满而人造 POSSIBLE。
 
 ---
 

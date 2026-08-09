@@ -25,6 +25,7 @@ import {
 } from "@/services/caseCommands/structuredDiff";
 import { mergeChecklistOnRestore } from "@/services/persistence/caseMapper";
 import type { RestoredWorkbenchView } from "@/services/persistence/restoreWorkbench";
+import type { CaseCompliancePanelView } from "@/services/knowledge/caseCompliancePanel";
 import { useCaseAutosave } from "@/hooks/useCaseAutosave";
 import { BusinessContextPanel } from "@/components/BusinessContextPanel";
 import { ChecklistPanel } from "@/components/ChecklistPanel";
@@ -44,6 +45,7 @@ import {
   CaseActivityPanel,
   type CaseActivityPanelHandle,
 } from "./CaseActivityPanel";
+import { CaseCompliancePanel } from "./CaseCompliancePanel";
 import { CaseHeader } from "./CaseHeader";
 
 const emptyHumanReview = (): HumanReview => ({
@@ -74,6 +76,7 @@ export function PersistedCaseWorkbench({
   hasReport = false,
   initialAudit,
   capabilities,
+  compliancePanel,
 }: {
   initial: RestoredWorkbenchView;
   hasReport?: boolean;
@@ -84,6 +87,8 @@ export function PersistedCaseWorkbench({
     latestHandoff: CaseAuditLogView | null;
   };
   capabilities: CaseWorkbenchCapabilities;
+  /** 服务端已解析的合规参考视图；前端只读展示 */
+  compliancePanel: CaseCompliancePanelView;
 }) {
   const router = useRouter();
   const readOnly = isCaseWorkbenchReadOnly(capabilities);
@@ -617,6 +622,8 @@ export function PersistedCaseWorkbench({
       <FindingsSummary results={analyzed.analysisResults} />
 
       <DimensionPanels securityCase={analyzed} />
+
+      <CaseCompliancePanel view={compliancePanel} />
 
       <BusinessContextPanel
         businessContext={businessContext}

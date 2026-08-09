@@ -211,6 +211,13 @@ describe("Case A/B DOCX regression（pack graph Snapshot）", () => {
     expect(a1.report.sections.some((s) => s.key === "complianceRelevant")).toBe(
       true,
     );
+    // 分层 topN 后 Case A 三节均应有实质条目（非空态提示）
+    const aPossible = a1.report.sections.find((s) => s.key === "compliancePossible");
+    const aInsufficient = a1.report.sections.find(
+      (s) => s.key === "complianceFurtherVerification",
+    );
+    expect(aPossible?.content).toMatch(/可能涉及/);
+    expect(aInsufficient?.content).toMatch(/缺少必要上下文/);
     const aText = a1.report.sections.map((s) => s.content).join("\n");
     expect(aText).not.toMatch(FORBIDDEN_COMPLIANCE_REPORT_PHRASES);
     // 三态正文章节仍在

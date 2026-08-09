@@ -7,6 +7,8 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { caseA, caseB } from "@/domain/demo";
 import type {
+  CaseComplianceFinding,
+  CaseComplianceRelevance,
   ComplianceClause,
   ComplianceControl,
   ComplianceDocument,
@@ -18,12 +20,14 @@ import type { AnalysisResult, SecurityCaseDraft } from "@/domain/types";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
 import { resetPrismaClient } from "@/lib/prisma";
 import { importCuratedKnowledgePack } from "@/services/knowledge/pack/importCuratedKnowledgePack";
+import { curatedPackToResolutionGraph } from "@/services/knowledge/pack/curatedPackToResolutionGraph";
 import {
   collectAvailableContextKeys,
   collectHitRuleIds,
   resolveCaseCompliance,
   resolveCaseComplianceFromGraph,
   resolveFindingRelevance,
+  selectTopFindingsByRelevance,
   type KnowledgeResolutionGraph,
 } from "@/services/knowledge/resolveCaseCompliance";
 
@@ -256,6 +260,35 @@ function draftWithDate(
   };
 }
 
+function stubFinding(
+  relevance: CaseComplianceRelevance,
+  controlCode: string,
+  clauseKey: string,
+): CaseComplianceFinding {
+  return {
+    ruleId: "DATA-001",
+    supportingRuleIds: [],
+    evidenceIds: [],
+    controlId: controlCode,
+    controlCode,
+    documentId: "doc",
+    documentCanonicalCode: "CN-DSL",
+    documentVersionId: "ver",
+    versionKey: "2021-original",
+    clauseId: clauseKey,
+    clauseKey,
+    relationType:
+      relevance === "POSSIBLE" ? "POSSIBLE_OBLIGATION" : "CONTROL_SUPPORT",
+    relevance,
+    rationale: "test",
+    missingContext: [],
+    suggestedEvidence: [],
+    suggestedChecklist: [],
+    versionSelectionBasis: "CASE_DATE",
+    caseDate: "2026-08-08",
+  };
+}
+
 describe("resolveFindingRelevance 保守策略", () => {
   it("CONTROL_SUPPORT → RELEVANT；有 evidence 仍不升 DIRECT", () => {
     expect(
@@ -285,6 +318,58 @@ describe("resolveFindingRelevance 保守策略", () => {
         evidenceIds: ["e1"],
       }),
     ).toBe("INSUFFICIENT_CONTEXT");
+  });
+});
+
+describe("selectTopFindingsByRelevance 分层截断", () => {
+  it("RELEVANT 占多数时仍为 POSSIBLE / INSUFFICIENT 保留配额", () => {
+    const findings = [
+      ...Array.from({ length: 10 }, (_, i) =>
+        stubFinding("RELEVANT", `CTRL-R-${i}`, `c-r-${i}`),
+      ),
+      stubFinding("POSSIBLE", "CTRL-P-0", "c-p-0"),
+      stubFinding("POSSIBLE", "CTRL-P-1", "c-p-1"),
+      stubFinding("INSUFFICIENT_CONTEXT", "CTRL-I-0", "c-i-0"),
+      stubFinding("INSUFFICIENT_CONTEXT", "CTRL-I-1", "c-i-1"),
+    ];
+    const selected = selectTopFindingsByRelevance(findings, 6);
+    expect(selected).toHaveLength(6);
+    const dist = Object.fromEntries(
+      (["RELEVANT", "POSSIBLE", "INSUFFICIENT_CONTEXT"] as const).map((r) => [
+        r,
+        selected.filter((f) => f.relevance === r).length,
+      ]),
+    );
+    expect(dist.POSSIBLE).toBeGreaterThan(0);
+    expect(dist.INSUFFICIENT_CONTEXT).toBeGreaterThan(0);
+    expect(dist.RELEVANT).toBeGreaterThan(0);
+  });
+
+  it("某档不足配额时回填其他档，仍凑满 topN", () => {
+    const findings = [
+      ...Array.from({ length: 20 }, (_, i) =>
+        stubFinding("RELEVANT", `CTRL-R-${i}`, `c-r-${i}`),
+      ),
+      stubFinding("POSSIBLE", "CTRL-P-0", "c-p-0"),
+      ...Array.from({ length: 5 }, (_, i) =>
+        stubFinding("INSUFFICIENT_CONTEXT", `CTRL-I-${i}`, `c-i-${i}`),
+      ),
+    ];
+    const selected = selectTopFindingsByRelevance(findings, 12);
+    expect(selected).toHaveLength(12);
+    expect(selected.some((f) => f.relevance === "POSSIBLE")).toBe(true);
+    expect(selected.some((f) => f.relevance === "INSUFFICIENT_CONTEXT")).toBe(
+      true,
+    );
+  });
+
+  it("不超过 topN；短列表原样返回", () => {
+    const findings = [
+      stubFinding("RELEVANT", "CTRL-R-0", "c-0"),
+      stubFinding("POSSIBLE", "CTRL-P-0", "c-1"),
+    ];
+    expect(selectTopFindingsByRelevance(findings, 12)).toEqual(findings);
+    expect(selectTopFindingsByRelevance(findings, 0)).toEqual([]);
   });
 });
 
@@ -562,5 +647,75 @@ describe("Case A/B + curated pack（DB）", () => {
     const keys = collectAvailableContextKeys(caseB);
     expect(keys).toContain("dataCategory");
     expect(keys).toContain("loginSourceIp");
+  });
+});
+
+describe("Case A/B relevance distribution（curated pack graph）", () => {
+  const packGraph = curatedPackToResolutionGraph();
+
+  function distOf(relevances: CaseComplianceRelevance[]) {
+    const d: Record<CaseComplianceRelevance, number> = {
+      DIRECT: 0,
+      RELEVANT: 0,
+      POSSIBLE: 0,
+      INSUFFICIENT_CONTEXT: 0,
+    };
+    for (const r of relevances) d[r] += 1;
+    return d;
+  }
+
+  it("默认 topN：Case A Snapshot 同时含 POSSIBLE 与 INSUFFICIENT_CONTEXT", () => {
+    const analyzed = analyzeSecurityCase(caseA);
+    const result = resolveCaseComplianceFromGraph(
+      {
+        draft: caseA,
+        analysisResults: analyzed.analysisResults,
+        evidences: analyzed.evidences,
+        capturedAt: "2026-08-09T12:00:00.000Z",
+      },
+      packGraph,
+    );
+    expect(result.findings.length).toBeLessThanOrEqual(12);
+    const dist = distOf(result.findings.map((f) => f.relevance));
+    expect(dist.RELEVANT).toBeGreaterThan(0);
+    expect(dist.POSSIBLE).toBeGreaterThan(0);
+    expect(dist.INSUFFICIENT_CONTEXT).toBeGreaterThan(0);
+    expect(dist.DIRECT).toBe(0);
+  });
+
+  it("默认 topN：Case B Snapshot 含 POSSIBLE；缺工单在全量中为 INSUFFICIENT", () => {
+    const analyzed = analyzeSecurityCase(caseB);
+    const limited = resolveCaseComplianceFromGraph(
+      {
+        draft: caseB,
+        analysisResults: analyzed.analysisResults,
+        evidences: analyzed.evidences,
+        capturedAt: "2026-08-09T12:00:00.000Z",
+      },
+      packGraph,
+    );
+    const full = resolveCaseComplianceFromGraph(
+      {
+        draft: caseB,
+        analysisResults: analyzed.analysisResults,
+        evidences: analyzed.evidences,
+        capturedAt: "2026-08-09T12:00:00.000Z",
+        topN: 100,
+      },
+      packGraph,
+    );
+    const limitedDist = distOf(limited.findings.map((f) => f.relevance));
+    const fullDist = distOf(full.findings.map((f) => f.relevance));
+    expect(limitedDist.POSSIBLE).toBeGreaterThan(0);
+    expect(limitedDist.RELEVANT).toBeGreaterThan(0);
+    // Case B 缺 changeTicketId / businessOwnerConfirmed → BUSINESS-AUTH 全量应为 INSUFFICIENT
+    expect(fullDist.INSUFFICIENT_CONTEXT).toBeGreaterThan(0);
+    expect(
+      full.findings.some(
+        (f) =>
+          f.controlCode === "CTRL-BUSINESS-AUTH-01" &&
+          f.relevance === "INSUFFICIENT_CONTEXT",
+      ),
+    ).toBe(true);
   });
 });

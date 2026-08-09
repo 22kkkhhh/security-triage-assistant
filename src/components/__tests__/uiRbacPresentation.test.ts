@@ -78,6 +78,14 @@ describe("Case Workbench Viewer presentation", () => {
     expect(src).toContain("该案件尚未生成调查报告");
     expect(src).not.toContain('role === "VIEWER"');
   });
+
+  it("PersistedCaseWorkbench：合规参考面板只读接入，不在前端 resolve Knowledge", () => {
+    const src = readSrc("components/cases/PersistedCaseWorkbench.tsx");
+    expect(src).toContain("CaseCompliancePanel");
+    expect(src).toContain("compliancePanel");
+    expect(src).not.toContain("resolveCaseCompliance");
+    expect(src).not.toContain("loadCaseCompliancePanelView");
+  });
 });
 
 describe("Report Viewer presentation", () => {
