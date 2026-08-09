@@ -1,7 +1,8 @@
 # v1.4 架构设计：安全与合规知识中心
 
-> 状态：Design Locked（Step 0）  
-> 候选架构，不授权 Prisma migration。
+> **状态说明：** 该文件为 v1.4 设计阶段归档。v1.4.0 已实现并发布；当前实现状态与冻结验收以 `docs/v1.4/RELEASE_CHECKLIST.md` 和根 `docs/ARCHITECTURE.md` 为准。
+>
+> 原设计状态：Design Locked（Step 0）
 
 ---
 

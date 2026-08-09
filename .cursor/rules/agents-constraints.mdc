@@ -9,6 +9,7 @@ alwaysApply: true
 
 1. `AGENTS.md`（最高优先级）
 2. 与本次任务相关的 `docs/` 文档（至少包括 `PRODUCT_BOUNDARY.md`、`DOMAIN_MODEL.md`；涉及架构/技术选型时读 `ARCHITECTURE.md`；涉及数据/AI 时读 `COMPLIANCE.md`；声称完成时对照 `ACCEPTANCE_CRITERIA.md`）
+3. **v1.5 双 Agent / 并行开发任务**：额外阅读 `docs/v1.5/DUAL_AGENT.md`（ownership、branch、Shared 文件锁）
 
 若用户需求与上述约束冲突，以约束文件为准，不得自行扩大范围。
 
@@ -18,3 +19,5 @@ alwaysApply: true
 - 缺失判断使用 `NORMAL | ABNORMAL | UNKNOWN`，禁止把 `UNKNOWN` 当成正常
 - 最终结论必须人工确认
 - 汇报使用简体中文，并遵循 `AGENTS.md` 第 13 节固定格式
+- Cursor **不得**在 Client 侧 import Prisma 或 runtime compliance resolver（如 `resolveCaseCompliance`）
+- Prisma `schema` / `migrations` **未获任务明确授权不得修改**

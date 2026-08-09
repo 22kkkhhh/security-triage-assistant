@@ -89,7 +89,7 @@ Security Triage Assistant
 未经明确批准，不得实现：
 
 - 实时日志采集
-- Agent
+- Agent（指产品运行时 autonomous agent 功能，不含 Cursor / Hermes 等开发编码 Agent）
 - Syslog Server
 - PCAP 抓包
 - Nmap 扫描
@@ -106,8 +106,8 @@ Security Triage Assistant
 - Kubernetes
 - 微服务拆分
 - 外部 AI API
-- LLM Agent
-- 用户权限系统
+- LLM Agent（同上：产品运行时能力；不含开发编码 Agent）
+- 用户权限系统（指禁止擅自扩展 Enterprise IAM / 多租户权限平台；v1.3 已批准并交付的 Auth/RBAC 为既有基线，不得删除或重做）
 - 多租户
 - 复杂审批流
 - 实时 WebSocket 告警
@@ -338,6 +338,22 @@ MVP 优先可读、可测试、可演示。
 - 无 / 有，说明原因
 
 不要输出大段无意义开发过程。
+
+---
+
+## 14. 多开发 Agent 协作
+
+v1.5 起，Cursor / Hermes 等开发编码 Agent 并行时须遵守：
+
+1. `integration/v1.5` 是 v1.5 **集成基线**，不是日常业务开发工作区
+2. 各 Agent 必须在各自的 `agent/*` 分支工作（如 `agent/cursor-*`、`agent/hermes-*`）
+3. **禁止**直接在 `integration/v1.5` 上开发业务功能
+4. Agent 分支 **不得自行 merge** 进 `integration/v1.5`（须经 PR / 审查合入）
+5. **禁止**对 shared / `integration/*` 分支 force push
+6. Prisma / schema / migrations **默认禁止修改**；任务确需变更时必须先报告并获得明确授权
+7. 共享 / 高冲突文件同一时间只能由任务明确指定的 **唯一 owner** 修改
+
+详细 ownership、Git 工作流、验证与 v1.5 产品方向见：`docs/v1.5/DUAL_AGENT.md`。
 
 <!-- BEGIN:nextjs-agent-rules -->
 
