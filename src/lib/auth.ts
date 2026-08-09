@@ -1,11 +1,13 @@
 /**
- * Better Auth server instance（v1.3 Step 2 persistence foundation）。
+ * Better Auth server instance（v1.3 Step 2–3）。
  *
  * - 复用 Prisma 7 + better-sqlite3 adapter 单例
- * - 不挂载 HTTP route（Step 3）
- * - 不创建 auth-client（Step 3）
- * - User.role 唯一物理 SoT：ADMIN | ANALYST | VIEWER（与 domain/auth UserRole 同名）
- * - enabled 为 server-owned additional field；产品禁用态不用 banned
+ * - HTTP handler：/api/auth/[...all]（Step 3）
+ * - Client：src/lib/auth-client.ts（仅 username / session）
+ * - User.role 唯一物理 SoT：ADMIN | ANALYST | VIEWER
+ * - enabled 为 server-owned；产品禁用态不用 banned
+ *
+ * 本文件仅供 Server 导入；禁止从 Client Component 引用。
  */
 import "dotenv/config";
 import { betterAuth } from "better-auth";
@@ -27,8 +29,16 @@ function requireAuthSecret(): string {
   return secret;
 }
 
-const baseURL =
-  process.env.BETTER_AUTH_URL?.trim() || "http://localhost:3000";
+function resolveBaseURL(): string {
+  const url = process.env.BETTER_AUTH_URL?.trim();
+  if (url) return url;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("production 必须显式配置 BETTER_AUTH_URL");
+  }
+  return "http://localhost:3000";
+}
+
+const baseURL = resolveBaseURL();
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -36,6 +46,7 @@ export const auth = betterAuth({
   }),
   secret: requireAuthSecret(),
   baseURL,
+  trustedOrigins: [baseURL],
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,
@@ -78,6 +89,8 @@ export const auth = betterAuth({
     username({
       minUsernameLength: 3,
       maxUsernameLength: 30,
+      /** 允许连字符（如 demo-admin）；仍禁止空格与其它特殊字符 */
+      usernameValidator: (value) => /^[a-zA-Z0-9_.-]+$/.test(value),
     }),
     admin({
       ac: authAccessControl,

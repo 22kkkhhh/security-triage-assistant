@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { LogoutButton } from "@/components/auth/LogoutButton";
+import { userRoleLabels, type UserRole } from "@/domain/auth";
 
 const navItems = [
   { href: "/cases/new", label: "+ 新建研判", match: (path: string) => path.startsWith("/cases/new") },
@@ -20,11 +22,22 @@ const navItems = [
   },
 ];
 
+export type AppShellUser = {
+  displayName: string;
+  role: UserRole;
+};
+
 /**
  * 企业级应用壳：深色侧边栏 + 浅色主内容区。
- * 导航严格限定为新建研判 / 历史案件 / 报告中心。
+ * 展示当前用户身份；不按 role 隐藏业务按钮（Server Action RBAC 属 Step 4）。
  */
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  user,
+}: {
+  children: ReactNode;
+  user: AppShellUser;
+}) {
   const pathname = usePathname() ?? "/cases";
 
   return (
@@ -54,12 +67,21 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="border-t border-slate-700 px-5 py-4 text-xs leading-5 text-slate-500">
-          系统说明
-          <br />
-          本地 Demo · 仅使用虚构数据
-          <br />
-          最终结论以人工确认为准
+        <div className="space-y-3 border-t border-slate-700 px-5 py-4 text-xs leading-5 text-slate-400">
+          <div>
+            <div className="text-slate-200">{user.displayName}</div>
+            <div className="mt-0.5">{userRoleLabels[user.role]}</div>
+            <div className="mt-2">
+              <LogoutButton />
+            </div>
+          </div>
+          <div className="text-slate-500">
+            系统说明
+            <br />
+            本地 Demo · 仅使用虚构数据
+            <br />
+            最终结论以人工确认为准
+          </div>
         </div>
       </aside>
       <main className="min-w-0 flex-1 overflow-auto">

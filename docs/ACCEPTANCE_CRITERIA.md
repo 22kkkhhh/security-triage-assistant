@@ -135,4 +135,12 @@ Persistence foundation（Step 2）自动化必须证明：
 - [ ] CaseAuditLog USER FK Restrict；MANUAL/SYSTEM actorId null 兼容
 - [ ] formal Prisma migration `add_auth_identity` 可从空库与 v1.2.1 forward
 
-尚未验收（后续 Step）：Login UI、Session 强制、Server Action authorize、Trusted Actor、用户管理 UI。
+Login / Session（Step 3）自动化必须证明：
+
+- [ ] `/api/auth` 已挂载；public signup / username availability 仍关闭
+- [ ] username + password 登录；失败不区分用户名/密码
+- [ ] `requireAuthenticatedUser`：无 Session→未认证；enabled=false→Forbidden；DB reload role/enabled
+- [ ] `(app)` 未登录跳转 `/login`；logout 失效 Session
+- [ ] 开发 Demo Users 幂等；production 不 provisioning
+
+尚未验收（后续 Step）：Server Action authorize、Trusted Actor、用户管理 UI、密码自助修改。

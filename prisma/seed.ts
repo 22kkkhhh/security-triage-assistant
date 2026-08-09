@@ -1,13 +1,17 @@
 /**
- * Demo 种子：仅写入 Case A / Case B（虚构 Mock 数据）。
+ * Demo 种子：Case A / Case B（虚构 Mock 数据）+ 开发环境 Demo Users。
  * 固定 id / caseNumber / Audit operationId，可重复执行（幂等）。
- * Seed 中所有人员均为虚构 Demo 数据。
+ * Demo Users 仅非 production；通过 Better Auth createUser 创建。
  * 运行：npm run db:seed
  */
 import "dotenv/config";
 import { caseA, caseB } from "../src/domain/demo";
 import { analyzeSecurityCase } from "../src/services/analysis/analyzeSecurityCase";
 import { prisma } from "../src/lib/prisma";
+import {
+  isDemoProvisioningAllowed,
+  seedDemoUsers,
+} from "../src/services/demo/seedDemoUsers";
 import {
   buildSystemsSearchText,
   countPendingChecklist,
@@ -368,6 +372,16 @@ async function main() {
   console.log(
     `  Case B ${b.caseNumber} status=${b.status} hasReport=${b.hasReport} pending=${b.pendingChecklistCount} audits=${bCount} lastActivityAt=${bLast.toISOString()}`,
   );
+
+  if (isDemoProvisioningAllowed()) {
+    const demo = await seedDemoUsers();
+    console.log(
+      `  Demo Users：created=${demo.created.join(",") || "无"} skipped=${demo.skipped.join(",") || "无"}`,
+    );
+    console.log("  说明：Demo Users 仅开发/测试；口令见 DEMO_AUTH_PASSWORD / .env.example。");
+  } else {
+    console.log("  Demo Users：production 已跳过。");
+  }
   console.log("  说明：Seed 中所有人员均为虚构 Demo 数据。");
 }
 

@@ -276,7 +276,8 @@ type UserRole = "ADMIN" | "ANALYST" | "VIEWER";
 非法 role（含小写 `admin` / 多角色逗号串）、缺失 username、非 boolean `enabled` → fail closed。
 
 Persistence（Step 2）已加入 User/Session/Account/Verification；密码仅存 `Account.password`。  
-本段仍不代表 Login / Session 强制 / Server RBAC 已上线。
+Login / Session（Step 3）已接入：`requireAuthenticatedUser()` 从 DB 重载 `enabled` / `role`。  
+本段仍不代表 Server Action RBAC / Trusted Actor 已上线。
 
 ---
 

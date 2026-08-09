@@ -57,7 +57,7 @@ v1.2 提供案件级操作留痕，**不等于**生产级合规审计系统。
 
 当前局限：
 
-- v1.3 Step 2 已加入 Better Auth 持久化 foundation，但 **尚未** 强制 Login / Session / Server Action 授权；现有研判路径仍可能以 `MANUAL` actor 运行
+- v1.3 Step 3 已强制 Login / Session 进入 `(app)` 页面，但 **尚未** 将 `authorize()` 接入 Case/Report Server Actions；Audit Actor 仍可能为 `MANUAL`
 - `MANUAL` actorName 不可信为真实身份；未来 USER Actor 才绑定真实 `User.id`
 - SQLite 本地库；无独立审计库
 - 无防篡改 / 无不可抵赖保证

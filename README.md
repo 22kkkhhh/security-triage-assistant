@@ -49,8 +49,24 @@
 
 - Next.js（App Router）+ TypeScript + Tailwind CSS
 - Prisma ORM 7 + SQLite（本地 Demo）
+- Better Auth 1.6.x（username + password；Database Session）
 - Vitest
 - docx（原生可编辑 Word）
+
+### 开发登录（v1.3 Step 3）
+
+`npm run db:seed`（非 production）会幂等创建 Demo Users：
+
+| username | role |
+| --- | --- |
+| `demo-admin` | ADMIN |
+| `demo-analyst` | ANALYST |
+| `demo-viewer` | VIEWER |
+
+口令：环境变量 `DEMO_AUTH_PASSWORD`，未设置时使用 `.env.example` 中的 Development-only 默认值。  
+**production seed 不会创建 Demo Users。**
+
+说明：页面已要求登录；**Server Action RBAC / Trusted Actor 尚未完成**，勿当作完整权限上线。
 
 ## 五、核心流程
 
@@ -82,15 +98,14 @@
 
 原因包括：
 
-- 无认证
-- `MANUAL` actorName 不可信为真实身份
+- 已有 Login / Session，但 Case/Report Server Action RBAC 与 Trusted Actor **尚未**接入
+- `MANUAL` actorName 仍不可信为真实身份
 - SQLite 本地库
-- 无 RBAC
 - 无独立审计库
 - 无防篡改机制
 - 无不可抵赖保证
 
-生产环境需要：认证身份、RBAC、服务端可信 Actor、数据库权限隔离、
+生产环境需要：强制认证、完整 RBAC、服务端可信 Actor、数据库权限隔离、
 集中审计、日志完整性保护、备份与保留策略。
 
 ## 八、数据安全说明
@@ -133,8 +148,9 @@ npm run db:reset-demo    # 清空本地 Demo DB 并重新 migrate + seed（仅�
 
 ## 十、Demo Flow（约 3～5 分钟）
 
-1. **定位（30 秒）**  
-   打开 `/cases`，说明：不替代 SIEM，只做告警后的研判、案件运营与报告。
+1. **登录（30 秒）**  
+   打开 `/login`，使用 `demo-analyst` + Development Demo 口令进入 `/cases`。  
+   说明：不替代 SIEM，只做告警后的研判、案件运营与报告。
 
 2. **Case A（1 分钟）**  
    打开 `INC-20260808-001`：技术异常明显，但业务已授权；人工结论为

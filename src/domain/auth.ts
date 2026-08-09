@@ -21,6 +21,13 @@ export const USER_ROLES: readonly UserRole[] = [
   "VIEWER",
 ] as const;
 
+/** 角色中文展示（App Shell 展示用；不等于授权） */
+export const userRoleLabels: Record<UserRole, string> = {
+  ADMIN: "管理员",
+  ANALYST: "分析员",
+  VIEWER: "只读用户",
+};
+
 /**
  * Security Triage 已验证的当前用户身份（非数据库 User 完整实体）。
  * 不得包含 password / passwordHash / sessionToken。

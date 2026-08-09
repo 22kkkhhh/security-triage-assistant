@@ -150,34 +150,35 @@ Client
 
 ---
 
-## Auth Domain & Persistence Foundation（v1.3 Step 1–2）
+## Auth / Session（v1.3 Step 1–3）
 
 业务授权模型独立于 Better Auth 内部 ACL，定义于 `src/domain/auth.ts`：
 
 ```text
-Better Auth（credential + username + admin lifecycle）
-  → Prisma User / Session / Account / Verification
-  → toAuthUser() → AuthUser
-  → ROLE_PERMISSIONS / hasPermission / authorize
-  → Case / Report / User Server Actions（后续接入）
+/api/auth/[...all]（Better Auth handler）
+  → Session（DB）
+  → getCurrentAuthUser / requireAuthenticatedUser
+       （Session 仅取 userId → Prisma reload User → toAuthUser）
+  → (app) Layout 页面保护
+  → ROLE_PERMISSIONS / authorize → Server Actions（Step 4，尚未接入）
 ```
 
 已建立：
 
 - Domain：`AuthUser` / `UserRole` / `Permission` / `authorize`
-- Persistence：Better Auth 1.6.26 + `@better-auth/prisma-adapter` + Prisma 7 SQLite adapter
-- `User.role` 唯一物理 SoT：`ADMIN | ANALYST | VIEWER`（与 Domain 同名）
-- `enabled` server-owned（产品禁用态；不使用 banned 产品状态机）
-- `CaseAuditLog.actorId` → optional `User` FK（`onDelete: Restrict`）
-- Admin Plugin ACL：仅 auth lifecycle；**禁止** delete / impersonate
+- Persistence：Better Auth 1.6.26 + Prisma 7 SQLite adapter
+- Login：`/login`（username + password）；Logout；开发 Demo Users
+- Auth DAL：`disableCookieCache` + DB reload（enabled/role/displayName 新鲜度）
+- `(app)` Layout Server 保护：未登录 → `/login`；disabled → 清 Session 并提示
 
-**尚未完成（不得宣称系统已需登录）**：
+**尚未完成（不得宣称 RBAC / v1.3 已完成）**：
 
-- Login UI / Session cookie 保护 / HTTP `/api/auth`
-- Server Action `authorize` 接入
+- Server Action `authorize` 接入（Step 4）
 - Trusted Actor / `reviewedByUserId`
+- Admin User Management UI / 密码自助修改
 
-写边界两层仍独立：Authorization + Snapshot Payload Allowlist。
+写边界两层仍独立：Authorization + Snapshot Payload Allowlist。  
+页面受保护 ≠ Server Action 授权已完成。
 
 ---
 
