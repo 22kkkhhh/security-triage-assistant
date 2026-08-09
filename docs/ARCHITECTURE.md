@@ -156,7 +156,7 @@ Client
 
 ---
 
-## Auth / Session / Server Authorization（v1.3 Step 1–4）
+## Auth / Session / Server Authorization / User Admin（v1.3 Step 1–8）
 
 业务授权模型独立于 Better Auth 内部 ACL，定义于 `src/domain/auth.ts`：
 
@@ -168,7 +168,7 @@ Client
   → (app) Layout：Session 边界（是否有效登录）
   → requirePermission(permission)
        （authorize → ROLE_PERMISSIONS）
-  → Case / Report / Activity Server Actions 与受保护页面 loaders
+  → Case / Report / Activity / User Admin / Account Server Actions
 ```
 
 已建立：
@@ -181,6 +181,10 @@ Client
 - Server Authorization（Step 4）：`requirePermission` 接入全部 Case/Report/Activity
   读写入口；顺序为 Authentication → DB reload → enabled → Permission →
   parse / operationId / OCC / mutation；拒绝时无 DB 副作用
+- User Administration（Step 8）：`/admin/users`（`USER_ADMIN`）+ `/account`（自助改密）
+- Password：Better Auth `changePassword` / `setUserPassword` + Session 吊销；
+  产品禁用态仅 `User.enabled`（不使用 ban）
+- Bootstrap：`npm run user:bootstrap-admin`（显式 CLI；禁止 startup 自动建 ADMIN）
 
 写边界两层仍独立且必须同时满足：
 
@@ -205,17 +209,30 @@ Audit Actor vs HumanReview Responsibility（Step 6）：
 二者不得互相推导：不得用 `reviewer` 填 Audit Actor；不得从 Audit 反推当前责任人。
 Report Builder 继续使用 `HumanReview.reviewer` 快照；已有 ReportDraft 不随责任人自动同步。
 
-UI Permission Presentation（Step 7）：
+UI Permission Presentation（Step 7–8）：
 
 - Server 用 `hasPermission()` 派生 capability DTO（`src/domain/uiCapabilities.ts`）
 - Client 组件接收 capability 布尔值做只读呈现；**不**把 Client role 当作安全依据
-- VIEWER：只读 Workbench / Report；隐藏新建；Export disabled 并说明无权限
-- ANALYST / ADMIN：当前 Case/Report 操作 UI 相同（User Admin 属 Step 8）
+- VIEWER：只读 Workbench / Report；隐藏新建与用户管理；可进入 `/account`
+- ANALYST：Case/Report 操作 UI；无用户管理导航
+- ADMIN：另见「用户管理」导航（`canManageUsers` ← `USER_ADMIN`）
 - **UI permissions = UX；Server Authorization = 最终安全边界**（不得削弱 `requirePermission`）
 
-**尚未完成（不得宣称 v1.3 已完成）**：
+User Admin 边界（Step 8）：
 
-- Admin User Management UI / 密码自助修改（Step 8）
+- 产品入口必须经 Security Triage Server Actions + Permission；禁止 Client 直调 `authClient.admin.*` 作为安全边界
+- last enabled ADMIN invariant 在 Prisma transaction 内检查（role/enabled mutation）
+- password set 与 session revoke 在 Better Auth 侧为独立 API；部分失败须显式提示，不得回滚已成功的 `enabled=false`
+- 无 SystemAuditLog：Login / 改密 / 用户管理操作尚无独立全局审计（Known Limitation）
+
+**v1.3 功能开发已基本完成；下一步为 Release Hardening（Step 9）。**
+
+已知限制（不得宣称已具备）：
+
+- 无 MFA / SSO / forgot-password email / first-login forced password change
+- username/email v1.3 immutable；无用户物理删除；无 impersonation
+- 无 SystemAuditLog / Login Audit / User Admin Audit
+- PostgreSQL isolation 语义需在 v1.4 migration 后重新验证 last-ADMIN concurrency
 
 ---
 

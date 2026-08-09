@@ -69,9 +69,11 @@
 说明：页面已要求登录；Case/Report/Activity **Server Authorization** 与 **Trusted USER Actor** 已接入（Step 4–5）。  
 VIEWER 可查看案件与报告，但写操作与 Word 导出会被服务端拒绝。  
 认证写操作 Audit 绑定当前用户；跨用户重放 `operationId` 会被拒绝。  
-**HumanReview 责任人（Step 6）与 UI 只读呈现（Step 7）已接入**。  
-VIEWER = 只读 UX；ANALYST/ADMIN = 案件与报告操作 UI。  
-**Server Authorization 仍是最终安全边界**；用户管理 / 密码生命周期属 Step 8，勿当作完整 v1.3 上线。
+**HumanReview 责任人（Step 6）、UI 只读呈现（Step 7）、最小用户管理与密码生命周期（Step 8）已接入**。  
+VIEWER = 只读 UX + `/account` 自改密码；ANALYST = 案件/报告操作；ADMIN 另含 `/admin/users`。  
+**Server Authorization 仍是最终安全边界**。  
+v1.3 **无** SystemAuditLog / MFA / SSO / 用户物理删除 / impersonation；username/email 创建后不可改。  
+Production 首个管理员：显式运行 `npm run user:bootstrap-admin`（见 `.env.example`），禁止 startup 自动建号。
 
 ## 五、核心流程
 
@@ -144,6 +146,7 @@ npm run build            # 生产构建
 npm run generate:samples # 重新生成 samples/ DOCX
 npm run db:seed          # 幂等写入 Case A / Case B（含 Audit）
 npm run db:reset-demo    # 清空本地 Demo DB 并重新 migrate + seed（仅本地）
+npm run user:bootstrap-admin  # 无 enabled ADMIN 时创建首个生产管理员（需 BOOTSTRAP_* 环境变量）
 ```
 
 > `db:reset-demo` 是本地开发复位工具，**不会**在 Web UI 中提供。

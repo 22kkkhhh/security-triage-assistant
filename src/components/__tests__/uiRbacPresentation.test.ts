@@ -21,6 +21,16 @@ describe("AppShell / Navigation", () => {
     expect(src).toContain("showReadOnlyHint");
   });
 
+  it("用户管理 / 账户导航来自 capability，不硬编码 role === ADMIN", () => {
+    expect(src).toContain("requiresManageUsers");
+    expect(src).toContain("navigation.canManageUsers");
+    expect(src).toContain("requiresChangeOwnPassword");
+    expect(src).toContain("navigation.canChangeOwnPassword");
+    expect(src).toContain("/admin/users");
+    expect(src).toContain("/account");
+    expect(src).not.toContain('role === "ADMIN"');
+  });
+
   it("历史案件列表新建入口受 canCreateCase 控制", () => {
     const page = readSrc("app/(app)/cases/page.tsx");
     expect(page).toContain("buildNavigationCapabilities");

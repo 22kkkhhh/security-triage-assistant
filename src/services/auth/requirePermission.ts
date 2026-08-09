@@ -77,6 +77,14 @@ export const SERVER_ACTION_PERMISSIONS = {
   createReportDraftAction: "REPORT_WRITE",
   saveReportDraftAction: "REPORT_WRITE",
   exportReportAction: "REPORT_EXPORT",
+  listUsersAction: "USER_ADMIN",
+  createUserAction: "USER_ADMIN",
+  updateDisplayNameAction: "USER_ADMIN",
+  changeRoleAction: "USER_ADMIN",
+  setEnabledAction: "USER_ADMIN",
+  retryRevokeSessionsAction: "USER_ADMIN",
+  adminResetPasswordAction: "PASSWORD_ADMIN_RESET",
+  changeOwnPasswordAction: "PASSWORD_SELF_CHANGE",
 } as const satisfies Record<string, Permission>;
 
 export const SERVER_PAGE_PERMISSIONS = {
@@ -86,4 +94,6 @@ export const SERVER_PAGE_PERMISSIONS = {
   "/cases/new": "CASE_CREATE",
   "/cases/[id]/report": "REPORT_READ",
   "/reports": "REPORT_READ",
+  "/admin/users": "USER_ADMIN",
+  "/account": "PASSWORD_SELF_CHANGE",
 } as const satisfies Record<string, Permission>;

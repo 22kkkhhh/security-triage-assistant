@@ -12,6 +12,8 @@ type NavItem = {
   label: string;
   match: (path: string) => boolean;
   requiresCreateCase?: boolean;
+  requiresManageUsers?: boolean;
+  requiresChangeOwnPassword?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -32,6 +34,18 @@ const navItems: NavItem[] = [
     href: "/reports",
     label: "报告中心",
     match: (path: string) => path.startsWith("/reports"),
+  },
+  {
+    href: "/admin/users",
+    label: "用户管理",
+    match: (path: string) => path.startsWith("/admin/users"),
+    requiresManageUsers: true,
+  },
+  {
+    href: "/account",
+    label: "账户",
+    match: (path: string) => path.startsWith("/account"),
+    requiresChangeOwnPassword: true,
   },
 ];
 
@@ -57,9 +71,14 @@ export function AppShell({
   showReadOnlyHint?: boolean;
 }) {
   const pathname = usePathname() ?? "/cases";
-  const visibleNav = navItems.filter(
-    (item) => !item.requiresCreateCase || navigation.canCreateCase,
-  );
+  const visibleNav = navItems.filter((item) => {
+    if (item.requiresCreateCase && !navigation.canCreateCase) return false;
+    if (item.requiresManageUsers && !navigation.canManageUsers) return false;
+    if (item.requiresChangeOwnPassword && !navigation.canChangeOwnPassword) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="flex min-h-screen bg-neutral-100 text-neutral-900">

@@ -293,7 +293,8 @@ type UserRole = "ADMIN" | "ANALYST" | "VIEWER";
 - `CASE_READ` 与 `ACTIVITY_READ` 分权保留；v1.3 三角色均可读
 - VIEWER：`REPORT_READ` 允许，`REPORT_EXPORT` 拒绝
 - `CASE_SNAPSHOT_WRITE`：仅 ANALYST / ADMIN（与 Snapshot allowlist 叠加）
-- 「至少一个 enabled ADMIN」是未来用户管理 invariant，不在本 foundation 的 `authorize()` 内实现
+- 「至少一个 enabled ADMIN」由用户管理服务在 role/enabled mutation 的 DB transaction 内强制；
+  不在 `authorize()` 内实现。disabled ADMIN 不计入。
 
 `toAuthUser()`（`src/services/auth/toAuthUser.ts`）是 Better Auth / Prisma User → `AuthUser` 的唯一 mapper：  
 非法 role（含小写 `admin` / 多角色逗号串）、缺失 username、非 boolean `enabled` → fail closed。
@@ -315,7 +316,15 @@ UI Capability（Step 7）：页面 Server Component 经 `hasPermission` 派生
 `CaseWorkbenchCapabilities` / `ReportPageCapabilities` / `NavigationCapabilities`，
 供 Client 只读呈现。权限 SoT 仍只有 `ROLE_PERMISSIONS`；UI 隐藏不等于已授权。
 
-仍未完成：用户管理、密码自助修改。
+User Administration / Password Lifecycle（Step 8）：
+
+- `/admin/users`：`USER_ADMIN`；创建用户、改 displayName / role / enabled、ADMIN 重置他人密码
+- `/account`：`PASSWORD_SELF_CHANGE`；三角色自助改密（`revokeOtherSessions=true`）
+- username / email：v1.3 创建后不可通过 UI 修改
+- 无物理删除、无 impersonation、无 ban 产品状态机（禁用只用 `User.enabled`）
+- Credential 仅经 Better Auth provisioning / changePassword / setUserPassword
+- Production：`npm run user:bootstrap-admin`（无 enabled ADMIN 时一次创建；无默认口令）
+- 用户管理事件不写入 CaseAuditLog；无 SystemAuditLog（Known Limitation）
 
 ---
 

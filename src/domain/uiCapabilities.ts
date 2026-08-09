@@ -29,6 +29,8 @@ export type ReportPageCapabilities = {
 
 export type NavigationCapabilities = {
   canCreateCase: boolean;
+  canManageUsers: boolean;
+  canChangeOwnPassword: boolean;
 };
 
 export type AppShellCapabilities = {
@@ -67,6 +69,8 @@ export function buildNavigationCapabilities(
 ): NavigationCapabilities {
   return {
     canCreateCase: hasPermission(user, "CASE_CREATE"),
+    canManageUsers: hasPermission(user, "USER_ADMIN"),
+    canChangeOwnPassword: hasPermission(user, "PASSWORD_SELF_CHANGE"),
   };
 }
 

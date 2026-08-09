@@ -175,7 +175,20 @@ UI RBAC Presentation（Step 7）必须证明：
 - [x] capability 仅由 `hasPermission` 派生；Client 不硬编码 role 作为安全 SoT
 - [x] VIEWER：只读 Workbench（Status/BC/HR/Checklist/Timeline/Handoff）；无新建入口
 - [x] VIEWER：Report 可读；无生成；Export disabled；不触发 Case/Report autosave
-- [x] ANALYST/ADMIN：Case/Report 操作 UI 可用；ADMIN 无 User Management 入口（Step 8）
+- [x] ANALYST/ADMIN：Case/Report 操作 UI 可用；User Management 入口属 Step 8（capability）
 - [x] Server Authorization / Trusted Actor / HR Responsibility / Snapshot / OCC 回归保持
 
-尚未验收（后续 Step）：用户管理 UI、密码自助修改。
+User Management & Password Lifecycle（Step 8）自动化必须证明：
+
+- [x] `/admin/users` 与 User Admin Actions 要求 `USER_ADMIN`；ANALYST/VIEWER → FORBIDDEN 无副作用
+- [x] 创建用户：Better Auth provisioning；username canonical lowercase；enabled 固定 true；单角色
+- [x] displayName 更新：AuthUser 新名称；历史 CaseAuditLog.actorName / HumanReview.reviewer 快照不变
+- [x] role / enabled：DB reload 立即生效；禁用先提交 enabled=false 再吊销 Session（revoke 失败不回滚禁用）
+- [x] last enabled ADMIN invariant（含并发危险 mutation）；disabled ADMIN 不计入
+- [x] 自助改密：`PASSWORD_SELF_CHANGE` + Better Auth changePassword + revokeOtherSessions
+- [x] ADMIN 重置他人：`PASSWORD_ADMIN_RESET`；禁止重置自己；成功后吊销目标 Sessions
+- [x] mass-assignment reject；无物理删除 / impersonation / ban 产品路径
+- [x] `user:bootstrap-admin`：无 enabled ADMIN 时可创建；已有则拒绝；无默认弱口令
+- [x] 用户管理不写入 CaseAuditLog；无 SystemAuditLog
+
+尚未验收（后续 Step 9 Release Hardening）：端到端发布门禁 hardening、文档/发布核对。

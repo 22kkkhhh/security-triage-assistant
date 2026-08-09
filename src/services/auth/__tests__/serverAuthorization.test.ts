@@ -32,6 +32,12 @@ import {
   exportReportAction,
   saveReportDraftAction,
 } from "@/app/(app)/cases/reportActions";
+import {
+  adminResetPasswordAction,
+  createUserAction,
+  listUsersAction,
+} from "@/app/(app)/admin/users/actions";
+import { changeOwnPasswordAction } from "@/app/(app)/account/actions";
 import { caseA } from "@/domain/demo";
 import {
   ForbiddenError,
@@ -217,6 +223,15 @@ describe("Action → Permission 合同", () => {
     }
     expect(SERVER_PAGE_PERMISSIONS["/cases/new"]).toBe("CASE_CREATE");
     expect(SERVER_PAGE_PERMISSIONS["/cases/[id]/report"]).toBe("REPORT_READ");
+    expect(SERVER_PAGE_PERMISSIONS["/admin/users"]).toBe("USER_ADMIN");
+    expect(SERVER_PAGE_PERMISSIONS["/account"]).toBe("PASSWORD_SELF_CHANGE");
+    expect(SERVER_ACTION_PERMISSIONS.createUserAction).toBe("USER_ADMIN");
+    expect(SERVER_ACTION_PERMISSIONS.adminResetPasswordAction).toBe(
+      "PASSWORD_ADMIN_RESET",
+    );
+    expect(SERVER_ACTION_PERMISSIONS.changeOwnPasswordAction).toBe(
+      "PASSWORD_SELF_CHANGE",
+    );
   });
 });
 
@@ -727,13 +742,27 @@ describe("Permission 入口覆盖", () => {
       REPORT_EXPORT: () => exportReportAction(created.id, randomUUID(), true),
       CASE_READ: async () => ({ ok: true, code: "SKIP" }),
       REPORT_READ: async () => ({ ok: true, code: "SKIP" }),
-      USER_ADMIN: async () => ({ ok: true, code: "SKIP" }),
-      PASSWORD_SELF_CHANGE: async () => ({ ok: true, code: "SKIP" }),
-      PASSWORD_ADMIN_RESET: async () => ({ ok: true, code: "SKIP" }),
+      USER_ADMIN: () => listUsersAction(1),
+      PASSWORD_SELF_CHANGE: async () => {
+        // VIEWER 拥有自改密码：改用无 Session 验证入口存在
+        return runAsUnauthenticatedTest(() =>
+          changeOwnPasswordAction({
+            currentPassword: "x",
+            newPassword: "yyyyyyyy",
+            confirmPassword: "yyyyyyyy",
+          }),
+        );
+      },
+      PASSWORD_ADMIN_RESET: () =>
+        adminResetPasswordAction({
+          userId: VITEST_ANALYST_USER.id,
+          newPassword: "TestOnly_Reset_9x!!",
+          confirmPassword: "TestOnly_Reset_9x!!",
+        }),
     };
 
     const writePermissions = Object.values(SERVER_ACTION_PERMISSIONS).filter(
-      (p) => p !== "ACTIVITY_READ",
+      (p) => p !== "ACTIVITY_READ" && p !== "PASSWORD_SELF_CHANGE",
     );
     const unique = [...new Set(writePermissions)];
 
@@ -743,6 +772,25 @@ describe("Permission 入口覆盖", () => {
       expect(result.ok, permission).toBe(false);
       if (!result.ok) expect(result.code).toBe("FORBIDDEN");
     }
+
+    // PASSWORD_SELF_CHANGE：未登录拒绝（VIEWER 有权限，不能用 VIEWER 测 FORBIDDEN）
+    const pwdDenied = await probes.PASSWORD_SELF_CHANGE();
+    expect(pwdDenied.ok).toBe(false);
+    if (!pwdDenied.ok) expect(pwdDenied.code).toBe("UNAUTHENTICATED");
+
+    // USER_ADMIN create 额外入口
+    const createDenied = await runWithTestAuthUser(VITEST_VIEWER_USER, () =>
+      createUserAction({
+        username: "denied.user",
+        displayName: "Denied",
+        email: "denied@example.test",
+        role: "VIEWER",
+        initialPassword: "TestOnly_Denied_9x!",
+        confirmPassword: "TestOnly_Denied_9x!",
+      }),
+    );
+    expect(createDenied.ok).toBe(false);
+    if (!createDenied.ok) expect(createDenied.code).toBe("FORBIDDEN");
 
     // ACTIVITY_READ：Viewer 成功；无 Session 失败
     const activityOk = await runWithTestAuthUser(VITEST_VIEWER_USER, () =>
