@@ -150,6 +150,31 @@ Client
 
 ---
 
+## Auth Domain Foundation（v1.3 Step 1）
+
+业务授权模型独立于未来的 Better Auth 集成，定义于 `src/domain/auth.ts`：
+
+```text
+Authenticated identity（后续 Better Auth）
+  → AuthUser（Security Triage trusted object）
+  → ROLE_PERMISSIONS / hasPermission / authorize
+  → Case / Report / User Server Actions（后续接入）
+```
+
+当前状态：
+
+- 已建立：`AuthUser` / `UserRole`（ADMIN | ANALYST | VIEWER）/ `Permission` / Role 映射 / `authorize`
+- **尚未**：Login、Session、Prisma User、Server Action 授权接入、Trusted Actor
+
+写边界两层仍独立：
+
+1. Authorization（谁能进入动作）
+2. Snapshot Payload Allowlist（能改哪些非语义字段）
+
+AuthUser 只能由 Server 派生；Client 不得提交 role / enabled 等作为可信身份。
+
+---
+
 ## 明确禁止
 
 禁止为了“架构漂亮”制造：

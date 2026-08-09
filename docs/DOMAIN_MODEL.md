@@ -253,6 +253,29 @@ type AuditActorType = "SYSTEM" | "MANUAL" | "USER";
 
 ---
 
+## AuthUser / Permission（v1.3 Domain Foundation）
+
+全局角色（无自定义角色）：
+
+```ts
+type UserRole = "ADMIN" | "ANALYST" | "VIEWER";
+```
+
+`AuthUser` 表示「已验证的当前用户身份」，不含 password / sessionToken。  
+`Permission` 与 `ROLE_PERMISSIONS` 是业务授权唯一 Source of Truth；业务代码应通过 `hasPermission` / `authorize`，禁止散落 `if (role === "ADMIN")`。
+
+要点：
+
+- `enabled === false` → 有效授权永远拒绝（即使 ADMIN）
+- `CASE_READ` 与 `ACTIVITY_READ` 分权保留；v1.3 三角色均可读
+- VIEWER：`REPORT_READ` 允许，`REPORT_EXPORT` 拒绝
+- `CASE_SNAPSHOT_WRITE`：仅 ANALYST / ADMIN（与 Snapshot allowlist 叠加）
+- 「至少一个 enabled ADMIN」是未来用户管理 invariant，不在本 foundation 的 `authorize()` 内实现
+
+本段仅为领域 foundation；不代表 Authentication / Login / RBAC 运行时已上线。
+
+---
+
 ## 禁止事项
 
 - 不得用 boolean 表示可能缺失数据的判断字段
@@ -260,3 +283,4 @@ type AuditActorType = "SYSTEM" | "MANUAL" | "USER";
 - 不得引入与核心流程无关的复杂状态机或微服务实体拆分
 - 不得把 `UNKNOWN` 解释为“未发现异常”
 - 不得混淆 Timeline 与 AuditLog
+- 不得让业务授权依赖 Better Auth 内部 role / permission 实现

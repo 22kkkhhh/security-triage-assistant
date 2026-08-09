@@ -111,3 +111,18 @@ v1.2 Case 双 Tab 并发（I）：已在发布前用真实双 Page 浏览器一�
 （Status→BusinessContext / BusinessContext→Checklist / Status vs Status /
 单 Tab sanity / Handoff→stale）。项目未将 Playwright 列为正式依赖；
 长期回归保留 `caseConcurrency` 单测与 `scripts/smoke-v12-case-concurrency.ts`。
+
+---
+
+## v1.3 验收条件（Auth Domain Foundation — 进行中）
+
+Domain foundation（Step 1）自动化必须证明：
+
+- [ ] `UserRole` 仅 ADMIN / ANALYST / VIEWER
+- [ ] Role → Permission 矩阵符合产品设计（含 VIEWER 只读、ANALYST 无 USER_ADMIN、ADMIN 全权限）
+- [ ] `enabled === false` 时 `hasPermission` / `authorize` 一律拒绝
+- [ ] `ForbiddenError.code === "FORBIDDEN"`；`UnauthenticatedError.code === "UNAUTHENTICATED"`
+- [ ] Auth Domain 不依赖 Better Auth package
+- [ ] Server Actions 尚未强制 authorize（待后续 Authorization 接入 Step）
+
+尚未验收（后续 Step）：Login、Session、User 持久化、Trusted Actor、用户管理 UI。
