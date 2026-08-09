@@ -329,6 +329,8 @@ export type ComplianceReferenceSnapshot = {
   supportingRuleIds: string[];
   evidenceIds: string[];
   relevance: CaseComplianceRelevance;
+  /** 报告渲染用：SUMMARY_ONLY / METADATA_ONLY 不得伪装成全文原文引用 */
+  contentMode: ContentMode;
 };
 
 // ---------------------------------------------------------------------------

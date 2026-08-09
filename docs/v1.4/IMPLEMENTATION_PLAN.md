@@ -70,7 +70,7 @@
 
 ---
 
-## Step 2B — Runtime Compliance Resolution（本提交）
+## Step 2B — Runtime Compliance Resolution（已完成）
 
 **目标：** Case 运行时从命中 ruleId 解析 Findings + Snapshot（不建表、不接报告 UI）。
 
@@ -80,9 +80,21 @@
 - control+clause 去重，保留 supportingRuleIds / evidenceIds  
 - Snapshot 固定 caseDate / VersionSelectionBasis / versionKey / clauseKey  
 
-**不做：** Prisma schema 变更、Finding 表、报告集成、RAG/Admin UI。
-
 **出口：** `resolveCaseCompliance` + 历史选版 / 去重 / Case A/B 测试。
+
+---
+
+## Step 2C — Report Integration（本提交）
+
+**目标：** Snapshot → 报告三节 + DOCX；创建草稿时固化，导出不再查 Knowledge。
+
+- 章节：相关合规参考 / 可能相关要求 / 建议进一步核实事项  
+- 禁止违法/违规/法律意见自动措辞；GB/T SUMMARY_ONLY 摘要渲染  
+- `createReportDraftCommand` 解析 Snapshot 后写入 `ReportData.complianceReferences`  
+
+**不做：** Prisma schema、SecurityRule SoT、RAG/Admin UI。
+
+**出口：** compliance report builder 测试 + Case A/B DOCX + samples。
 
 ---
 

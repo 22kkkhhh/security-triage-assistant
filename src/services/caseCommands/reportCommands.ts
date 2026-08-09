@@ -31,6 +31,7 @@ import type { PersistedCase } from "@/services/persistence/types";
 import {
   buildInitialReportFromRecord,
   getReportExportPayload,
+  resolveComplianceSnapshotsForReport,
 } from "@/services/persistence/reportDraftService";
 import {
   generateDocxBuffer,
@@ -112,7 +113,12 @@ export async function createReportDraftCommand(input: {
     };
   }
 
-  const report = buildInitialReportFromRecord(existing);
+  // 报告创建时解析 Snapshot；此后草稿/导出不得再查 Knowledge DB
+  const complianceReferences =
+    await resolveComplianceSnapshotsForReport(existing);
+  const report = buildInitialReportFromRecord(existing, {
+    complianceReferences,
+  });
 
   try {
     const audit = await runInTransaction(async (tx) => {

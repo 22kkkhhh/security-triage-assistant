@@ -38,6 +38,11 @@ import {
   importCuratedKnowledgePack,
 } from "../src/services/knowledge/pack/importCuratedKnowledgePack";
 import { countPackEntities } from "../src/services/knowledge/pack/curatedPack";
+import { getCaseById } from "../src/services/persistence/caseRepository";
+import {
+  buildInitialReportFromRecord,
+  resolveComplianceSnapshotsForReport,
+} from "../src/services/persistence/reportDraftService";
 
 function toJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -416,6 +421,27 @@ async function main() {
       knowledgeCounts.controls < expected.controls
     ) {
       throw new Error("Knowledge Pack seed 后计数低于 pack 期望值");
+    }
+
+    // Case A 已有报告：用固化 Snapshot 刷新合规章节（幂等；不改 Audit 计数）
+    const caseARecord = await getCaseById("demo-case-a");
+    if (caseARecord?.hasReport) {
+      const snapshots =
+        await resolveComplianceSnapshotsForReport(caseARecord);
+      const report = buildInitialReportFromRecord(caseARecord, {
+        complianceReferences: snapshots,
+      });
+      await prisma.caseRecord.update({
+        where: { id: "demo-case-a" },
+        data: {
+          reportDraft: toJson(report),
+          hasReport: true,
+          reportUpdatedAt: T.aReport,
+        },
+      });
+      console.log(
+        `  Case A 报告合规章节已刷新：snapshots=${snapshots.length}`,
+      );
     }
   }
 }

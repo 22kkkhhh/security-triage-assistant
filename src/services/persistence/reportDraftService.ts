@@ -1,5 +1,7 @@
+import type { ComplianceReferenceSnapshot } from "@/domain/knowledge";
 import type { Evidence, ReportData, TimelineEvent } from "@/domain/types";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
+import { resolveCaseCompliance } from "@/services/knowledge/resolveCaseCompliance";
 import { buildReportData } from "@/services/reporting/reportBuilder";
 import {
   mergeChecklistOnRestore,
@@ -66,8 +68,13 @@ function buildContext(record: PersistedCase): ReportWorkbenchContext {
   };
 }
 
-/** 从当前案件状态构建初稿（不写入 DB） */
-export function buildInitialReportFromRecord(record: PersistedCase): ReportData {
+/** 从当前案件状态构建初稿（不写入 DB）；合规章节只消费传入的 Snapshot */
+export function buildInitialReportFromRecord(
+  record: PersistedCase,
+  options?: {
+    complianceReferences?: ComplianceReferenceSnapshot[];
+  },
+): ReportData {
   const draft = toSecurityCaseDraft(record.id, record.caseState);
   const analyzed = analyzeSecurityCase(draft);
   const checklist = mergeChecklistOnRestore(
@@ -84,6 +91,7 @@ export function buildInitialReportFromRecord(record: PersistedCase): ReportData 
     humanReview: record.caseState.humanReview,
     checklist,
     timeline: record.caseState.timeline,
+    complianceReferences: options?.complianceReferences,
   });
   return {
     ...report,
@@ -94,6 +102,28 @@ export function buildInitialReportFromRecord(record: PersistedCase): ReportData 
         : row,
     ),
   };
+}
+
+/**
+ * 创建报告初稿前解析合规 Snapshot（唯一允许查 Knowledge 的时机）。
+ * 随后 buildReportData / DOCX 只消费返回的 snapshots。
+ */
+export async function resolveComplianceSnapshotsForReport(
+  record: PersistedCase,
+): Promise<ComplianceReferenceSnapshot[]> {
+  const draft = toSecurityCaseDraft(record.id, record.caseState);
+  const analyzed = analyzeSecurityCase(draft);
+  try {
+    const resolved = await resolveCaseCompliance({
+      draft,
+      analysisResults: analyzed.analysisResults,
+      evidences: analyzed.evidences,
+    });
+    return resolved.snapshots;
+  } catch {
+    // Knowledge 不可用时不阻断报告生成（章节缺失）
+    return [];
+  }
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   riskLevelLabels,
   verificationStatusLabels,
 } from "@/domain/labels";
+import type { ComplianceReferenceSnapshot } from "@/domain/knowledge";
 import type {
   AnalysisResult,
   ChecklistItem,
@@ -17,6 +18,7 @@ import type {
   SecurityDomain,
   TimelineEvent,
 } from "@/domain/types";
+import { buildComplianceReportSections } from "./complianceReportBuilder";
 import { formatDateTime, normalizeDateTimesInText } from "./timeFormat";
 
 /** 报告正文使用的正式中文措辞，内部枚举值不得直接进入正文 */
@@ -39,6 +41,12 @@ export interface BuildReportInput {
   humanReview: HumanReview | null;
   checklist: ChecklistItem[];
   timeline: TimelineEvent[];
+  /**
+   * 报告生成时已固化的合规 Snapshot。
+   * buildReportData 只消费该数组，不得查询 Knowledge DB 或重选版本。
+   * undefined = 旧路径/无合规集成（不插入合规章节）；[] = 已评估但无条目。
+   */
+  complianceReferences?: ComplianceReferenceSnapshot[];
 }
 
 const sectionTitles: Record<ReportSection["key"], string> = {
@@ -52,6 +60,9 @@ const sectionTitles: Record<ReportSection["key"], string> = {
   checklistSummary: "核查情况",
   timelineIntro: "事件处置过程",
   impactAnalysis: "影响分析",
+  complianceRelevant: "相关合规参考",
+  compliancePossible: "可能相关要求",
+  complianceFurtherVerification: "建议进一步核实事项",
   conclusion: "人工研判结论",
   recommendations: "整改建议",
 };
@@ -85,7 +96,13 @@ function joinRuleExplanations(
 }
 
 export function buildReportData(input: BuildReportInput): ReportData {
-  const { securityCase, humanReview, checklist, timeline } = input;
+  const {
+    securityCase,
+    humanReview,
+    checklist,
+    timeline,
+    complianceReferences,
+  } = input;
   const {
     alert,
     dataContext,
@@ -213,6 +230,7 @@ export function buildReportData(input: BuildReportInput): ReportData {
       title: sectionTitles.impactAnalysis,
       content: impactText,
     },
+    ...buildComplianceReportSections(complianceReferences),
     {
       key: "conclusion",
       title: sectionTitles.conclusion,
@@ -261,5 +279,13 @@ export function buildReportData(input: BuildReportInput): ReportData {
       .map((e) => e.evidenceId),
     timelineEventIds: timeline.map((event) => event.id),
     generatedAt,
+    ...(complianceReferences !== undefined
+      ? {
+          // 深拷贝固化，避免后续外部修改影响草稿
+          complianceReferences: JSON.parse(
+            JSON.stringify(complianceReferences),
+          ) as ComplianceReferenceSnapshot[],
+        }
+      : {}),
   };
 }

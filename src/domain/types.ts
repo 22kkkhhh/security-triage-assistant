@@ -8,6 +8,8 @@
  * - 缺失的具体数据字段使用 null 显式建模。
  */
 
+import type { ComplianceReferenceSnapshot } from "./knowledge";
+
 /** 三态判断：未见异常 / 异常或可疑 / 数据不足无法判断 */
 export type ObservationStatus = "NORMAL" | "ABNORMAL" | "UNKNOWN";
 
@@ -267,6 +269,9 @@ export type ReportSectionKey =
   | "checklistSummary"
   | "timelineIntro"
   | "impactAnalysis"
+  | "complianceRelevant"
+  | "compliancePossible"
+  | "complianceFurtherVerification"
   | "conclusion"
   | "recommendations";
 
@@ -297,6 +302,11 @@ export interface ReportData {
   /** 进入报告的时间线事件 ID */
   timelineEventIds: string[];
   generatedAt: string;
+  /**
+   * 合规引用 Snapshot（旧草稿可缺失）。
+   * DOCX 只消费章节/本字段，不得再查 Knowledge DB 或重选版本。
+   */
+  complianceReferences?: ComplianceReferenceSnapshot[];
 }
 
 /** 一次研判案件的聚合根 */

@@ -380,7 +380,7 @@ export function resolveCaseComplianceFromGraph(
     ];
     const rationale = [
       `基于命中规则 ${[ruleId, ...supportingRuleIds].join("、")} 关联控制 ${bucket.control.controlCode}。`,
-      `静态关系：${bucket.relationType}（非违法结论）。`,
+      `静态关系：${bucket.relationType}（仅知识关联，非法律定性）。`,
       ...rationaleParts.slice(0, 2),
       missingContext.length > 0
         ? `缺少上下文：${missingContext.map((m) => m.label).join("、")}。`
@@ -455,6 +455,7 @@ export function resolveCaseComplianceFromGraph(
       supportingRuleIds: f.supportingRuleIds,
       evidenceIds: f.evidenceIds,
       relevance: f.relevance,
+      contentMode: version?.contentMode ?? "METADATA_ONLY",
     };
   });
 
