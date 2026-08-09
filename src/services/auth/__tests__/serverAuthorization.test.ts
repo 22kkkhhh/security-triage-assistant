@@ -2,6 +2,7 @@
  * v1.3 Step 4：Server Authorization 边界、无副作用、三角色矩阵、回归。
  */
 import { execSync } from "node:child_process";
+import { systemActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -53,6 +54,7 @@ import {
   SERVER_PAGE_PERMISSIONS,
 } from "@/services/auth/requirePermission";
 import {
+  ensureVitestAuthUsersInDb,
   runAsUnauthenticatedTest,
   runWithTestAuthUser,
   setVitestDefaultAuthUser,
@@ -91,7 +93,8 @@ async function seedCase(operationId: string) {
       suggestedRiskLevel:
         analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
     },
-    { operationId },
+    { operationId, actor: systemActor()
+},
   );
   expect(created.ok).toBe(true);
   if (!created.ok) throw new Error(created.error);
@@ -195,6 +198,7 @@ beforeEach(async () => {
   await prisma.account.deleteMany();
   await prisma.verification.deleteMany();
   await prisma.user.deleteMany();
+  await ensureVitestAuthUsersInDb();
 });
 
 afterAll(async () => {
@@ -350,8 +354,8 @@ describe("Viewer 写拒绝 + 无副作用", () => {
       const created = await seedCase(`viewer-deny-${randomUUID()}`);
       await createReportDraftCommand({
         caseId: created.id,
-        operationId: `viewer-report-${randomUUID()}`,
-      });
+        operationId: `viewer-report-${randomUUID()}`, actor: systemActor()
+});
       const before = await fingerprint(created.id);
       const casesBefore = (await listCases({})).length;
 
@@ -397,8 +401,8 @@ describe("Viewer 读允许", () => {
     const created = await seedCase("viewer-read");
     await createReportDraftCommand({
       caseId: created.id,
-      operationId: "viewer-read-report",
-    });
+      operationId: "viewer-read-report", actor: systemActor()
+});
 
     await runWithTestAuthUser(VITEST_VIEWER_USER, async () => {
       await expect(requirePermission("CASE_READ")).resolves.toMatchObject({
@@ -421,8 +425,8 @@ describe("Analyst / Admin 写允许", () => {
     const created = await seedCase("analyst-allow");
     await createReportDraftCommand({
       caseId: created.id,
-      operationId: "analyst-report",
-    });
+      operationId: "analyst-report", actor: systemActor()
+});
 
     await runWithTestAuthUser(VITEST_ANALYST_USER, async () => {
       const snap = await saveCaseStateAction(created.id, {
@@ -663,8 +667,8 @@ describe("Permission 入口覆盖", () => {
     const created = await seedCase("map-coverage");
     await createReportDraftCommand({
       caseId: created.id,
-      operationId: "map-report",
-    });
+      operationId: "map-report", actor: systemActor()
+});
     const latest = await getCaseById(created.id);
     const state = toNextState(latest!);
 

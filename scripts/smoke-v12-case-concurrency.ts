@@ -5,6 +5,7 @@
  * 最终 status 仍为 RESPONDING，且无 stale BC Audit。
  */
 import "dotenv/config";
+import { systemActor } from "../src/services/audit/auditEventBuilder";
 import { caseB } from "../src/domain/demo";
 import { analyzeSecurityCase } from "../src/services/analysis/analyzeSecurityCase";
 import {
@@ -59,7 +60,8 @@ async function main() {
       suggestedRiskLevel:
         analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
     },
-    { operationId: `smoke-cc-create-${Date.now()}` },
+    { operationId: `smoke-cc-create-${Date.now()}`, actor: systemActor()
+},
   );
   assert(created.ok, "创建失败");
   if (!created.ok) return;
@@ -72,8 +74,8 @@ async function main() {
     nextStatus: "RESPONDING",
     operationId: `smoke-cc-status-${Date.now()}`,
     baseUpdatedAt: v1.updatedAt,
-    nextCaseState: toNextState(v1, { status: "RESPONDING" }),
-  });
+    nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+});
   assert(tabA.ok, `Tab A 状态修改失败: ${!tabA.ok ? tabA.error : ""}`);
   if (!tabA.ok) return;
   assert(tabA.case.status === "RESPONDING", "Tab A 后应为处置中");
@@ -93,8 +95,8 @@ async function main() {
         ...v1.caseState.businessContext,
         businessLegitimacy: targetLegitimacy,
       },
-    }),
-  });
+    }), actor: systemActor()
+});
   assert(!tabB.ok, "Tab B 应 STALE");
   assert(!tabB.ok && tabB.code === "STALE", "Tab B 应返回 STALE code");
 

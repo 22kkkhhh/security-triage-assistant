@@ -1,6 +1,7 @@
 /**
  * 报告 Semantic Commands：创建 / 保存（可选审计） / 导出。
  * reportDraft 为唯一草稿 SoT；Audit 不存正文。
+ * Actor 必须由调用方显式传入（USER / SYSTEM）。
  */
 
 import type { ReportData } from "@/domain/types";
@@ -9,7 +10,13 @@ import {
   buildReportCreatedAudit,
   buildReportExportedAudit,
   buildReportUpdatedAudit,
+  type AuditActor,
 } from "@/services/audit/auditEventBuilder";
+import {
+  assertTrustedCommandActor,
+  validateOperationOwnership,
+  type TrustedCommandActor,
+} from "@/services/audit/operationOwnership";
 import {
   appendCaseAudit,
   findAuditByOperationId,
@@ -30,21 +37,41 @@ import {
   suggestDocxFileName,
 } from "@/services/reporting/docxGenerator";
 import type { CommandResult } from "./types";
+import type { AuditActionType } from "@/domain/audit";
 
-function reviewerOf(record: PersistedCase): string | null {
-  return record.caseState.humanReview?.reviewer ?? null;
+function requireActor(actor: AuditActor): TrustedCommandActor | CommandResult {
+  try {
+    return assertTrustedCommandActor(actor);
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Actor 无效",
+    };
+  }
 }
 
-async function resolveReportOperation(
-  caseId: string,
-  operationId: string,
-): Promise<CommandResult | null> {
-  const existing = await findAuditByOperationId(operationId);
+async function resolveReportOperation(input: {
+  caseId: string;
+  operationId: string;
+  actor: TrustedCommandActor;
+  actionType: AuditActionType;
+}): Promise<CommandResult | null> {
+  const existing = await findAuditByOperationId(input.operationId);
   if (!existing) return null;
-  if (existing.caseId !== caseId) {
-    return { ok: false, error: "operationId 已被其他案件使用" };
+  const ownership = validateOperationOwnership({
+    existing,
+    expectedActor: input.actor,
+    caseId: input.caseId,
+    actionType: input.actionType,
+  });
+  if (!ownership.ok) {
+    return {
+      ok: false,
+      error: ownership.error,
+      code: ownership.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+    };
   }
-  const record = await getCaseById(caseId);
+  const record = await getCaseById(input.caseId);
   if (!record) return { ok: false, error: "案件不存在" };
   return {
     ok: true,
@@ -58,11 +85,18 @@ async function resolveReportOperation(
 export async function createReportDraftCommand(input: {
   caseId: string;
   operationId: string;
+  actor: AuditActor;
 }): Promise<CommandResult> {
-  const idempotent = await resolveReportOperation(
-    input.caseId,
-    input.operationId,
-  );
+  const actor = requireActor(input.actor);
+  if ("ok" in actor && actor.ok === false) return actor;
+  const trusted = actor as TrustedCommandActor;
+
+  const idempotent = await resolveReportOperation({
+    caseId: input.caseId,
+    operationId: input.operationId,
+    actor: trusted,
+    actionType: "REPORT_CREATED",
+  });
   if (idempotent) return idempotent;
 
   const existing = await getCaseById(input.caseId);
@@ -95,7 +129,7 @@ export async function createReportDraftCommand(input: {
           caseId: input.caseId,
           ...buildReportCreatedAudit({
             caseNumber: existing.caseNumber,
-            reviewer: reviewerOf(existing),
+            actor: trusted,
             operationId: input.operationId,
           }),
         },
@@ -124,9 +158,17 @@ export async function createReportDraftCommand(input: {
         };
       }
     }
-    const raced = await resolveReportOperation(input.caseId, input.operationId);
+    const raced = await resolveReportOperation({
+      caseId: input.caseId,
+      operationId: input.operationId,
+      actor: trusted,
+      actionType: "REPORT_CREATED",
+    });
     if (raced) return raced;
-    return { ok: false, error: message === "REPORT_ALREADY_EXISTS" ? "报告已存在" : message };
+    return {
+      ok: false,
+      error: message === "REPORT_ALREADY_EXISTS" ? "报告已存在" : message,
+    };
   }
 }
 
@@ -140,12 +182,19 @@ export async function saveReportDraftCommand(input: {
   reportDraft: ReportData;
   baseReportUpdatedAt: string | null;
   auditOperationId?: string | null;
+  actor: AuditActor;
 }): Promise<CommandResult> {
+  const actor = requireActor(input.actor);
+  if ("ok" in actor && actor.ok === false) return actor;
+  const trusted = actor as TrustedCommandActor;
+
   if (input.auditOperationId?.trim()) {
-    const idempotent = await resolveReportOperation(
-      input.caseId,
-      input.auditOperationId.trim(),
-    );
+    const idempotent = await resolveReportOperation({
+      caseId: input.caseId,
+      operationId: input.auditOperationId.trim(),
+      actor: trusted,
+      actionType: "REPORT_UPDATED",
+    });
     if (idempotent) return idempotent;
   }
 
@@ -173,7 +222,7 @@ export async function saveReportDraftCommand(input: {
               caseNumber: existing.caseNumber,
               reportUpdatedAtFrom: fromAt,
               reportUpdatedAtTo: after?.reportUpdatedAt?.toISOString() ?? null,
-              reviewer: reviewerOf(existing),
+              actor: trusted,
               operationId: opId,
             }),
           },
@@ -221,18 +270,35 @@ export type ExportReportCommandResult =
       lastActivityAt: string;
       reportUpdatedAt: string | null;
     }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: "FORBIDDEN" };
 
 /** 服务器成功生成 DOCX 后才记 REPORT_EXPORTED */
 export async function exportReportCommand(input: {
   caseId: string;
   operationId: string;
   maskSensitive?: boolean;
+  actor: AuditActor;
 }): Promise<ExportReportCommandResult> {
+  const actor = requireActor(input.actor);
+  if ("ok" in actor && actor.ok === false) {
+    return { ok: false, error: actor.error };
+  }
+  const trusted = actor as TrustedCommandActor;
+
   const existingAudit = await findAuditByOperationId(input.operationId);
   if (existingAudit) {
-    if (existingAudit.caseId !== input.caseId) {
-      return { ok: false, error: "operationId 已被其他案件使用" };
+    const ownership = validateOperationOwnership({
+      existing: existingAudit,
+      expectedActor: trusted,
+      caseId: input.caseId,
+      actionType: "REPORT_EXPORTED",
+    });
+    if (!ownership.ok) {
+      return {
+        ok: false,
+        error: ownership.error,
+        code: ownership.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+      };
     }
     const record = await getCaseById(input.caseId);
     if (!record?.reportDraft) {
@@ -292,7 +358,7 @@ export async function exportReportCommand(input: {
           ...buildReportExportedAudit({
             caseNumber: payload.caseNumber,
             fileName,
-            reviewer: reviewerOf(record),
+            actor: trusted,
             operationId: input.operationId,
           }),
         },
@@ -305,6 +371,19 @@ export async function exportReportCommand(input: {
       const message =
         error instanceof Error ? error.message : "导出审计写入失败";
       return { ok: false, error: message };
+    }
+    const ownership = validateOperationOwnership({
+      existing: raced,
+      expectedActor: trusted,
+      caseId: input.caseId,
+      actionType: "REPORT_EXPORTED",
+    });
+    if (!ownership.ok) {
+      return {
+        ok: false,
+        error: ownership.error,
+        code: ownership.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+      };
     }
   }
 

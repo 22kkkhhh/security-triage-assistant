@@ -16,9 +16,16 @@ export {
   manualActor,
   systemActor,
   truncateSummary,
+  userActor,
   type AuditActor,
   type BuiltAuditEvent,
 } from "./auditEventBuilder";
+
+export {
+  assertTrustedCommandActor,
+  validateOperationOwnership,
+  type TrustedCommandActor,
+} from "./operationOwnership";
 
 export {
   formatAuditActionLabel,

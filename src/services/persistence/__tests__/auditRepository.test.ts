@@ -8,6 +8,8 @@ import {
   buildCaseCreatedAudit,
   buildHandoffAudit,
   buildStatusChangedAudit,
+  manualActor,
+  systemActor,
 } from "@/services/audit/auditEventBuilder";
 import { resetPrismaClient } from "@/lib/prisma";
 import {
@@ -78,8 +80,8 @@ describe("auditRepository（v1.2 Step 1）", () => {
     const event = buildStatusChangedAudit({
       from: "INVESTIGATING",
       to: "PENDING_VERIFICATION",
-      reviewer: "王研判",
-    });
+      actor: manualActor("王研判")
+});
     const log = await appendCaseAudit({ caseId: created.id, ...event });
 
     expect(log.actorType).toBe("MANUAL");
@@ -99,19 +101,21 @@ describe("auditRepository（v1.2 Step 1）", () => {
 
     await appendCaseAudit({
       caseId: a.id,
-      ...buildCaseCreatedAudit({ caseNumber: a.caseNumber }),
+      ...buildCaseCreatedAudit({ caseNumber: a.caseNumber, actor: systemActor()
+}),
     });
     await appendCaseAudit({
       caseId: a.id,
       ...buildStatusChangedAudit({
         from: "INVESTIGATING",
         to: "PENDING_VERIFICATION",
-        reviewer: "甲",
-      }),
+        actor: manualActor("甲")
+}),
     });
     await appendCaseAudit({
       caseId: b.id,
-      ...buildCaseCreatedAudit({ caseNumber: b.caseNumber }),
+      ...buildCaseCreatedAudit({ caseNumber: b.caseNumber, actor: systemActor()
+}),
     });
 
     const listed = await listCaseAuditLogs({ caseId: a.id });
@@ -129,9 +133,8 @@ describe("auditRepository（v1.2 Step 1）", () => {
         ...buildStatusChangedAudit({
           from: "INVESTIGATING",
           to: "PENDING_VERIFICATION",
-          reviewer: `操作人${i}`,
-          operationId: `op-page-${created.id}-${i}`,
-        }),
+          operationId: `op-page-${created.id}-${i}`, actor: manualActor("王研判")
+}),
       });
     }
 
@@ -166,15 +169,15 @@ describe("auditRepository（v1.2 Step 1）", () => {
       caseId: created.id,
       ...buildHandoffAudit({
         note: "第一班：已联系业务方",
-        reviewer: "甲",
-      }),
+        actor: manualActor("甲")
+}),
     });
     await appendCaseAudit({
       caseId: created.id,
       ...buildHandoffAudit({
         note: "第二班：等待 CRM 确认，重点查出口日志",
-        reviewer: "乙",
-      }),
+        actor: manualActor("乙")
+}),
     });
 
     const latest = await getLatestHandoffNote(created.id);
@@ -189,7 +192,8 @@ describe("auditRepository（v1.2 Step 1）", () => {
     const created = await createDemoCase();
     await appendCaseAudit({
       caseId: created.id,
-      ...buildCaseCreatedAudit({ caseNumber: created.caseNumber }),
+      ...buildCaseCreatedAudit({ caseNumber: created.caseNumber, actor: systemActor()
+}),
     });
 
     await expect(
@@ -217,10 +221,9 @@ describe("auditRepository（v1.2 Step 1）", () => {
             ...buildStatusChangedAudit({
               from: "INVESTIGATING",
               to: "CLOSED",
-              reviewer: "王研判",
-              // 故意使用非法外键触发失败（空 caseId 会被覆盖，改用重复 operationId 第二次）
-              operationId: "dup-op-1",
-            }),
+                            // 故意使用非法外键触发失败（空 caseId 会被覆盖，改用重复 operationId 第二次）
+              operationId: "dup-op-1", actor: manualActor("王研判")
+}),
           },
           tx,
         );
@@ -231,9 +234,8 @@ describe("auditRepository（v1.2 Step 1）", () => {
             ...buildStatusChangedAudit({
               from: "INVESTIGATING",
               to: "CLOSED",
-              reviewer: "王研判",
-              operationId: "dup-op-1",
-            }),
+              operationId: "dup-op-1", actor: manualActor("王研判")
+}),
           },
           tx,
         );
@@ -255,7 +257,8 @@ describe("auditRepository（v1.2 Step 1）", () => {
 
     await appendCaseAudit({
       caseId: created.id,
-      ...buildCaseCreatedAudit({ caseNumber: created.caseNumber }),
+      ...buildCaseCreatedAudit({ caseNumber: created.caseNumber, actor: systemActor()
+}),
     });
 
     const after = await getCaseById(created.id);

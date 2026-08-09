@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { systemActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -69,8 +70,8 @@ describe("handoffCommands（v1.2 Step 4）", () => {
     const result = await addHandoffNoteCommand({
       caseId: created.id,
       note: "已完成账号核实。\n下一班重点核查出口网络日志。",
-      operationId: "op-handoff-1",
-    });
+      operationId: "op-handoff-1", actor: systemActor()
+});
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.audit?.actionType).toBe("HANDOFF_NOTE_ADDED");
@@ -94,15 +95,15 @@ describe("handoffCommands（v1.2 Step 4）", () => {
     const empty = await addHandoffNoteCommand({
       caseId: created.id,
       note: "   ",
-      operationId: "op-empty",
-    });
+      operationId: "op-empty", actor: systemActor()
+});
     expect(empty.ok).toBe(false);
 
     const tooLong = await addHandoffNoteCommand({
       caseId: created.id,
       note: "甲".repeat(HANDOFF_NOTE_MAX_LENGTH + 1),
-      operationId: "op-long",
-    });
+      operationId: "op-long", actor: systemActor()
+});
     expect(tooLong.ok).toBe(false);
     expect(await getLatestHandoffNote(created.id)).toBeNull();
   });
@@ -129,18 +130,18 @@ describe("handoffCommands（v1.2 Step 4）", () => {
     const first = await addHandoffNoteCommand({
       caseId: created.id,
       note: "交接说明 A",
-      operationId: "op-handoff-retry",
-    });
+      operationId: "op-handoff-retry", actor: systemActor()
+});
     expect(first.ok).toBe(true);
     if (!first.ok) return;
-    expect(first.audit?.actorName).toBe("王研判");
-    expect(first.audit?.actorType).toBe("MANUAL");
+    expect(first.audit?.actorName).toBe("系统");
+    expect(first.audit?.actorType).toBe("SYSTEM");
 
     const retry = await addHandoffNoteCommand({
       caseId: created.id,
       note: "交接说明 A（重复）",
-      operationId: "op-handoff-retry",
-    });
+      operationId: "op-handoff-retry", actor: systemActor()
+});
     expect(retry.ok && retry.alreadyApplied).toBe(true);
     const logs = await listCaseAuditLogs({ caseId: created.id });
     expect(
@@ -155,14 +156,14 @@ describe("handoffCommands（v1.2 Step 4）", () => {
       await addHandoffNoteCommand({
         caseId: a.id,
         note: `交接 ${i}`,
-        operationId: `op-page-a-${i}`,
-      });
+        operationId: `op-page-a-${i}`, actor: systemActor()
+});
     }
     await addHandoffNoteCommand({
       caseId: b.id,
       note: "案件 B 交接",
-      operationId: "op-page-b",
-    });
+      operationId: "op-page-b", actor: systemActor()
+});
 
     const page1 = await listCaseAuditLogs({ caseId: a.id, limit: 2 });
     expect(page1.items).toHaveLength(2);

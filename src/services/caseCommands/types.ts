@@ -12,7 +12,7 @@ export type CommandOk = {
 export type CommandFail = {
   ok: false;
   error: string;
-  code?: "STALE";
+  code?: "STALE" | "FORBIDDEN";
   /** STALE 时返回服务器当前 canonical case */
   case?: PersistedCase;
 };

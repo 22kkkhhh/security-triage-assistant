@@ -2,6 +2,7 @@
  * Step 4 冒烟：交接 + Activity list（无浏览器依赖）。
  */
 import { analyzeSecurityCase } from "../src/services/analysis/analyzeSecurityCase";
+import { systemActor } from "../src/services/audit/auditEventBuilder";
 import { caseB } from "../src/domain/demo";
 import { addHandoffNoteCommand } from "../src/services/caseCommands/handoffCommands";
 import { changeCaseStatusCommand } from "../src/services/caseCommands/caseCommands";
@@ -29,8 +30,8 @@ async function main() {
   const handoff = await addHandoffNoteCommand({
     caseId: created.id,
     note: "已完成账号核实，已联系业务负责人，等待回复。\n下一班重点核查出口网络日志。",
-    operationId: `smoke-handoff-${Date.now()}`,
-  });
+    operationId: `smoke-handoff-${Date.now()}`, actor: systemActor()
+});
   if (!handoff.ok) throw new Error(handoff.error);
 
   const latest = await getLatestHandoffNote(created.id);
@@ -53,8 +54,8 @@ async function main() {
       timeline: created.caseState.timeline,
       suggestedRiskLevel: created.suggestedRiskLevel,
       status: "PENDING_VERIFICATION",
-    },
-  });
+    }, actor: systemActor()
+});
   if (!statused.ok) throw new Error(statused.error);
 
   const feed = await listCaseAuditLogs({ caseId: created.id, limit: 40 });

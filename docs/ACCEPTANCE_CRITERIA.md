@@ -153,4 +153,12 @@ Server Authorization（Step 4）自动化必须证明：
 - [x] `/cases/new` VIEWER → Forbidden（非 redirect login）
 - [x] cross-user operationId ownership **明确推迟到 Step 5**
 
-尚未验收（后续 Step）：Trusted Actor、用户管理 UI、密码自助修改、UI RBAC。
+Trusted Actor / operationId ownership（Step 5）自动化必须证明：
+
+- [x] 认证写路径 Audit = USER（actorId/displayName 快照）；不使用 reviewer
+- [x] same-user operationId retry → alreadyApplied；无重复 Audit
+- [x] cross-user / MANUAL / SYSTEM operationId replay → FORBIDDEN
+- [x] Seed CASE_CREATED 仍可为 SYSTEM；Legacy MANUAL 不迁移
+- [x] displayName 变更不改写旧 Audit actorName
+
+尚未验收（后续 Step）：HumanReview responsibility、用户管理 UI、密码自助修改、UI RBAC。

@@ -1,6 +1,7 @@
 "use server";
 
 import type { ReportData } from "@/domain/types";
+import { userActor } from "@/services/audit/auditEventBuilder";
 import {
   createReportDraftCommand,
   exportReportCommand,
@@ -84,8 +85,9 @@ export async function createReportDraftAction(
   caseId: string,
   operationId: unknown,
 ): Promise<CreateReportActionResult> {
+  let user;
   try {
-    await requirePermission("REPORT_WRITE");
+    user = await requirePermission("REPORT_WRITE");
   } catch (error) {
     return toAuthActionFailure(error);
   }
@@ -96,8 +98,15 @@ export async function createReportDraftAction(
   const result = await createReportDraftCommand({
     caseId,
     operationId: operationId.trim(),
+    actor: userActor(user),
   });
-  if (!result.ok) return { ok: false, error: result.error };
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: result.error,
+      code: result.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+    };
+  }
   return {
     ok: true,
     alreadyApplied: result.alreadyApplied,
@@ -117,8 +126,9 @@ export async function saveReportDraftAction(
     auditOperationId?: string | null;
   },
 ): Promise<SaveReportActionResult> {
+  let user;
   try {
-    await requirePermission("REPORT_WRITE");
+    user = await requirePermission("REPORT_WRITE");
   } catch (error) {
     return toAuthActionFailure(error);
   }
@@ -136,8 +146,16 @@ export async function saveReportDraftAction(
       reportDraft: parsed,
       baseReportUpdatedAt: options?.baseReportUpdatedAt ?? null,
       auditOperationId: options?.auditOperationId ?? null,
+      actor: userActor(user),
     });
     if (!result.ok) {
+      if (result.code === "FORBIDDEN") {
+        return {
+          ok: false,
+          error: result.error || "当前账号无权限执行此操作",
+          code: "FORBIDDEN",
+        };
+      }
       if (result.error.includes("其他页面") || result.error.includes("已发生更新")) {
         const latest = await getCaseById(caseId);
         return {
@@ -180,8 +198,9 @@ export async function exportReportAction(
   operationId: unknown,
   maskSensitive: unknown = true,
 ): Promise<ExportReportActionResult> {
+  let user;
   try {
-    await requirePermission("REPORT_EXPORT");
+    user = await requirePermission("REPORT_EXPORT");
   } catch (error) {
     return toAuthActionFailure(error);
   }
@@ -193,8 +212,15 @@ export async function exportReportAction(
     caseId,
     operationId: operationId.trim(),
     maskSensitive: maskSensitive !== false,
+    actor: userActor(user),
   });
-  if (!result.ok) return { ok: false, error: result.error };
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: result.error,
+      code: result.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+    };
+  }
   return {
     ok: true,
     alreadyApplied: result.alreadyApplied,

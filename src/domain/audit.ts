@@ -21,7 +21,7 @@ export type AuditActionType =
 
 /**
  * 操作主体类型。
- * v1.2 主要使用 SYSTEM / MANUAL；USER 预留给未来登录身份。
+ * USER = 认证用户写入时快照；MANUAL = Legacy / Seed；SYSTEM = 系统创建。
  */
 export type AuditActorType = "SYSTEM" | "MANUAL" | "USER";
 
@@ -60,7 +60,7 @@ export const auditActionTypeLabels: Record<AuditActionType, string> = {
 export const auditActorTypeLabels: Record<AuditActorType, string> = {
   SYSTEM: "系统",
   MANUAL: "人工（未认证）",
-  USER: "登录用户",
+  USER: "认证用户",
 };
 
 /** 交接说明最大长度（字） */

@@ -1,8 +1,16 @@
 /**
  * 交接说明 Semantic Command：仅 append Audit，不改 caseState / Timeline / Report。
+ * Actor 必须由调用方显式传入（USER / SYSTEM）。
  */
 
-import { buildHandoffAudit } from "@/services/audit/auditEventBuilder";
+import {
+  buildHandoffAudit,
+  type AuditActor,
+} from "@/services/audit/auditEventBuilder";
+import {
+  assertTrustedCommandActor,
+  validateOperationOwnership,
+} from "@/services/audit/operationOwnership";
 import {
   appendCaseAudit,
   findAuditByOperationId,
@@ -16,7 +24,18 @@ export async function addHandoffNoteCommand(input: {
   caseId: string;
   note: string;
   operationId: string;
+  actor: AuditActor;
 }): Promise<CommandResult> {
+  let trusted;
+  try {
+    trusted = assertTrustedCommandActor(input.actor);
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Actor 无效",
+    };
+  }
+
   const operationId = input.operationId.trim();
   if (!operationId) {
     return { ok: false, error: "operationId 无效" };
@@ -24,8 +43,18 @@ export async function addHandoffNoteCommand(input: {
 
   const existing = await findAuditByOperationId(operationId);
   if (existing) {
-    if (existing.caseId !== input.caseId) {
-      return { ok: false, error: "operationId 已被其他案件使用" };
+    const ownership = validateOperationOwnership({
+      existing,
+      expectedActor: trusted,
+      caseId: input.caseId,
+      actionType: "HANDOFF_NOTE_ADDED",
+    });
+    if (!ownership.ok) {
+      return {
+        ok: false,
+        error: ownership.error,
+        code: ownership.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+      };
     }
     const record = await getCaseById(input.caseId);
     if (!record) return { ok: false, error: "案件不存在" };
@@ -44,7 +73,7 @@ export async function addHandoffNoteCommand(input: {
   try {
     built = buildHandoffAudit({
       note: input.note,
-      reviewer: record.caseState.humanReview?.reviewer ?? null,
+      actor: trusted,
       operationId,
     });
   } catch (error) {
@@ -73,15 +102,23 @@ export async function addHandoffNoteCommand(input: {
     };
   } catch (error) {
     const raced = await findAuditByOperationId(operationId);
-    if (raced?.caseId === input.caseId) {
-      const saved = await getCaseById(input.caseId);
-      if (saved) {
-        return {
-          ok: true,
-          alreadyApplied: true,
-          case: saved,
-          audit: raced,
-        };
+    if (raced) {
+      const ownership = validateOperationOwnership({
+        existing: raced,
+        expectedActor: trusted,
+        caseId: input.caseId,
+        actionType: "HANDOFF_NOTE_ADDED",
+      });
+      if (ownership.ok) {
+        const saved = await getCaseById(input.caseId);
+        if (saved) {
+          return {
+            ok: true,
+            alreadyApplied: true,
+            case: saved,
+            audit: raced,
+          };
+        }
       }
     }
     const message =

@@ -93,9 +93,12 @@ export function formatAuditActionLabel(actionType: string): string {
   return "操作记录";
 }
 
-/** actor 展示名 */
+/** actor 展示名（USER/MANUAL 使用写入时 snapshot，不 join User 表） */
 export function formatAuditActorName(log: CaseAuditLogView): string {
   if (log.actorType === "SYSTEM") return "系统";
+  if (log.actorType === "USER") {
+    return log.actorName?.trim() || "认证用户";
+  }
   return log.actorName?.trim() || "未填写研判人员";
 }
 

@@ -10,6 +10,7 @@ import {
   updateHumanReviewCommand,
   type ChecklistCommandAction,
 } from "@/services/caseCommands";
+import { userActor } from "@/services/audit/auditEventBuilder";
 import {
   requirePermission,
   toAuthActionFailure,
@@ -100,6 +101,13 @@ function toResult(
         caseState: result.case.caseState,
       };
     }
+    if (result.code === "FORBIDDEN") {
+      return {
+        ok: false,
+        error: result.error || "当前账号无权限执行此操作",
+        code: "FORBIDDEN",
+      };
+    }
     return { ok: false, error: result.error };
   }
   return {
@@ -119,8 +127,9 @@ export async function changeCaseStatusAction(
   rawNextState: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
+  let user;
   try {
-    await requirePermission("CASE_STATUS_CHANGE");
+    user = await requirePermission("CASE_STATUS_CHANGE");
   } catch (error) {
     return toAuthActionFailure(error);
   }
@@ -142,6 +151,7 @@ export async function changeCaseStatusAction(
       operationId: operationId.trim(),
       nextCaseState,
       baseUpdatedAt: base,
+      actor: userActor(user),
     }),
   );
 }
@@ -154,8 +164,9 @@ export async function applyChecklistCommandAction(
   rawNextState: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
+  let user;
   try {
-    await requirePermission("CHECKLIST_WRITE");
+    user = await requirePermission("CHECKLIST_WRITE");
   } catch (error) {
     return toAuthActionFailure(error);
   }
@@ -186,6 +197,7 @@ export async function applyChecklistCommandAction(
       operationId: operationId.trim(),
       nextCaseState,
       baseUpdatedAt: base,
+      actor: userActor(user),
     }),
   );
 }
@@ -196,8 +208,9 @@ export async function updateBusinessContextAction(
   rawNextState: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
+  let user;
   try {
-    await requirePermission("BUSINESS_CONTEXT_WRITE");
+    user = await requirePermission("BUSINESS_CONTEXT_WRITE");
   } catch (error) {
     return toAuthActionFailure(error);
   }
@@ -217,6 +230,7 @@ export async function updateBusinessContextAction(
       operationId: operationId.trim(),
       nextCaseState,
       baseUpdatedAt: base,
+      actor: userActor(user),
     }),
   );
 }
@@ -227,8 +241,9 @@ export async function updateHumanReviewAction(
   rawNextState: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
+  let user;
   try {
-    await requirePermission("HUMAN_REVIEW_WRITE");
+    user = await requirePermission("HUMAN_REVIEW_WRITE");
   } catch (error) {
     return toAuthActionFailure(error);
   }
@@ -248,6 +263,7 @@ export async function updateHumanReviewAction(
       operationId: operationId.trim(),
       nextCaseState,
       baseUpdatedAt: base,
+      actor: userActor(user),
     }),
   );
 }
@@ -259,8 +275,9 @@ export async function addTimelineEventAction(
   rawNextState: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
+  let user;
   try {
-    await requirePermission("TIMELINE_WRITE");
+    user = await requirePermission("TIMELINE_WRITE");
   } catch (error) {
     return toAuthActionFailure(error);
   }
@@ -284,6 +301,7 @@ export async function addTimelineEventAction(
       operationId: operationId.trim(),
       nextCaseState,
       baseUpdatedAt: base,
+      actor: userActor(user),
     }),
   );
 }
@@ -308,8 +326,9 @@ export async function addHandoffNoteAction(
   note: unknown,
   operationId: unknown,
 ): Promise<HandoffActionResult> {
+  let user;
   try {
-    await requirePermission("HANDOFF_WRITE");
+    user = await requirePermission("HANDOFF_WRITE");
   } catch (error) {
     return toAuthActionFailure(error);
   }
@@ -322,8 +341,15 @@ export async function addHandoffNoteAction(
     caseId,
     note,
     operationId: operationId.trim(),
+    actor: userActor(user),
   });
-  if (!result.ok) return { ok: false, error: result.error };
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: result.error,
+      code: result.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+    };
+  }
   if (!result.audit) {
     return { ok: false, error: "交接记录添加失败，请重试。" };
   }

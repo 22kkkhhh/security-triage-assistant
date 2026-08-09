@@ -1,13 +1,14 @@
 /**
  * 案件 Semantic Commands：业务状态更新 + Audit 同事务。
  * 与普通 saveCaseState autosave 路径分离；写入前校验 baseUpdatedAt。
+ * Actor 必须由调用方显式传入（USER / SYSTEM）；禁止 reviewer 推导。
  */
 
+import type { AuditActionType } from "@/domain/audit";
 import type {
   BusinessContext,
   CaseStatus,
   FinalConclusion,
-  HumanReview,
   RiskLevel,
 } from "@/domain/types";
 import {
@@ -20,8 +21,14 @@ import {
   buildHumanReviewUpdatedAudit,
   buildStatusChangedAudit,
   buildTimelineEventAddedAudit,
+  type AuditActor,
   type BuiltAuditEvent,
 } from "@/services/audit/auditEventBuilder";
+import {
+  assertTrustedCommandActor,
+  validateOperationOwnership,
+  type TrustedCommandActor,
+} from "@/services/audit/operationOwnership";
 import {
   appendCaseAudit,
   findAuditByOperationId,
@@ -53,17 +60,31 @@ const STRUCTURED_BC_FIELDS = [
   "businessLegitimacy",
 ] as const;
 
-async function resolveOperationId(
-  caseId: string,
-  operationId: string | null | undefined,
-): Promise<CommandResult | null> {
-  if (!operationId?.trim()) return null;
-  const existing = await findAuditByOperationId(operationId.trim());
+async function resolveOperationId(input: {
+  caseId: string;
+  operationId: string | null | undefined;
+  actor: TrustedCommandActor;
+  actionType: AuditActionType;
+}): Promise<CommandResult | null> {
+  if (!input.operationId?.trim()) return null;
+  const existing = await findAuditByOperationId(input.operationId.trim());
   if (!existing) return null;
-  if (existing.caseId !== caseId) {
-    return { ok: false, error: "operationId 已被其他案件使用" };
+
+  const ownership = validateOperationOwnership({
+    existing,
+    expectedActor: input.actor,
+    caseId: input.caseId,
+    actionType: input.actionType,
+  });
+  if (!ownership.ok) {
+    return {
+      ok: false,
+      error: ownership.error,
+      code: ownership.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+    };
   }
-  const record = await getCaseById(caseId);
+
+  const record = await getCaseById(input.caseId);
   if (!record) return { ok: false, error: "案件不存在" };
   return {
     ok: true,
@@ -71,12 +92,6 @@ async function resolveOperationId(
     case: record,
     audit: existing,
   };
-}
-
-function reviewerOf(state: {
-  humanReview: HumanReview | null | undefined;
-}): string | null {
-  return state.humanReview?.reviewer ?? null;
 }
 
 function asPersistedState(record: PersistedCase): PersistedCaseState {
@@ -125,17 +140,46 @@ async function commitStateAndAudit(input: {
   }
 }
 
-/** 创建案件 + CASE_CREATED（同事务；operationId 幂等） */
+function requireActor(actor: AuditActor): TrustedCommandActor | CommandResult {
+  try {
+    return assertTrustedCommandActor(actor);
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Actor 无效",
+    };
+  }
+}
+
+/** 创建案件 + CASE_CREATED（同事务；operationId 幂等 + ownership） */
 export async function createCaseWithAudit(
   input: CreateCaseInput,
-  options?: { sourceType?: string | null; operationId?: string | null },
+  options: {
+    actor: AuditActor;
+    sourceType?: string | null;
+    operationId?: string | null;
+  },
 ): Promise<CommandResult> {
-  const operationId = options?.operationId?.trim() || null;
+  const actor = requireActor(options.actor);
+  if ("ok" in actor && actor.ok === false) return actor;
+
+  const trusted = actor as TrustedCommandActor;
+  const operationId = options.operationId?.trim() || null;
   if (operationId) {
     const existing = await findAuditByOperationId(operationId);
     if (existing) {
-      if (existing.actionType !== "CASE_CREATED") {
-        return { ok: false, error: "operationId 已被其他操作使用" };
+      const ownership = validateOperationOwnership({
+        existing,
+        expectedActor: trusted,
+        caseId: existing.caseId,
+        actionType: "CASE_CREATED",
+      });
+      if (!ownership.ok) {
+        return {
+          ok: false,
+          error: ownership.error,
+          code: ownership.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+        };
       }
       const record = await getCaseById(existing.caseId);
       if (!record) return { ok: false, error: "案件不存在" };
@@ -157,8 +201,9 @@ export async function createCaseWithAudit(
           ...buildCaseCreatedAudit({
             caseNumber: row.caseNumber,
             title: row.title,
-            sourceType: options?.sourceType,
+            sourceType: options.sourceType,
             operationId,
+            actor: trusted,
           }),
         },
         tx,
@@ -176,15 +221,23 @@ export async function createCaseWithAudit(
   } catch (error) {
     if (operationId) {
       const raced = await findAuditByOperationId(operationId);
-      if (raced?.actionType === "CASE_CREATED") {
-        const record = await getCaseById(raced.caseId);
-        if (record) {
-          return {
-            ok: true,
-            alreadyApplied: true,
-            case: record,
-            audit: raced,
-          };
+      if (raced) {
+        const ownership = validateOperationOwnership({
+          existing: raced,
+          expectedActor: trusted,
+          caseId: raced.caseId,
+          actionType: "CASE_CREATED",
+        });
+        if (ownership.ok) {
+          const record = await getCaseById(raced.caseId);
+          if (record) {
+            return {
+              ok: true,
+              alreadyApplied: true,
+              case: record,
+              audit: raced,
+            };
+          }
         }
       }
     }
@@ -200,11 +253,21 @@ export async function changeCaseStatusCommand(input: {
   operationId: string;
   nextCaseState: NextCaseStateInput;
   baseUpdatedAt: string;
+  actor: AuditActor;
 }): Promise<CommandResult> {
+  const actor = requireActor(input.actor);
+  if ("ok" in actor && actor.ok === false) return actor;
+  const trusted = actor as TrustedCommandActor;
+
   if (!isCaseStatus(input.nextStatus)) {
     return { ok: false, error: "案件状态无效" };
   }
-  const idempotent = await resolveOperationId(input.caseId, input.operationId);
+  const idempotent = await resolveOperationId({
+    caseId: input.caseId,
+    operationId: input.operationId,
+    actor: trusted,
+    actionType: "STATUS_CHANGED",
+  });
   if (idempotent) return idempotent;
 
   const base = requireBaseUpdatedAt(input.baseUpdatedAt);
@@ -233,7 +296,7 @@ export async function changeCaseStatusCommand(input: {
     built: buildStatusChangedAudit({
       from: oldStatus,
       to: input.nextStatus,
-      reviewer: reviewerOf(existing.caseState),
+      actor: trusted,
       operationId: input.operationId,
     }),
   });
@@ -245,6 +308,21 @@ export type ChecklistCommandAction =
   | "add"
   | "delete";
 
+function checklistActionType(
+  action: ChecklistCommandAction,
+): AuditActionType {
+  switch (action) {
+    case "complete":
+      return "CHECKLIST_COMPLETED";
+    case "reopen":
+      return "CHECKLIST_REOPENED";
+    case "add":
+      return "CHECKLIST_ADDED";
+    case "delete":
+      return "CHECKLIST_DELETED";
+  }
+}
+
 /** Checklist 语义命令 */
 export async function applyChecklistCommand(input: {
   caseId: string;
@@ -253,8 +331,18 @@ export async function applyChecklistCommand(input: {
   operationId: string;
   nextCaseState: NextCaseStateInput;
   baseUpdatedAt: string;
+  actor: AuditActor;
 }): Promise<CommandResult> {
-  const idempotent = await resolveOperationId(input.caseId, input.operationId);
+  const actor = requireActor(input.actor);
+  if ("ok" in actor && actor.ok === false) return actor;
+  const trusted = actor as TrustedCommandActor;
+
+  const idempotent = await resolveOperationId({
+    caseId: input.caseId,
+    operationId: input.operationId,
+    actor: trusted,
+    actionType: checklistActionType(input.action),
+  });
   if (idempotent) return idempotent;
 
   const base = requireBaseUpdatedAt(input.baseUpdatedAt);
@@ -267,7 +355,6 @@ export async function applyChecklistCommand(input: {
   const nextItems = input.nextCaseState.checklist;
   const oldItem = oldItems.find((i) => i.id === input.itemId);
   const nextItem = nextItems.find((i) => i.id === input.itemId);
-  const reviewer = reviewerOf(existing.caseState);
 
   let built:
     | ReturnType<typeof buildChecklistCompletedAudit>
@@ -284,7 +371,7 @@ export async function applyChecklistCommand(input: {
     built = buildChecklistCompletedAudit({
       itemId: oldItem.id,
       label: oldItem.label,
-      reviewer,
+      actor: trusted,
       operationId: input.operationId,
     });
     built = {
@@ -302,7 +389,7 @@ export async function applyChecklistCommand(input: {
     built = buildChecklistReopenedAudit({
       itemId: oldItem.id,
       label: oldItem.label,
-      reviewer,
+      actor: trusted,
       operationId: input.operationId,
     });
     built = {
@@ -319,7 +406,7 @@ export async function applyChecklistCommand(input: {
     built = buildChecklistAddedAudit({
       itemId: nextItem.id,
       label: nextItem.label,
-      reviewer,
+      actor: trusted,
       operationId: input.operationId,
     });
     built = {
@@ -339,7 +426,7 @@ export async function applyChecklistCommand(input: {
     built = buildChecklistDeletedAudit({
       itemId: oldItem.id,
       label: oldItem.label,
-      reviewer,
+      actor: trusted,
       operationId: input.operationId,
     });
     built = {
@@ -377,8 +464,18 @@ export async function updateBusinessContextCommand(input: {
   operationId: string;
   nextCaseState: NextCaseStateInput;
   baseUpdatedAt: string;
+  actor: AuditActor;
 }): Promise<CommandResult> {
-  const idempotent = await resolveOperationId(input.caseId, input.operationId);
+  const actor = requireActor(input.actor);
+  if ("ok" in actor && actor.ok === false) return actor;
+  const trusted = actor as TrustedCommandActor;
+
+  const idempotent = await resolveOperationId({
+    caseId: input.caseId,
+    operationId: input.operationId,
+    actor: trusted,
+    actionType: "BUSINESS_CONTEXT_UPDATED",
+  });
   if (idempotent) return idempotent;
 
   const base = requireBaseUpdatedAt(input.baseUpdatedAt);
@@ -408,7 +505,7 @@ export async function updateBusinessContextCommand(input: {
         { from: v.from, to: v.to },
       ]),
     ),
-    reviewer: reviewerOf(existing.caseState),
+    actor: trusted,
     operationId: input.operationId,
   });
 
@@ -433,8 +530,18 @@ export async function updateHumanReviewCommand(input: {
   operationId: string;
   nextCaseState: NextCaseStateInput;
   baseUpdatedAt: string;
+  actor: AuditActor;
 }): Promise<CommandResult> {
-  const idempotent = await resolveOperationId(input.caseId, input.operationId);
+  const actor = requireActor(input.actor);
+  if ("ok" in actor && actor.ok === false) return actor;
+  const trusted = actor as TrustedCommandActor;
+
+  const idempotent = await resolveOperationId({
+    caseId: input.caseId,
+    operationId: input.operationId,
+    actor: trusted,
+    actionType: "HUMAN_REVIEW_UPDATED",
+  });
   if (idempotent) return idempotent;
 
   const base = requireBaseUpdatedAt(input.baseUpdatedAt);
@@ -475,7 +582,7 @@ export async function updateHumanReviewCommand(input: {
           to: nextRisk as RiskLevel | null,
         }
       : undefined,
-    reviewer: reviewerOf(existing.caseState),
+    actor: trusted,
     operationId: input.operationId,
   });
 
@@ -505,8 +612,18 @@ export async function addTimelineEventCommand(input: {
   eventId: string;
   nextCaseState: NextCaseStateInput;
   baseUpdatedAt: string;
+  actor: AuditActor;
 }): Promise<CommandResult> {
-  const idempotent = await resolveOperationId(input.caseId, input.operationId);
+  const actor = requireActor(input.actor);
+  if ("ok" in actor && actor.ok === false) return actor;
+  const trusted = actor as TrustedCommandActor;
+
+  const idempotent = await resolveOperationId({
+    caseId: input.caseId,
+    operationId: input.operationId,
+    actor: trusted,
+    actionType: "TIMELINE_EVENT_ADDED",
+  });
   if (idempotent) return idempotent;
 
   const base = requireBaseUpdatedAt(input.baseUpdatedAt);
@@ -538,7 +655,7 @@ export async function addTimelineEventCommand(input: {
   const built = buildTimelineEventAddedAudit({
     eventId: nextEvent.id,
     title: nextEvent.title,
-    reviewer: reviewerOf(existing.caseState),
+    actor: trusted,
     operationId: input.operationId,
   });
 

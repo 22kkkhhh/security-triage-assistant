@@ -25,7 +25,8 @@ describe("auditEventBuilder", () => {
   });
 
   it("CASE_CREATED 使用 SYSTEM 主体", () => {
-    const event = buildCaseCreatedAudit({ caseNumber: "INC-20260808-003" });
+    const event = buildCaseCreatedAudit({ caseNumber: "INC-20260808-003", actor: systemActor()
+});
     expect(event.actionType).toBe("CASE_CREATED");
     expect(event.actorType).toBe("SYSTEM");
     expect(event.actorName).toBe("系统");
@@ -36,7 +37,7 @@ describe("auditEventBuilder", () => {
     const event = buildStatusChangedAudit({
       from: "INVESTIGATING",
       to: "PENDING_BUSINESS_CONFIRMATION",
-      reviewer: "王研判",
+      actor: manualActor("王研判"),
     });
     expect(event.actorType).toBe("MANUAL");
     expect(event.summary).toBe("研判中 → 待业务确认");
@@ -49,7 +50,7 @@ describe("auditEventBuilder", () => {
   it("HUMAN_REVIEW_UPDATED 不复制说明全文", () => {
     const event = buildHumanReviewUpdatedAudit({
       noteUpdated: true,
-      reviewer: "王研判",
+      actor: manualActor("王研判"),
     });
     expect(event.summary).toBe("人工研判说明已更新");
     expect(JSON.stringify(event.changes)).not.toContain("很长一段");
@@ -57,15 +58,20 @@ describe("auditEventBuilder", () => {
 
   it("HANDOFF 截断 summary、metadata 存全文，拒绝超长", () => {
     const long = "甲".repeat(100);
-    const event = buildHandoffAudit({ note: long, reviewer: "王研判" });
+    const event = buildHandoffAudit({
+      note: long,
+      actor: manualActor("王研判"),
+    });
     expect(event.summary.endsWith("…")).toBe(true);
     expect(event.summary.length).toBeLessThanOrEqual(81);
     expect(event.metadata?.note).toBe(long);
 
     expect(() =>
-      buildHandoffAudit({ note: "乙".repeat(HANDOFF_NOTE_MAX_LENGTH + 1) }),
+      buildHandoffAudit({ note: "乙".repeat(HANDOFF_NOTE_MAX_LENGTH + 1), actor: manualActor("王研判")
+}),
     ).toThrow(/不能超过/);
-    expect(() => buildHandoffAudit({ note: "   " })).toThrow(/不能为空/);
+    expect(() => buildHandoffAudit({ note: "   ", actor: manualActor("王研判")
+})).toThrow(/不能为空/);
   });
 
   it("asPlainText / truncateSummary", () => {

@@ -2,6 +2,7 @@
  * Case Semantic Command 乐观并发：防止旧 Tab 完整 nextCaseState lost update。
  */
 import { execSync } from "node:child_process";
+import { systemActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -55,7 +56,8 @@ async function seed() {
       suggestedRiskLevel:
         analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
     },
-    { operationId: `cc-create-${Date.now()}-${Math.random()}` },
+    { operationId: `cc-create-${Date.now()}-${Math.random()}`, actor: systemActor()
+},
   );
   if (!created.ok) throw new Error(created.error);
   return created.case;
@@ -91,8 +93,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-status-a",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }),
-    });
+      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+});
     expect(a.ok).toBe(true);
     if (!a.ok) return;
     expect(a.case.status).toBe("RESPONDING");
@@ -114,8 +116,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
           ...v1.caseState.businessContext,
           businessLegitimacy: staleTarget,
         },
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(staleBc.ok).toBe(false);
     if (staleBc.ok) return;
     expect(staleBc.code).toBe("STALE");
@@ -151,8 +153,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
           ...v1.caseState.businessContext,
           businessLegitimacy: "UNAUTHORIZED",
         },
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(a.ok).toBe(true);
     if (!a.ok) return;
 
@@ -164,8 +166,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextCaseState: toNextState(v1, {
         status: "CLOSED",
         businessContext: v1.caseState.businessContext,
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
     expect(stale.code).toBe("STALE");
@@ -187,8 +189,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
           ...v1.caseState.businessContext,
           businessLegitimacy: "UNAUTHORIZED",
         },
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(a.ok).toBe(true);
     if (!a.ok) return;
 
@@ -204,8 +206,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
           x.id === item.id ? { ...x, completed: true } : x,
         ),
         businessContext: v1.caseState.businessContext,
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
     expect(stale.code).toBe("STALE");
@@ -231,8 +233,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
         checklist: v1.caseState.checklist.map((x) =>
           x.id === item.id ? { ...x, completed: true } : x,
         ),
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(a.ok).toBe(true);
     if (!a.ok) return;
 
@@ -254,8 +256,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
           humanRiskLevel: "MEDIUM",
         },
         checklist: v1.caseState.checklist,
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
     expect(stale.code).toBe("STALE");
@@ -286,8 +288,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       baseUpdatedAt: v1.updatedAt,
       nextCaseState: toNextState(v1, {
         timeline: [...v1.caseState.timeline, event],
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(a.ok).toBe(true);
     if (!a.ok) return;
 
@@ -301,8 +303,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
           businessLegitimacy: "UNAUTHORIZED",
         },
         timeline: v1.caseState.timeline,
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
     expect(stale.code).toBe("STALE");
@@ -317,8 +319,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-status-vs-a",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }),
-    });
+      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+});
     expect(a.ok).toBe(true);
     if (!a.ok) return;
 
@@ -327,8 +329,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "CLOSED",
       operationId: "cc-status-vs-b",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "CLOSED" }),
-    });
+      nextCaseState: toNextState(v1, { status: "CLOSED" }), actor: systemActor()
+});
     expect(b.ok).toBe(false);
     if (b.ok) return;
     expect(b.code).toBe("STALE");
@@ -342,8 +344,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-retry-op",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }),
-    });
+      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+});
     expect(first.ok).toBe(true);
     if (!first.ok) return;
     const logs1 = await listCaseAuditLogs({ caseId: v1.id });
@@ -353,8 +355,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-retry-op",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }),
-    });
+      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+});
     expect(retry.ok).toBe(true);
     if (!retry.ok) return;
     expect(retry.alreadyApplied).toBe(true);
@@ -371,8 +373,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-chain-1",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }),
-    });
+      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+});
     expect(a.ok).toBe(true);
     if (!a.ok) return;
     expect(a.case.updatedAt).not.toBe(v1.updatedAt);
@@ -389,8 +391,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
               ? "UNKNOWN"
               : "AUTHORIZED",
         },
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(b.ok).toBe(true);
   });
 
@@ -401,8 +403,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-autosave-race",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }),
-    });
+      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+});
     expect(a.ok).toBe(true);
     if (!a.ok) return;
 
@@ -431,8 +433,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-canon-a",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }),
-    });
+      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+});
     const stale = await updateBusinessContextCommand({
       caseId: v1.id,
       operationId: "cc-canon-b",
@@ -442,8 +444,8 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
           ...v1.caseState.businessContext,
           businessLegitimacy: "UNAUTHORIZED",
         },
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
     expect(stale.case?.status).toBe("RESPONDING");

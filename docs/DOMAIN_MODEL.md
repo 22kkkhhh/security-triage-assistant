@@ -280,7 +280,12 @@ Login / Session（Step 3）已接入：`requireAuthenticatedUser()` 从 DB 重�
 Server Authorization（Step 4）已接入：Case/Report/Activity 的 Server Actions 与页面 loaders
 经 `requirePermission` 使用本 Permission 模型；VIEWER 写操作与 `REPORT_EXPORT` 服务端拒绝。
 
-仍未完成：Trusted Actor（Audit Actor 仍可能为 `MANUAL`/`SYSTEM`）、UI RBAC、用户管理。
+Trusted Actor（Step 5）：认证用户触发的 Case/Report Audit 使用 `USER` Actor
+（`actorId` = 当前 User.id，`actorName` = 写入时 displayName 快照）；
+不再从 `HumanReview.reviewer` 推导。Legacy `MANUAL` / Seed `SYSTEM` 仍兼容。
+`operationId` 幂等含 actor ownership（跨用户重放拒绝）。
+
+仍未完成：HumanReview responsibility、UI RBAC、用户管理。
 
 ---
 

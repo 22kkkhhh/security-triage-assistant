@@ -1,6 +1,10 @@
 /**
  * Audit Event Builder：统一 actionType / summary / changes / metadata / actor。
  * Repository 只负责 append / query；组件不得自行拼审计文案。
+ *
+ * Trusted Actor（v1.3 Step 5）：
+ * - 认证写路径必须传入 userActor(AuthUser) 或 systemActor()
+ * - manualActor 仅用于 Seed / Legacy fixture
  */
 
 import {
@@ -9,6 +13,7 @@ import {
   type AuditActionType,
   type AuditActorType,
 } from "@/domain/audit";
+import type { AuthUser } from "@/domain/auth";
 import {
   businessLegitimacyLabels,
   caseStatusLabels,
@@ -42,7 +47,7 @@ export interface AuditActor {
   actorName: string;
 }
 
-/** 系统主体 */
+/** 系统主体（Seed / 未来 Connector） */
 export function systemActor(): AuditActor {
   return {
     actorType: "SYSTEM",
@@ -52,8 +57,8 @@ export function systemActor(): AuditActor {
 }
 
 /**
- * 人工主体（Demo）：取案件 reviewer；非可信认证身份。
- * actorId 恒为 null，直至未来登录接入 USER。
+ * Legacy 人工主体：Seed / 历史 fixture。
+ * 认证写路径禁止使用。
  */
 export function manualActor(reviewer?: string | null): AuditActor {
   const name = reviewer?.trim();
@@ -61,6 +66,18 @@ export function manualActor(reviewer?: string | null): AuditActor {
     actorType: "MANUAL",
     actorId: null,
     actorName: name && name.length > 0 ? name : "未填写研判人员",
+  };
+}
+
+/**
+ * 可信 USER Actor：仅来自 Server AuthUser。
+ * actorName 为写入时 displayName 快照，之后不随 User 表变更改写。
+ */
+export function userActor(authUser: AuthUser): AuditActor {
+  return {
+    actorType: "USER",
+    actorId: authUser.id,
+    actorName: authUser.displayName,
   };
 }
 
@@ -95,8 +112,9 @@ export function buildCaseCreatedAudit(input: {
   title?: string;
   sourceType?: string | null;
   operationId?: string | null;
+  actor: AuditActor;
 }): BuiltAuditEvent {
-  return withActor(systemActor(), {
+  return withActor(input.actor, {
     actionType: "CASE_CREATED",
     summary: `创建研判案件 ${input.caseNumber}`,
     changes: {
@@ -111,12 +129,12 @@ export function buildCaseCreatedAudit(input: {
 export function buildStatusChangedAudit(input: {
   from: CaseStatus;
   to: CaseStatus;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
   const fromLabel = caseStatusLabels[input.from];
   const toLabel = caseStatusLabels[input.to];
-  return withActor(manualActor(input.reviewer), {
+  return withActor(input.actor, {
     actionType: "STATUS_CHANGED",
     summary: `${fromLabel} → ${toLabel}`,
     changes: { from: input.from, to: input.to },
@@ -134,11 +152,11 @@ function checklistAudit(
   input: {
     itemId: string;
     label: string;
-    reviewer?: string | null;
+    actor: AuditActor;
     operationId?: string | null;
   },
 ): BuiltAuditEvent {
-  return withActor(manualActor(input.reviewer), {
+  return withActor(input.actor, {
     actionType,
     summary: truncateSummary(input.label),
     changes: { itemId: input.itemId, label: input.label },
@@ -150,7 +168,7 @@ function checklistAudit(
 export function buildChecklistCompletedAudit(input: {
   itemId: string;
   label: string;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
   return checklistAudit("CHECKLIST_COMPLETED", input);
@@ -159,7 +177,7 @@ export function buildChecklistCompletedAudit(input: {
 export function buildChecklistReopenedAudit(input: {
   itemId: string;
   label: string;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
   return checklistAudit("CHECKLIST_REOPENED", input);
@@ -168,7 +186,7 @@ export function buildChecklistReopenedAudit(input: {
 export function buildChecklistAddedAudit(input: {
   itemId: string;
   label: string;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
   return checklistAudit("CHECKLIST_ADDED", input);
@@ -177,7 +195,7 @@ export function buildChecklistAddedAudit(input: {
 export function buildChecklistDeletedAudit(input: {
   itemId: string;
   label: string;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
   return checklistAudit("CHECKLIST_DELETED", input);
@@ -187,7 +205,7 @@ export function buildBusinessContextUpdatedAudit(input: {
   fields: string[];
   /** 枚举类字段的新旧值（可选，短值） */
   enumChanges?: Record<string, { from: string | null; to: string | null }>;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
   const legitimacy = input.enumChanges?.businessLegitimacy;
@@ -218,7 +236,7 @@ export function buildBusinessContextUpdatedAudit(input: {
     summary = `负责人确认：${from} → ${to}`;
   }
 
-  return withActor(manualActor(input.reviewer), {
+  return withActor(input.actor, {
     actionType: "BUSINESS_CONTEXT_UPDATED",
     summary,
     changes: {
@@ -238,7 +256,7 @@ export function buildHumanReviewUpdatedAudit(input: {
   humanRiskLevel?: { from: RiskLevel | null; to: RiskLevel | null };
   /** 仅说明文本变化（不复制全文） */
   noteUpdated?: boolean;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
   const changes: Record<string, unknown> = {};
@@ -281,7 +299,7 @@ export function buildHumanReviewUpdatedAudit(input: {
     changes.humanRiskLevel = input.humanRiskLevel;
   }
 
-  return withActor(manualActor(input.reviewer), {
+  return withActor(input.actor, {
     actionType: "HUMAN_REVIEW_UPDATED",
     summary,
     changes: Object.keys(changes).length > 0 ? changes : null,
@@ -293,10 +311,10 @@ export function buildHumanReviewUpdatedAudit(input: {
 export function buildTimelineEventAddedAudit(input: {
   eventId: string;
   title: string;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
-  return withActor(manualActor(input.reviewer), {
+  return withActor(input.actor, {
     actionType: "TIMELINE_EVENT_ADDED",
     summary: truncateSummary(input.title),
     changes: { eventId: input.eventId, title: input.title },
@@ -307,10 +325,10 @@ export function buildTimelineEventAddedAudit(input: {
 
 export function buildReportCreatedAudit(input: {
   caseNumber: string;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
-  return withActor(manualActor(input.reviewer), {
+  return withActor(input.actor, {
     actionType: "REPORT_CREATED",
     summary: "生成调查报告初稿",
     changes: null,
@@ -323,10 +341,10 @@ export function buildReportUpdatedAudit(input: {
   caseNumber: string;
   reportUpdatedAtFrom?: string | null;
   reportUpdatedAtTo?: string | null;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
-  return withActor(manualActor(input.reviewer), {
+  return withActor(input.actor, {
     actionType: "REPORT_UPDATED",
     summary: "更新调查报告",
     changes:
@@ -346,10 +364,10 @@ export function buildReportUpdatedAudit(input: {
 export function buildReportExportedAudit(input: {
   caseNumber: string;
   fileName?: string;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
-  return withActor(manualActor(input.reviewer), {
+  return withActor(input.actor, {
     actionType: "REPORT_EXPORTED",
     summary: "导出调查报告",
     changes: null,
@@ -363,7 +381,7 @@ export function buildReportExportedAudit(input: {
 
 export function buildHandoffAudit(input: {
   note: string;
-  reviewer?: string | null;
+  actor: AuditActor;
   operationId?: string | null;
 }): BuiltAuditEvent {
   const plain = asPlainText(input.note);
@@ -374,7 +392,7 @@ export function buildHandoffAudit(input: {
     throw new Error(`交接说明不能超过 ${HANDOFF_NOTE_MAX_LENGTH} 字`);
   }
 
-  return withActor(manualActor(input.reviewer), {
+  return withActor(input.actor, {
     actionType: "HANDOFF_NOTE_ADDED",
     summary: truncateSummary(plain),
     changes: null,

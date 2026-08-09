@@ -72,3 +72,38 @@ export const VITEST_ADMIN_USER: AuthUser = {
   role: "ADMIN",
   enabled: true,
 };
+
+/**
+ * 确保 Vitest 虚拟 AuthUser 在 DB 有对应 User 行，
+ * 以便 CaseAuditLog.actorId FK（USER Actor）可写入。
+ */
+export async function ensureVitestAuthUsersInDb(): Promise<void> {
+  if (process.env.VITEST !== "true") {
+    throw new Error("ensureVitestAuthUsersInDb 仅允许在 Vitest 中使用");
+  }
+  const { prisma } = await import("@/lib/prisma");
+  for (const u of [
+    VITEST_ANALYST_USER,
+    VITEST_VIEWER_USER,
+    VITEST_ADMIN_USER,
+  ]) {
+    await prisma.user.upsert({
+      where: { id: u.id },
+      create: {
+        id: u.id,
+        name: u.displayName,
+        email: u.email,
+        emailVerified: false,
+        username: u.username,
+        displayUsername: u.username,
+        role: u.role,
+        enabled: u.enabled,
+      },
+      update: {
+        name: u.displayName,
+        role: u.role,
+        enabled: u.enabled,
+      },
+    });
+  }
+}

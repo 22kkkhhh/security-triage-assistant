@@ -3,6 +3,7 @@
  * 浏览器 A–J 人工点验不在此脚本声称通过。
  */
 import "dotenv/config";
+import { systemActor } from "../src/services/audit/auditEventBuilder";
 import { caseA, caseB } from "../src/domain/demo";
 import { analyzeSecurityCase } from "../src/services/analysis/analyzeSecurityCase";
 import {
@@ -88,7 +89,8 @@ async function main() {
       suggestedRiskLevel:
         analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
     },
-    { operationId: `smoke-rc-create-${Date.now()}` },
+    { operationId: `smoke-rc-create-${Date.now()}`, actor: systemActor()
+},
   );
   assert(created.ok, "创建 smoke 案件失败");
   if (!created.ok) return;
@@ -107,8 +109,8 @@ async function main() {
       checklist: created.case.caseState.checklist.filter(
         (x) => x.id !== systemItem!.id,
       ),
-    }),
-  });
+    }), actor: systemActor()
+});
   assert(!reject.ok, "SYSTEM 删除应失败");
   assert(
     !reject.ok && reject.error.includes("系统生成的核查事项不能删除"),
@@ -127,8 +129,8 @@ async function main() {
     baseUpdatedAt: created.case.updatedAt,
     nextCaseState: toNextState(created.case, {
       checklist: [...created.case.caseState.checklist, manual],
-    }),
-  });
+    }), actor: systemActor()
+});
   assert(added.ok, "MANUAL 新增失败");
   if (!added.ok) return;
   const delManual = await applyChecklistCommand({
@@ -139,8 +141,8 @@ async function main() {
     baseUpdatedAt: added.case.updatedAt,
     nextCaseState: toNextState(added.case, {
       checklist: added.case.caseState.checklist.filter((x) => x.id !== manual.id),
-    }),
-  });
+    }), actor: systemActor()
+});
   assert(delManual.ok, "MANUAL 删除应成功");
   if (delManual.ok) {
     assert(

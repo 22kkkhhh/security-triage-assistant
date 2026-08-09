@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { systemActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -69,12 +70,12 @@ describe("reportCommands（v1.2 Step 3）", () => {
 
     const result = await createReportDraftCommand({
       caseId: created.id,
-      operationId: "op-report-create-1",
-    });
+      operationId: "op-report-create-1", actor: systemActor()
+});
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.audit?.actionType).toBe("REPORT_CREATED");
-    expect(result.audit?.actorType).toBe("MANUAL");
+    expect(result.audit?.actorType).toBe("SYSTEM");
     expect(result.audit?.summary).toBe("生成调查报告初稿");
     expect(JSON.stringify(result.audit)).not.toContain("sections");
 
@@ -86,23 +87,23 @@ describe("reportCommands（v1.2 Step 3）", () => {
     const created = await seedCase();
     const first = await createReportDraftCommand({
       caseId: created.id,
-      operationId: "op-report-create-2",
-    });
+      operationId: "op-report-create-2", actor: systemActor()
+});
     expect(first.ok).toBe(true);
     if (!first.ok) return;
 
     const retry = await createReportDraftCommand({
       caseId: created.id,
-      operationId: "op-report-create-2",
-    });
+      operationId: "op-report-create-2", actor: systemActor()
+});
     expect(retry.ok && retry.alreadyApplied).toBe(true);
     if (!retry.ok) return;
     expect(retry.case.id).toBe(first.case.id);
 
     const secondClick = await createReportDraftCommand({
       caseId: created.id,
-      operationId: "op-report-create-other",
-    });
+      operationId: "op-report-create-other", actor: systemActor()
+});
     expect(secondClick.ok && secondClick.alreadyApplied).toBe(true);
 
     const logs = await listCaseAuditLogs({ caseId: created.id });
@@ -115,8 +116,8 @@ describe("reportCommands（v1.2 Step 3）", () => {
     const created = await seedCase();
     const createdReport = await createReportDraftCommand({
       caseId: created.id,
-      operationId: "op-ru-create",
-    });
+      operationId: "op-ru-create", actor: systemActor()
+});
     expect(createdReport.ok).toBe(true);
     if (!createdReport.ok) return;
 
@@ -131,8 +132,8 @@ describe("reportCommands（v1.2 Step 3）", () => {
       caseId: created.id,
       reportDraft: edited,
       baseReportUpdatedAt: createdReport.case.reportUpdatedAt,
-      auditOperationId: "op-ru-session-1",
-    });
+      auditOperationId: "op-ru-session-1", actor: systemActor()
+});
     expect(firstSave.ok).toBe(true);
     if (!firstSave.ok) return;
     expect(firstSave.audit?.actionType).toBe("REPORT_UPDATED");
@@ -145,8 +146,8 @@ describe("reportCommands（v1.2 Step 3）", () => {
       caseId: created.id,
       reportDraft: { ...edited, title: `${edited.title}-再改` },
       baseReportUpdatedAt: firstSave.case.reportUpdatedAt,
-      auditOperationId: null,
-    });
+      auditOperationId: null, actor: systemActor()
+});
     expect(secondSave.ok).toBe(true);
     if (!secondSave.ok) return;
     expect(secondSave.audit).toBeNull();
@@ -168,8 +169,8 @@ describe("reportCommands（v1.2 Step 3）", () => {
       caseId: created.id,
       reportDraft: { ...edited, title: "会话二" },
       baseReportUpdatedAt: secondSave.case.reportUpdatedAt,
-      auditOperationId: "op-ru-session-2",
-    });
+      auditOperationId: "op-ru-session-2", actor: systemActor()
+});
     expect(session2.ok).toBe(true);
     if (!session2.ok) return;
     expect(session2.audit?.actionType).toBe("REPORT_UPDATED");
@@ -183,8 +184,8 @@ describe("reportCommands（v1.2 Step 3）", () => {
     const created = await seedCase();
     const r = await createReportDraftCommand({
       caseId: created.id,
-      operationId: "op-stale-create",
-    });
+      operationId: "op-stale-create", actor: systemActor()
+});
     expect(r.ok).toBe(true);
     if (!r.ok) return;
 
@@ -211,8 +212,8 @@ describe("reportCommands（v1.2 Step 3）", () => {
     const created = await seedCase();
     const r = await createReportDraftCommand({
       caseId: created.id,
-      operationId: "op-ex-create",
-    });
+      operationId: "op-ex-create", actor: systemActor()
+});
     expect(r.ok).toBe(true);
     if (!r.ok) return;
 
@@ -221,8 +222,8 @@ describe("reportCommands（v1.2 Step 3）", () => {
 
     const exported = await exportReportCommand({
       caseId: created.id,
-      operationId: "op-export-1",
-    });
+      operationId: "op-export-1", actor: systemActor()
+});
     expect(exported.ok).toBe(true);
     if (!exported.ok) return;
     expect(exported.fileBase64.length).toBeGreaterThan(100);
@@ -233,8 +234,8 @@ describe("reportCommands（v1.2 Step 3）", () => {
 
     const retry = await exportReportCommand({
       caseId: created.id,
-      operationId: "op-export-1",
-    });
+      operationId: "op-export-1", actor: systemActor()
+});
     expect(retry.ok && retry.alreadyApplied).toBe(true);
     if (!retry.ok) return;
     // Audit 幂等 ≠ 文件响应缓存：retry 仍返回可用 DOCX，但不新增 Audit
@@ -247,8 +248,8 @@ describe("reportCommands（v1.2 Step 3）", () => {
 
     const again = await exportReportCommand({
       caseId: created.id,
-      operationId: "op-export-2",
-    });
+      operationId: "op-export-2", actor: systemActor()
+});
     expect(again.ok && !again.alreadyApplied).toBe(true);
 
     const logs = await listCaseAuditLogs({ caseId: created.id });
@@ -262,12 +263,12 @@ describe("reportCommands（v1.2 Step 3）", () => {
     const b = await seedCase(caseB);
     const ra = await createReportDraftCommand({
       caseId: a.id,
-      operationId: "op-reg-a",
-    });
+      operationId: "op-reg-a", actor: systemActor()
+});
     const rb = await createReportDraftCommand({
       caseId: b.id,
-      operationId: "op-reg-b",
-    });
+      operationId: "op-reg-b", actor: systemActor()
+});
     expect(ra.ok && rb.ok).toBe(true);
     if (!ra.ok || !rb.ok) return;
     const textA = ra.case.reportDraft!.sections.map((s) => s.content).join("\n");

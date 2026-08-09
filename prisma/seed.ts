@@ -29,6 +29,8 @@ import {
   buildReportCreatedAudit,
   buildReportExportedAudit,
   buildStatusChangedAudit,
+  manualActor,
+  systemActor,
   type BuiltAuditEvent,
 } from "../src/services/audit/auditEventBuilder";
 
@@ -201,7 +203,7 @@ async function upsertDemoCase(input: {
 }
 
 function caseAAuditSpecs(): SeedAuditSpec[] {
-  const reviewer = "王研判";
+  const legacy = manualActor("王研判");
   return [
     {
       operationId: "seed:v12:case-a:created",
@@ -211,6 +213,7 @@ function caseAAuditSpecs(): SeedAuditSpec[] {
         title: caseA.name,
         sourceType: "DATABASE_AUDIT",
         operationId: "seed:v12:case-a:created",
+        actor: systemActor(),
       }),
     },
     {
@@ -222,7 +225,7 @@ function caseAAuditSpecs(): SeedAuditSpec[] {
           businessLegitimacy: { from: "UNKNOWN", to: "AUTHORIZED" },
           ownerVerification: { from: "UNKNOWN", to: "CONFIRMED" },
         },
-        reviewer,
+        actor: legacy,
         operationId: "seed:v12:case-a:business-confirmed",
       }),
     },
@@ -232,7 +235,7 @@ function caseAAuditSpecs(): SeedAuditSpec[] {
       event: buildHumanReviewUpdatedAudit({
         finalConclusion: { from: null, to: "NORMAL_BUSINESS" },
         humanRiskLevel: { from: null, to: "LOW" },
-        reviewer,
+        actor: legacy,
         operationId: "seed:v12:case-a:human-review",
       }),
     },
@@ -241,7 +244,7 @@ function caseAAuditSpecs(): SeedAuditSpec[] {
       createdAt: T.aReport,
       event: buildReportCreatedAudit({
         caseNumber: "INC-20260808-001",
-        reviewer,
+        actor: legacy,
         operationId: "seed:v12:case-a:report-created",
       }),
     },
@@ -251,7 +254,7 @@ function caseAAuditSpecs(): SeedAuditSpec[] {
       event: buildStatusChangedAudit({
         from: "INVESTIGATING",
         to: "CLOSED",
-        reviewer,
+        actor: legacy,
         operationId: "seed:v12:case-a:closed",
       }),
     },
@@ -261,7 +264,7 @@ function caseAAuditSpecs(): SeedAuditSpec[] {
       event: buildReportExportedAudit({
         caseNumber: "INC-20260808-001",
         fileName: "INC-20260808-001-数据与网络安全事件调查分析报告.docx",
-        reviewer,
+        actor: legacy,
         operationId: "seed:v12:case-a:report-exported",
       }),
     },
@@ -269,7 +272,7 @@ function caseAAuditSpecs(): SeedAuditSpec[] {
 }
 
 function caseBAuditSpecs(): SeedAuditSpec[] {
-  const reviewer = "王研判";
+  const legacy = manualActor("王研判");
   const handoffNote =
     "已完成账号基础核查，业务合理性尚未确认。已联系相关负责人，等待回复。下一班重点核查出口网络日志、异常公网通信及数据去向。";
   return [
@@ -281,6 +284,7 @@ function caseBAuditSpecs(): SeedAuditSpec[] {
         title: caseB.name,
         sourceType: "MIXED",
         operationId: "seed:v12:case-b:created",
+        actor: systemActor(),
       }),
     },
     {
@@ -289,7 +293,7 @@ function caseBAuditSpecs(): SeedAuditSpec[] {
       event: buildChecklistCompletedAudit({
         itemId: "CL-8",
         label: "联系账号使用人确认是否本人操作",
-        reviewer,
+        actor: legacy,
         operationId: "seed:v12:case-b:checklist-account",
       }),
     },
@@ -299,7 +303,7 @@ function caseBAuditSpecs(): SeedAuditSpec[] {
       event: buildStatusChangedAudit({
         from: "INVESTIGATING",
         to: "PENDING_VERIFICATION",
-        reviewer,
+        actor: legacy,
         operationId: "seed:v12:case-b:status-pending",
       }),
     },
@@ -308,7 +312,7 @@ function caseBAuditSpecs(): SeedAuditSpec[] {
       createdAt: T.bHandoff,
       event: buildHandoffAudit({
         note: handoffNote,
-        reviewer,
+        actor: legacy,
         operationId: "seed:v12:case-b:handoff",
       }),
     },

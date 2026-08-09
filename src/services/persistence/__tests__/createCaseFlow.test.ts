@@ -16,6 +16,7 @@ import { parsePastedText } from "@/services/normalization/textParser";
 import { emptyNormalizedInput } from "@/services/normalization/types";
 import { resetPrismaClient } from "@/lib/prisma";
 import {
+  ensureVitestAuthUsersInDb,
   setVitestDefaultAuthUser,
   VITEST_ANALYST_USER,
 } from "@/services/auth/testAuthContext";
@@ -50,6 +51,7 @@ beforeEach(async () => {
   const { prisma } = await import("@/lib/prisma");
   await prisma.caseAuditLog.deleteMany();
   await prisma.caseRecord.deleteMany();
+  await ensureVitestAuthUsersInDb();
 });
 
 afterAll(async () => {
@@ -85,7 +87,7 @@ describe("新建研判持久化（Step 4）", () => {
     expect(record!.title).toBe("手工录入敏感查询告警");
   });
 
-  it("创建成功同时产生 SYSTEM CASE_CREATED Audit", async () => {
+  it("创建成功同时产生 USER CASE_CREATED Audit", async () => {
     const { listCaseAuditLogs } = await import(
       "@/services/persistence/auditRepository"
     );
@@ -95,8 +97,9 @@ describe("新建研判持久化（Step 4）", () => {
     const logs = await listCaseAuditLogs({ caseId: result.id });
     expect(logs.items).toHaveLength(1);
     expect(logs.items[0]!.actionType).toBe("CASE_CREATED");
-    expect(logs.items[0]!.actorType).toBe("SYSTEM");
-    expect(logs.items[0]!.actorName).toBe("系统");
+    expect(logs.items[0]!.actorType).toBe("USER");
+    expect(logs.items[0]!.actorId).toBe("vitest-analyst-id");
+    expect(logs.items[0]!.actorName).toBe("Vitest 分析员");
   });
 
   it("创建失败（非法输入）不产生 Audit", async () => {

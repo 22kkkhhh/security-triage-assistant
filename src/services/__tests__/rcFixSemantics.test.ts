@@ -2,6 +2,7 @@
  * v1.2 RC Fix：Timeline/Audit 分离、SYSTEM Checklist 删除限制、用户可见时间格式。
  */
 import { execSync } from "node:child_process";
+import { systemActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -102,7 +103,8 @@ describe("RC Fix · Timeline / Audit", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "rc-tl-create" },
+      { operationId: "rc-tl-create", actor: systemActor()
+},
     );
     expect(created.ok).toBe(true);
     if (!created.ok) return;
@@ -122,8 +124,8 @@ describe("RC Fix · Timeline / Audit", () => {
       eventId: event.id,
       operationId: "rc-tl-add",
       baseUpdatedAt: created.case.updatedAt,
-      nextCaseState: toNextState(created.case, { timeline: nextTimeline }),
-    });
+      nextCaseState: toNextState(created.case, { timeline: nextTimeline }), actor: systemActor()
+});
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.audit?.actionType).toBe("TIMELINE_EVENT_ADDED");
@@ -156,7 +158,8 @@ describe("RC Fix · SYSTEM Checklist 删除", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "rc-cl-create" },
+      { operationId: "rc-cl-create", actor: systemActor()
+},
     );
     expect(created.ok).toBe(true);
     if (!created.ok) return;
@@ -177,8 +180,8 @@ describe("RC Fix · SYSTEM Checklist 删除", () => {
       itemId: systemItem.id,
       operationId: "rc-cl-del-system",
       baseUpdatedAt: before!.updatedAt,
-      nextCaseState: toNextState(before!, { checklist: deleted }),
-    });
+      nextCaseState: toNextState(before!, { checklist: deleted }), actor: systemActor()
+});
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toContain("系统生成的核查事项不能删除");
@@ -203,7 +206,8 @@ describe("RC Fix · SYSTEM Checklist 删除", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "rc-cl-create-2" },
+      { operationId: "rc-cl-create-2", actor: systemActor()
+},
     );
     expect(created.ok).toBe(true);
     if (!created.ok) return;
@@ -219,8 +223,8 @@ describe("RC Fix · SYSTEM Checklist 删除", () => {
       itemId: manual.id,
       operationId: "rc-cl-add-manual",
       baseUpdatedAt: created.case.updatedAt,
-      nextCaseState: toNextState(created.case, { checklist: withManual }),
-    });
+      nextCaseState: toNextState(created.case, { checklist: withManual }), actor: systemActor()
+});
     expect(added.ok).toBe(true);
     if (!added.ok) return;
 
@@ -232,8 +236,8 @@ describe("RC Fix · SYSTEM Checklist 删除", () => {
       itemId: manual.id,
       operationId: "rc-cl-del-manual",
       baseUpdatedAt: mid!.updatedAt,
-      nextCaseState: toNextState(mid!, { checklist: without }),
-    });
+      nextCaseState: toNextState(mid!, { checklist: without }), actor: systemActor()
+});
     expect(deleted.ok).toBe(true);
     if (!deleted.ok) return;
     expect(deleted.audit?.actionType).toBe("CHECKLIST_DELETED");

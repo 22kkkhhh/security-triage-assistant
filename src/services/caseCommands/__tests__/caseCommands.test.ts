@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { systemActor, manualActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -91,7 +92,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { sourceType: "DATABASE_AUDIT", operationId: "op-create-a" },
+      { sourceType: "DATABASE_AUDIT", operationId: "op-create-a", actor: systemActor()
+},
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -112,7 +114,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "op-create-retry" },
+      { operationId: "op-create-retry", actor: systemActor()
+},
     );
     expect(first.ok).toBe(true);
     if (!first.ok) return;
@@ -124,7 +127,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "op-create-retry" },
+      { operationId: "op-create-retry", actor: systemActor()
+},
     );
     expect(retry.ok).toBe(true);
     if (!retry.ok) return;
@@ -158,8 +162,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
             ...buildStatusChangedAudit({
               from: "INVESTIGATING",
               to: "CLOSED",
-              operationId: "dup-tx-fail",
-            }),
+              operationId: "dup-tx-fail", actor: manualActor("王研判")
+}),
           },
           tx,
         );
@@ -169,8 +173,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
             ...buildStatusChangedAudit({
               from: "INVESTIGATING",
               to: "CLOSED",
-              operationId: "dup-tx-fail",
-            }),
+              operationId: "dup-tx-fail", actor: manualActor("王研判")
+}),
           },
           tx,
         );
@@ -191,8 +195,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "op-status-1",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: next,
-    });
+      nextCaseState: next, actor: systemActor()
+});
     expect(r1.ok).toBe(true);
     if (!r1.ok) return;
     expect(r1.audit?.changes).toEqual({
@@ -205,8 +209,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "op-status-2",
       baseUpdatedAt: r1.case.updatedAt,
-      nextCaseState: toNextState(r1.case, { status: "PENDING_VERIFICATION" }),
-    });
+      nextCaseState: toNextState(r1.case, { status: "PENDING_VERIFICATION" }), actor: systemActor()
+});
     expect(r2.ok).toBe(true);
     if (!r2.ok) return;
     expect(r2.alreadyApplied).toBe(true);
@@ -225,8 +229,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "CLOSED",
       operationId: "op-close-1",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "CLOSED" }),
-    });
+      nextCaseState: toNextState(created, { status: "CLOSED" }), actor: systemActor()
+});
     expect(closed.ok).toBe(true);
     if (!closed.ok) return;
     expect(closed.case.closedAt).toBeTruthy();
@@ -236,8 +240,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "CLOSED",
       operationId: "op-close-1",
       baseUpdatedAt: closed.case.updatedAt,
-      nextCaseState: toNextState(closed.case, { status: "CLOSED" }),
-    });
+      nextCaseState: toNextState(closed.case, { status: "CLOSED" }), actor: systemActor()
+});
     expect(retry.ok).toBe(true);
     if (!retry.ok) return;
     expect(retry.alreadyApplied).toBe(true);
@@ -247,8 +251,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "INVESTIGATING",
       operationId: "op-reopen-1",
       baseUpdatedAt: closed.case.updatedAt,
-      nextCaseState: toNextState(closed.case, { status: "INVESTIGATING" }),
-    });
+      nextCaseState: toNextState(closed.case, { status: "INVESTIGATING" }), actor: systemActor()
+});
     expect(reopened.ok).toBe(true);
     if (!reopened.ok) return;
     expect(reopened.case.closedAt).toBeNull();
@@ -269,8 +273,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: item.id,
       operationId: "op-cl-complete",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { checklist: completedList }),
-    });
+      nextCaseState: toNextState(created, { checklist: completedList }), actor: systemActor()
+});
     expect(c1.ok).toBe(true);
     if (!c1.ok) return;
     expect(c1.audit?.actionType).toBe("CHECKLIST_COMPLETED");
@@ -281,8 +285,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: item.id,
       operationId: "op-cl-complete-2",
       baseUpdatedAt: c1.case.updatedAt,
-      nextCaseState: toNextState(c1.case, { checklist: completedList }),
-    });
+      nextCaseState: toNextState(c1.case, { checklist: completedList }), actor: systemActor()
+});
     expect(c2.ok && c2.alreadyApplied).toBe(true);
 
     const reopenedList = completedList.map((x) =>
@@ -294,8 +298,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: item.id,
       operationId: "op-cl-reopen",
       baseUpdatedAt: c1.case.updatedAt,
-      nextCaseState: toNextState(c1.case, { checklist: reopenedList }),
-    });
+      nextCaseState: toNextState(c1.case, { checklist: reopenedList }), actor: systemActor()
+});
     expect(r1.ok).toBe(true);
     if (!r1.ok) return;
     expect(r1.audit?.actionType).toBe("CHECKLIST_REOPENED");
@@ -311,8 +315,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: manual.id,
       operationId: "op-cl-add",
       baseUpdatedAt: r1.case.updatedAt,
-      nextCaseState: toNextState(r1.case, { checklist: withManual }),
-    });
+      nextCaseState: toNextState(r1.case, { checklist: withManual }), actor: systemActor()
+});
     expect(a1.ok).toBe(true);
     if (!a1.ok) return;
     expect(a1.audit?.actionType).toBe("CHECKLIST_ADDED");
@@ -325,8 +329,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       baseUpdatedAt: a1.case.updatedAt,
       nextCaseState: toNextState(a1.case, {
         checklist: [...withManual, { ...manual, id: "dup-should-not-apply" }],
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(aRetry.ok && aRetry.alreadyApplied).toBe(true);
     expect(
       aRetry.ok &&
@@ -340,8 +344,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: manual.id,
       operationId: "op-cl-del",
       baseUpdatedAt: a1.case.updatedAt,
-      nextCaseState: toNextState(a1.case, { checklist: deleted }),
-    });
+      nextCaseState: toNextState(a1.case, { checklist: deleted }), actor: systemActor()
+});
     expect(d1.ok).toBe(true);
     if (!d1.ok) return;
     expect(d1.audit?.actionType).toBe("CHECKLIST_DELETED");
@@ -367,8 +371,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
         checklist: analyzed.checklist,
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.audit?.actionType).toBe("BUSINESS_CONTEXT_UPDATED");
@@ -410,8 +414,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       caseId: created.id,
       operationId: "op-hr-1",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { humanReview: hr }),
-    });
+      nextCaseState: toNextState(created, { humanReview: hr }), actor: systemActor()
+});
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.audit?.actionType).toBe("HUMAN_REVIEW_UPDATED");
@@ -446,8 +450,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       baseUpdatedAt: created.updatedAt,
       nextCaseState: toNextState(created, {
         timeline: [...created.caseState.timeline, event],
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(r1.ok).toBe(true);
     if (!r1.ok) return;
     expect(r1.audit?.actionType).toBe("TIMELINE_EVENT_ADDED");
@@ -462,8 +466,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
           ...r1.case.caseState.timeline,
           { ...event, id: "should-not-add" },
         ],
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(r2.ok && r2.alreadyApplied).toBe(true);
     expect(
       r2.ok && r2.case.caseState.timeline.filter((e) => e.id === event.id),
@@ -486,8 +490,8 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "op-act-1",
       baseUpdatedAt: a.updatedAt,
-      nextCaseState: toNextState(a, { status: "PENDING_VERIFICATION" }),
-    });
+      nextCaseState: toNextState(a, { status: "PENDING_VERIFICATION" }), actor: systemActor()
+});
     expect(statused.ok).toBe(true);
     if (!statused.ok) return;
 

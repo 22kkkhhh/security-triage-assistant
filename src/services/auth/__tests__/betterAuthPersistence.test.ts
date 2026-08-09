@@ -7,6 +7,7 @@ import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { caseA } from "@/domain/demo";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
+import { systemActor } from "@/services/audit/auditEventBuilder";
 import { createCaseWithAudit } from "@/services/caseCommands";
 import { auth } from "@/lib/auth";
 import { resetPrismaClient } from "@/lib/prisma";
@@ -298,7 +299,7 @@ describe("CaseAuditLog actor User FK", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "auth-fk-case-1" },
+      { operationId: "auth-fk-case-1", actor: systemActor() },
     );
     expect(caseResult.ok).toBe(true);
     if (!caseResult.ok) return;

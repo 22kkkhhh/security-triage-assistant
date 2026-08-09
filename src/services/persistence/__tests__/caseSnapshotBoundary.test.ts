@@ -2,6 +2,7 @@
  * v1.3 Step 0：Snapshot Autosave 写边界攻击回归 + 语义/审计回归。
  */
 import { execSync } from "node:child_process";
+import { systemActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -19,6 +20,7 @@ import {
 import { saveCaseStateAction } from "@/app/(app)/cases/actions";
 import { resetPrismaClient } from "@/lib/prisma";
 import {
+  ensureVitestAuthUsersInDb,
   setVitestDefaultAuthUser,
   VITEST_ANALYST_USER,
 } from "@/services/auth/testAuthContext";
@@ -75,7 +77,8 @@ async function seedCase(
       suggestedRiskLevel:
         analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
     },
-    { operationId },
+    { operationId, actor: systemActor()
+},
   );
   expect(created.ok).toBe(true);
   if (!created.ok) throw new Error(created.error);
@@ -97,6 +100,7 @@ beforeEach(async () => {
   const { prisma } = await import("@/lib/prisma");
   await prisma.caseAuditLog.deleteMany();
   await prisma.caseRecord.deleteMany();
+  await ensureVitestAuthUsersInDb();
 });
 
 afterAll(async () => {
@@ -325,8 +329,8 @@ describe("saveCaseSnapshot / saveCaseStateAction 写边界", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "snap-stale-status",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }),
-    });
+      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }), actor: systemActor()
+});
     expect(status.ok).toBe(true);
     if (!status.ok) return;
 
@@ -422,8 +426,8 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "sem-status",
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, { status: "PENDING_VERIFICATION" }),
-    });
+      nextCaseState: toNextState(current, { status: "PENDING_VERIFICATION" }), actor: systemActor()
+});
     expect(status.ok).toBe(true);
     if (!status.ok) return;
     expect(status.audit?.actionType).toBe("STATUS_CHANGED");
@@ -437,8 +441,8 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
       caseId: current.id,
       operationId: "sem-bc",
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, { businessContext: nextBc }),
-    });
+      nextCaseState: toNextState(current, { businessContext: nextBc }), actor: systemActor()
+});
     expect(bc.ok).toBe(true);
     if (!bc.ok) return;
     expect(bc.audit?.actionType).toBe("BUSINESS_CONTEXT_UPDATED");
@@ -456,8 +460,8 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
       caseId: current.id,
       operationId: "sem-hr",
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, { humanReview: hr }),
-    });
+      nextCaseState: toNextState(current, { humanReview: hr }), actor: systemActor()
+});
     expect(human.ok).toBe(true);
     if (!human.ok) return;
     expect(human.audit?.actionType).toBe("HUMAN_REVIEW_UPDATED");
@@ -475,8 +479,8 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
         checklist: current.caseState.checklist.map((x) =>
           x.id === item!.id ? { ...x, completed: true } : x,
         ),
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(checklist.ok).toBe(true);
     if (!checklist.ok) return;
     expect(checklist.audit?.actionType).toMatch(/CHECKLIST/);
@@ -498,8 +502,8 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
       baseUpdatedAt: current.updatedAt,
       nextCaseState: toNextState(current, {
         timeline: [...current.caseState.timeline, event],
-      }),
-    });
+      }), actor: systemActor()
+});
     expect(timeline.ok).toBe(true);
     if (!timeline.ok) return;
     expect(timeline.audit?.actionType).toBe("TIMELINE_EVENT_ADDED");
@@ -508,8 +512,8 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
     const handoff = await addHandoffNoteCommand({
       caseId: current.id,
       note: "交接给夜班（Mock）",
-      operationId: "sem-handoff",
-    });
+      operationId: "sem-handoff", actor: systemActor()
+});
     expect(handoff.ok).toBe(true);
     if (!handoff.ok) return;
     expect(handoff.audit?.actionType).toBe("HANDOFF_NOTE_ADDED");

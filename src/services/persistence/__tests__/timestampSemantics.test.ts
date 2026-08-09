@@ -2,6 +2,7 @@
  * 时间戳语义矩阵：updatedAt / reportUpdatedAt / lastActivityAt / Audit.createdAt
  */
 import { execSync } from "node:child_process";
+import { systemActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -87,7 +88,8 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "ts-create-1" },
+      { operationId: "ts-create-1", actor: systemActor()
+},
     );
     expect(created.ok).toBe(true);
     if (!created.ok) return;
@@ -119,15 +121,16 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "ts-create-2" },
+      { operationId: "ts-create-2", actor: systemActor()
+},
     );
     expect(created.ok).toBe(true);
     if (!created.ok) return;
 
     const report = await createReportDraftCommand({
       caseId: created.case.id,
-      operationId: "ts-report-create",
-    });
+      operationId: "ts-report-create", actor: systemActor()
+});
     expect(report.ok).toBe(true);
     if (!report.ok) return;
 
@@ -136,8 +139,8 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
       caseId: created.case.id,
       reportDraft: { ...draft, title: `${draft.title}（修订1）` },
       baseReportUpdatedAt: report.case.reportUpdatedAt,
-      auditOperationId: "ts-report-update-session",
-    });
+      auditOperationId: "ts-report-update-session", actor: systemActor()
+});
     expect(first.ok).toBe(true);
     if (!first.ok) return;
     expect(first.audit?.actionType).toBe("REPORT_UPDATED");
@@ -148,8 +151,8 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
       caseId: created.case.id,
       reportDraft: { ...draft, title: `${draft.title}（修订2）` },
       baseReportUpdatedAt: first.case.reportUpdatedAt,
-      auditOperationId: null,
-    });
+      auditOperationId: null, actor: systemActor()
+});
     expect(second.ok).toBe(true);
     if (!second.ok) return;
     expect(second.audit).toBeNull();
@@ -166,23 +169,24 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "ts-create-3" },
+      { operationId: "ts-create-3", actor: systemActor()
+},
     );
     expect(created.ok).toBe(true);
     if (!created.ok) return;
 
     await createReportDraftCommand({
       caseId: created.case.id,
-      operationId: "ts-report-create-3",
-    });
+      operationId: "ts-report-create-3", actor: systemActor()
+});
     const before = await getCaseById(created.case.id);
     expect(before?.reportUpdatedAt).not.toBeNull();
 
     await sleep(15);
     const exported = await exportReportCommand({
       caseId: created.case.id,
-      operationId: "ts-export-1",
-    });
+      operationId: "ts-export-1", actor: systemActor()
+});
     expect(exported.ok).toBe(true);
     if (!exported.ok) return;
     expect(exported.reportUpdatedAt).toBe(before!.reportUpdatedAt);
@@ -207,7 +211,8 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "ts-create-4" },
+      { operationId: "ts-create-4", actor: systemActor()
+},
     );
     expect(created.ok).toBe(true);
     if (!created.ok) return;
@@ -218,8 +223,8 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "ts-status-a",
       baseUpdatedAt: v0!.updatedAt,
-      nextCaseState: toNextState(v0!, { status: "PENDING_VERIFICATION" }),
-    });
+      nextCaseState: toNextState(v0!, { status: "PENDING_VERIFICATION" }), actor: systemActor()
+});
     const v1 = await getCaseById(created.case.id);
     await expect(
       saveCaseState(
@@ -234,8 +239,8 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
 
     const report = await createReportDraftCommand({
       caseId: created.case.id,
-      operationId: "ts-report-create-4",
-    });
+      operationId: "ts-report-create-4", actor: systemActor()
+});
     expect(report.ok).toBe(true);
     if (!report.ok) return;
     const base0 = report.case.reportUpdatedAt;
@@ -244,16 +249,16 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
       caseId: created.case.id,
       reportDraft: { ...draft, title: "Tab A 已保存" },
       baseReportUpdatedAt: base0,
-      auditOperationId: "ts-ru-a",
-    });
+      auditOperationId: "ts-ru-a", actor: systemActor()
+});
     expect(tabA.ok).toBe(true);
     if (!tabA.ok) return;
     const tabB = await saveReportDraftCommand({
       caseId: created.case.id,
       reportDraft: { ...draft, title: "Tab B 旧版" },
       baseReportUpdatedAt: base0,
-      auditOperationId: "ts-ru-b",
-    });
+      auditOperationId: "ts-ru-b", actor: systemActor()
+});
     expect(tabB.ok).toBe(false);
     const latest = await getCaseById(created.case.id);
     expect(latest!.reportDraft?.title).toBe("Tab A 已保存");
@@ -270,7 +275,8 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
         suggestedRiskLevel:
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
       },
-      { operationId: "ts-clean-create", sourceType: "MANUAL" },
+      { operationId: "ts-clean-create", sourceType: "MANUAL", actor: systemActor()
+},
     );
     expect(created.ok).toBe(true);
     if (!created.ok) return;

@@ -4,6 +4,7 @@ import type { CaseStatus } from "@/domain/types";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
 import { buildSecurityCaseDraft } from "@/services/normalization/buildSecurityCase";
 import type { NormalizedSecurityInput } from "@/services/normalization/types";
+import { userActor } from "@/services/audit/auditEventBuilder";
 import { createCaseWithAudit } from "@/services/caseCommands";
 import {
   requirePermission,
@@ -127,8 +128,9 @@ export async function createCaseAction(
   rawInput: unknown,
   operationId?: unknown,
 ): Promise<CreateCaseActionResult> {
+  let user;
   try {
-    await requirePermission("CASE_CREATE");
+    user = await requirePermission("CASE_CREATE");
   } catch (error) {
     return toAuthActionFailure(error);
   }
@@ -177,6 +179,7 @@ export async function createCaseAction(
         status: "INVESTIGATING",
       },
       {
+        actor: userActor(user),
         sourceType: parsed.sourceType,
         operationId:
           typeof operationId === "string" ? operationId.trim() : null,
@@ -184,7 +187,11 @@ export async function createCaseAction(
     );
 
     if (!created.ok) {
-      return { ok: false, error: created.error };
+      return {
+        ok: false,
+        error: created.error,
+        code: created.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+      };
     }
 
     return {

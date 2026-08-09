@@ -181,9 +181,17 @@ Client
 1. Permission（谁可以写）
 2. Snapshot Payload Allowlist（允许写什么）
 
+认证写路径 Audit Actor（Step 5）：
+
+- `userActor(AuthUser)` → `actorType=USER`，`actorId=User.id`，`actorName=displayName` 写入时快照
+- Server Action 复用 `requirePermission` 返回的 AuthUser；Client 不得提交 Actor
+- `operationId` retry 校验 original actor ownership（跨用户 / Legacy MANUAL / SYSTEM 冒用 → FORBIDDEN）
+- Seed / 系统创建仍可使用 `SYSTEM`；历史 `MANUAL` Audit 原样兼容
+- Trusted Actor ≠ 防篡改 / 不可抵赖合规审计
+
 **尚未完成（不得宣称 v1.3 已完成）**：
 
-- Trusted Actor / Audit `actorId = User.id` / cross-user operationId ownership（Step 5）
+- HumanReview responsibility / `reviewedByUserId`（Step 6）
 - Admin User Management UI / 密码自助修改
 - UI RBAC（隐藏无权限按钮；Step 7）
 
