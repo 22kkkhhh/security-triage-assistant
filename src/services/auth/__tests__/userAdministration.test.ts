@@ -433,17 +433,20 @@ describe("displayName snapshot invariant", () => {
     expect(created.ok).toBe(true);
     if (!created.ok) throw new Error(created.error);
 
+    // 必须真实改变 semantic（Case A 草稿已有结论时 NO-OP 不会改责任人）
     const hr = await updateHumanReviewCommand({
       caseId: created.case.id,
       operationId: randomUUID(),
       actor: userActor(actor),
-      finalConclusion: "NORMAL_BUSINESS",
-      humanRiskLevel: "LOW",
+      finalConclusion: "SUSPECTED_SECURITY_INCIDENT",
+      humanRiskLevel: "HIGH",
       baseUpdatedAt: created.case.updatedAt,
     });
     expect(hr.ok).toBe(true);
     if (!hr.ok) throw new Error(hr.error);
+    expect(hr.alreadyApplied).not.toBe(true);
     expect(hr.case.caseState.humanReview?.reviewer).toBe("旧显示名");
+    expect(hr.case.caseState.humanReview?.reviewedByUserId).toBe(user.id);
 
     const auditsBefore = await listCaseAuditLogs({
       caseId: created.case.id,

@@ -225,14 +225,17 @@ User Admin 边界（Step 8）：
 - password set 与 session revoke 在 Better Auth 侧为独立 API；部分失败须显式提示，不得回滚已成功的 `enabled=false`
 - 无 SystemAuditLog：Login / 改密 / 用户管理操作尚无独立全局审计（Known Limitation）
 
-**v1.3 功能开发已基本完成；下一步为 Release Hardening（Step 9）。**
+**v1.3 Release Candidate：功能与 hardening 完成后，正式 tag 须单独执行。**
 
 已知限制（不得宣称已具备）：
 
+- 无 Case Ownership / Case ACL；authenticated users 可查看全部 Case
 - 无 MFA / SSO / forgot-password email / first-login forced password change
 - username/email v1.3 immutable；无用户物理删除；无 impersonation
 - 无 SystemAuditLog / Login Audit / User Admin Audit
-- PostgreSQL isolation 语义需在 v1.4 migration 后重新验证 last-ADMIN concurrency
+- SQLite 本地；不等于 PostgreSQL 生产就绪 / HA
+- UI capability 可能 stale；Server Authorization 为最终安全边界
+- PostgreSQL isolation 语义需在后续 migration 后重新验证 last-ADMIN concurrency
 
 ---
 

@@ -1,6 +1,6 @@
 /**
  * Better Auth 浏览器客户端（仅 Login / Logout / Session）。
- * 不引入 adminClient（用户管理 UI 属后续 Step）。
+ * 不引入 adminClient；用户管理走 Security Triage Server Actions + Permission。
  */
 "use client";
 

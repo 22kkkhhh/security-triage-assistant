@@ -99,21 +99,25 @@ Production 首个管理员：显式运行 `npm run user:bootstrap-admin`（见 `
 - 系统不得自动产生：确认攻击 / 确认失陷 / 确认数据泄露
 - Timeline = 安全事件历史；AuditLog = 运营操作历史（不得混淆）
 
-## 七、Audit 局限（重要）
+## 七、Audit 局限与 Known Limitations（重要）
 
-当前**不是**生产级合规审计系统。
+当前**不是**生产级合规审计 / Enterprise IAM。
 
-原因包括：
+v1.3 已具备：认证、三角色 Server Authorization、Trusted USER Case Audit Actor、
+最小用户管理与密码生命周期。
 
-- 已有 Login / Session、Server Action 权限校验，以及认证写路径 USER Actor
-- Legacy `MANUAL` actorName 仍不可信为真实身份；新认证操作使用 USER + User.id
-- SQLite 本地库
-- 无独立审计库
-- 无防篡改机制
-- 无不可抵赖保证
+明确 Known Limitations（记录限制，非未修缺陷）：
 
-生产环境需要：强制认证、完整 RBAC、服务端可信 Actor、数据库权限隔离、
-集中审计、日志完整性保护、备份与保留策略。
+- 单实例所有 authenticated users 可查看全部 Case；无 Case Ownership / ACL
+- 无 MFA / SSO / SystemAuditLog；Login / User Admin / Password 无全局审计
+- SQLite 本地持久化；非 PostgreSQL 生产就绪 / HA
+- username / email 创建后不可改；无首次强制改密 / forgot-password
+- Better Auth 技术面可能含 email sign-in；产品 UI 仅 username login
+- Legacy MANUAL Audit 保留；Legacy HumanReview reviewer 可无 `reviewedByUserId`
+- UI permission 可能 stale；**Server Authorization 才是最终安全边界**
+- 不等于电子签名、不可抵赖、防篡改合规审计或 SIEM 替代
+
+Demo 凭据仅限 Development/Test；**不得**用于 production。
 
 ## 八、数据安全说明
 
@@ -200,10 +204,12 @@ Seed 使用固定 `id`（`demo-case-a` / `demo-case-b`）、固定案件编号�
 
 ## 十三、Future Work / Roadmap
 
-合理后续方向（**不在当前 v1.2.x 稳定系列默认范围**）：
+合理后续方向（**不在当前 v1.3 默认范围**）：
 
-- 认证身份 / RBAC
-- PostgreSQL / 企业数据库
+- SystemAuditLog / Login·UserAdmin 全局审计
+- Case Ownership / Case ACL
+- MFA / SSO
+- PostgreSQL / 企业数据库（含 last-ADMIN isolation 复验）
 - 生产级集中审计与防篡改
 - 企业 Word 模板定制
 - 更多安全产品字段适配

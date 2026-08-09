@@ -83,13 +83,37 @@ Security Triage Assistant 用于解决上述问题。
 - 报告创建 / 更新 / 导出操作留痕
 - Semantic Command 与 Snapshot Autosave 分离
 
-### 仍不支持
+### 仍不支持（相对 v1.2 边界）
 
 - 全局 SIEM 审计中心
-- 用户身份认证 / RBAC
 - 不可篡改审计 / 不可抵赖
 - 排班系统
 - SOAR / 自动阻断
 - 通知系统 / 邮件推送
 - WebSocket 实时跨端推送
 - Audit 全文检索 / 导出中心 / Soft Delete UI
+
+> 注：用户身份认证 / RBAC 已在 **v1.3** 纳入（见下节）；上表保留 v1.2 时期边界表述。
+
+---
+
+## v1.3 产品边界（Identity / Access）
+
+### 支持
+
+- username + password 本地认证；Database Session
+- ADMIN / ANALYST / VIEWER；Server-side Permission
+- VIEWER 只读；Trusted USER Case Audit Actor；operationId ownership
+- HumanReview 责任人来自 authenticated identity
+- ADMIN 最小用户管理；自助改密；ADMIN 重置密码；Session 吊销
+- 至少 1 个 enabled ADMIN；Production bootstrap admin CLI
+
+### 仍不支持
+
+- Enterprise IAM / SSO / MFA / OIDC / LDAP / 多租户
+- Case Ownership / Case ACL / 自定义角色 / Permission Editor
+- SystemAuditLog / Login Audit / User Admin Audit
+- 用户物理删除 / impersonation / ban 产品状态机
+- username / email 修改；forgot-password；首次登录强制改密
+- PostgreSQL / Docker / Connector / AI / 新检测规则 / 新报告产品能力
+- 电子签名 / 不可抵赖合规审计 / 防篡改审计 / SIEM 替代

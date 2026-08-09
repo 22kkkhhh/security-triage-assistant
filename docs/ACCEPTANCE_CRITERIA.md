@@ -114,34 +114,34 @@ v1.2 Case 双 Tab 并发（I）：已在发布前用真实双 Page 浏览器一�
 
 ---
 
-## v1.3 验收条件（Auth Domain Foundation — 进行中）
+## v1.3 验收条件（Identity / Access — Release Candidate）
 
 Domain foundation（Step 1）自动化必须证明：
 
-- [ ] `UserRole` 仅 ADMIN / ANALYST / VIEWER
-- [ ] Role → Permission 矩阵符合产品设计（含 VIEWER 只读、ANALYST 无 USER_ADMIN、ADMIN 全权限）
-- [ ] `enabled === false` 时 `hasPermission` / `authorize` 一律拒绝
-- [ ] `ForbiddenError.code === "FORBIDDEN"`；`UnauthenticatedError.code === "UNAUTHENTICATED"`
-- [ ] Auth Domain 不依赖 Better Auth package
+- [x] `UserRole` 仅 ADMIN / ANALYST / VIEWER
+- [x] Role → Permission 矩阵符合产品设计（含 VIEWER 只读、ANALYST 无 USER_ADMIN、ADMIN 全权限）
+- [x] `enabled === false` 时 `hasPermission` / `authorize` 一律拒绝
+- [x] `ForbiddenError.code === "FORBIDDEN"`；`UnauthenticatedError.code === "UNAUTHENTICATED"`
+- [x] Auth Domain 不依赖 Better Auth package
 - [x] Server Actions 通过 `requirePermission` 强制 authorize（Step 4）
 
 Persistence foundation（Step 2）自动化必须证明：
 
-- [ ] Better Auth + Prisma 7 adapter 可创建 credential 用户（signup disabled）
-- [ ] Admin createUser 可设置 username（canonical lowercase）且无需绕过认证库
-- [ ] `User.role` 单 SoT；`toAuthUser` 拒绝非法/多角色
-- [ ] `enabled` 默认 true 且 create 路径 server-owned
-- [ ] Admin ACL 无 delete / impersonate；ANALYST/VIEWER 无 admin lifecycle
-- [ ] CaseAuditLog USER FK Restrict；MANUAL/SYSTEM actorId null 兼容
-- [ ] formal Prisma migration `add_auth_identity` 可从空库与 v1.2.1 forward
+- [x] Better Auth + Prisma 7 adapter 可创建 credential 用户（signup disabled）
+- [x] Admin createUser 可设置 username（canonical lowercase）且无需绕过认证库
+- [x] `User.role` 单 SoT；`toAuthUser` 拒绝非法/多角色
+- [x] `enabled` 默认 true 且 create 路径 server-owned
+- [x] Admin ACL 无 delete / impersonate；ANALYST/VIEWER 无 admin lifecycle
+- [x] CaseAuditLog USER FK Restrict；MANUAL/SYSTEM actorId null 兼容
+- [x] formal Prisma migration `add_auth_identity` 可从空库与 v1.2.1 forward
 
 Login / Session（Step 3）自动化必须证明：
 
-- [ ] `/api/auth` 已挂载；public signup / username availability 仍关闭
-- [ ] username + password 登录；失败不区分用户名/密码
-- [ ] `requireAuthenticatedUser`：无 Session→未认证；enabled=false→Forbidden；DB reload role/enabled
-- [ ] `(app)` 未登录跳转 `/login`；logout 失效 Session
-- [ ] 开发 Demo Users 幂等；production 不 provisioning
+- [x] `/api/auth` 已挂载；public signup / username availability 仍关闭
+- [x] username + password 登录；失败不区分用户名/密码
+- [x] `requireAuthenticatedUser`：无 Session→未认证；enabled=false→Forbidden；DB reload role/enabled
+- [x] `(app)` 未登录跳转 `/login`；logout 失效 Session
+- [x] 开发 Demo Users 幂等；production 不 provisioning
 
 Server Authorization（Step 4）自动化必须证明：
 
@@ -191,4 +191,13 @@ User Management & Password Lifecycle（Step 8）自动化必须证明：
 - [x] `user:bootstrap-admin`：无 enabled ADMIN 时可创建；已有则拒绝；无默认弱口令
 - [x] 用户管理不写入 CaseAuditLog；无 SystemAuditLog
 
-尚未验收（后续 Step 9 Release Hardening）：端到端发布门禁 hardening、文档/发布核对。
+Release Hardening（Step 9）必须证明：
+
+- [x] 安全宣称与 Known Limitations 一致；无过度 claim
+- [x] Server entry / Permission SoT / Viewer·Analyst·Admin 边界回归
+- [x] Snapshot / Trusted Actor / operationId / OCC / HR responsibility 回归
+- [x] User admin / Password / last ADMIN / bootstrap / Demo isolation
+- [x] fresh migrate + v1.2.1 forward migration；Case A/B 与 UNKNOWN 语义保持
+- [x] production build smoke + 三角色 HTTP/页面冒烟；无 tag / 无 push
+
+**正式 `v1.3.0` tag 须在本 Review PASS 后单独执行。**
