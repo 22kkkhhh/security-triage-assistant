@@ -18,25 +18,33 @@ import {
 } from "@/lib/formatDateTimeForDisplay";
 import type { AutosaveState } from "@/hooks/autosaveState";
 import { Panel } from "@/components/common";
+import type { ReportPageCapabilities } from "@/domain/uiCapabilities";
 import type { ReportDraftBundle } from "@/services/persistence/reportDraftService";
 
 /**
- * 持久化报告编辑器：以 reportDraft 为唯一 Source of Truth，自动保存，导出前 flush。
+ * 持久化报告编辑器：以 reportDraft 为唯一 Source of Truth。
+ * capabilities 控制 UX；无写权限时不启动 autosave、默认预览。
  */
 export function PersistedReportEditor({
   bundle,
+  capabilities,
 }: {
   bundle: ReportDraftBundle;
+  capabilities: ReportPageCapabilities;
 }) {
   const router = useRouter();
   const [report, setReport] = useState<ReportData>(bundle.report);
   const reportRef = useRef(report);
+  const canWrite = capabilities.canWrite;
+  const canExport = capabilities.canExport;
 
   useEffect(() => {
     reportRef.current = report;
   }, [report]);
 
-  const [mode, setMode] = useState<"edit" | "preview">("edit");
+  const [mode, setMode] = useState<"edit" | "preview">(
+    canWrite ? "edit" : "preview",
+  );
   const [exportFindings, setExportFindings] = useState<SensitiveFinding[] | null>(
     null,
   );
@@ -62,6 +70,7 @@ export function PersistedReportEditor({
     next: ReportData,
     modeSave: "debounce" | "immediate",
   ) => {
+    if (!canWrite) return;
     setReport(next);
     reportRef.current = next;
     scheduleSave(modeSave);
@@ -90,9 +99,10 @@ export function PersistedReportEditor({
   const handleBack = async () => {
     setNavigationError(null);
     if (
-      saveState.status === "DIRTY" ||
-      saveState.status === "SAVING" ||
-      saveState.status === "ERROR"
+      canWrite &&
+      (saveState.status === "DIRTY" ||
+        saveState.status === "SAVING" ||
+        saveState.status === "ERROR")
     ) {
       const ok = await flushSave();
       if (!ok) {
@@ -104,11 +114,16 @@ export function PersistedReportEditor({
   };
 
   const handleExportClick = async () => {
+    if (!canExport) {
+      setExportError("当前账号无权限导出报告");
+      return;
+    }
     setExportError(null);
     if (
-      saveState.status === "DIRTY" ||
-      saveState.status === "SAVING" ||
-      saveState.status === "ERROR"
+      canWrite &&
+      (saveState.status === "DIRTY" ||
+        saveState.status === "SAVING" ||
+        saveState.status === "ERROR")
     ) {
       const ok = await flushSave();
       if (!ok) {
@@ -121,6 +136,7 @@ export function PersistedReportEditor({
   };
 
   const doExport = async (maskSensitive: boolean) => {
+    if (!canExport) return;
     if (!exportOperationIdRef.current) {
       exportOperationIdRef.current = crypto.randomUUID();
     }
@@ -165,16 +181,27 @@ export function PersistedReportEditor({
         saveState={saveState}
         navigationError={navigationError}
         exportError={exportError}
+        canWrite={canWrite}
+        canExport={canExport}
         onBack={() => void handleBack()}
         onRetry={() => {
           setNavigationError(null);
           setExportError(null);
-          if (!isStaleLocked()) void retrySave();
+          if (canWrite && !isStaleLocked()) void retrySave();
         }}
         onExport={() => void handleExportClick()}
         mode={mode}
-        onToggleMode={() => setMode(mode === "edit" ? "preview" : "edit")}
+        onToggleMode={() => {
+          if (!canWrite) return;
+          setMode(mode === "edit" ? "preview" : "edit");
+        }}
       />
+
+      {!canWrite && (
+        <div className="rounded border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
+          只读模式：可查看报告内容，但不能编辑或自动保存。
+        </div>
+      )}
 
       {staleNotice && (
         <div className="rounded border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
@@ -189,7 +216,7 @@ export function PersistedReportEditor({
         </div>
       )}
 
-      {mode === "edit" ? (
+      {mode === "edit" && canWrite ? (
         <>
           <Panel title="事件名称">
             <input
@@ -312,6 +339,8 @@ function ReportHeader({
   saveState,
   navigationError,
   exportError,
+  canWrite,
+  canExport,
   onBack,
   onRetry,
   onExport,
@@ -323,6 +352,8 @@ function ReportHeader({
   saveState: AutosaveState;
   navigationError: string | null;
   exportError: string | null;
+  canWrite: boolean;
+  canExport: boolean;
   onBack: () => void;
   onRetry: () => void;
   onExport: () => void;
@@ -330,6 +361,7 @@ function ReportHeader({
   onToggleMode: () => void;
 }) {
   const savedLabel = (() => {
+    if (!canWrite) return "只读";
     switch (saveState.status) {
       case "SAVING":
         return "保存中…";
@@ -357,12 +389,14 @@ function ReportHeader({
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={
-              saveState.status === "ERROR" ? "text-sm text-red-700" : "text-sm text-neutral-500"
+              saveState.status === "ERROR" && canWrite
+                ? "text-sm text-red-700"
+                : "text-sm text-neutral-500"
             }
           >
             {savedLabel}
           </span>
-          {saveState.status === "ERROR" && (
+          {canWrite && saveState.status === "ERROR" && (
             <button
               type="button"
               onClick={onRetry}
@@ -371,16 +405,21 @@ function ReportHeader({
               重试
             </button>
           )}
+          {canWrite ? (
+            <button
+              type="button"
+              className="rounded border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
+              onClick={onToggleMode}
+            >
+              {mode === "edit" ? "预览" : "继续编辑"}
+            </button>
+          ) : null}
           <button
             type="button"
-            className="rounded border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
-            onClick={onToggleMode}
-          >
-            {mode === "edit" ? "预览" : "继续编辑"}
-          </button>
-          <button
-            type="button"
-            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
+            disabled={!canExport}
+            title={canExport ? "导出 Word 报告" : "当前账号无权限导出报告"}
+            aria-disabled={!canExport}
+            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
             onClick={onExport}
           >
             导出 Word
@@ -390,14 +429,23 @@ function ReportHeader({
       <div>
         <div className="font-mono text-xs text-neutral-500">{caseNumber}</div>
         <h1 className="mt-1 text-xl font-semibold text-neutral-900">{title}</h1>
-        <p className="mt-1 text-xs text-neutral-500">报告状态：草稿</p>
+        <p className="mt-1 text-xs text-neutral-500">
+          {canWrite ? "报告状态：草稿" : "报告状态：只读查看"}
+        </p>
+        {!canExport ? (
+          <p className="mt-1 text-xs text-neutral-500">
+            当前账号无权限导出报告
+          </p>
+        ) : null}
       </div>
       {(navigationError || exportError) && (
         <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {navigationError ?? exportError}{" "}
-          <button type="button" onClick={onRetry} className="underline">
-            重试
-          </button>
+          {canWrite ? (
+            <button type="button" onClick={onRetry} className="underline">
+              重试
+            </button>
+          ) : null}
         </div>
       )}
     </section>

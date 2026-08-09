@@ -7,6 +7,7 @@ import {
 } from "@/components/cases/caseDisplay";
 import { ReportExportButton } from "@/components/reports/ReportExportButton";
 import { ForbiddenError } from "@/domain/auth";
+import { buildReportPageCapabilities } from "@/domain/uiCapabilities";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import { requirePermission } from "@/services/auth/requirePermission";
 import { listReportCases } from "@/services/persistence/caseRepository";
@@ -15,10 +16,12 @@ export const dynamic = "force-dynamic";
 
 /**
  * 报告中心：仅列出 hasReport=true 的案件。
+ * 导出/编辑文案由 Server 派生 capability 控制（UX）。
  */
 export default async function ReportsPage() {
+  let user;
   try {
-    await requirePermission("REPORT_READ");
+    user = await requirePermission("REPORT_READ");
   } catch (error) {
     if (error instanceof ForbiddenError) {
       return (
@@ -29,13 +32,16 @@ export default async function ReportsPage() {
   }
 
   const reports = await listReportCases();
+  const capabilities = buildReportPageCapabilities(user);
 
   return (
     <div className="space-y-5">
       <header>
         <h1 className="text-2xl font-semibold text-neutral-900">报告中心</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          查看并继续编辑已生成的安全事件调查报告
+          {capabilities.canWrite
+            ? "查看并继续编辑已生成的安全事件调查报告"
+            : "查看已生成的安全事件调查报告（只读）"}
         </p>
       </header>
 
@@ -117,9 +123,12 @@ export default async function ReportsPage() {
                             href={`/cases/${item.id}/report`}
                             className="text-sm text-slate-800 underline-offset-2 hover:underline"
                           >
-                            继续编辑
+                            {capabilities.canWrite ? "继续编辑" : "查看报告"}
                           </Link>
-                          <ReportExportButton caseId={item.id} />
+                          <ReportExportButton
+                            caseId={item.id}
+                            canExport={capabilities.canExport}
+                          />
                         </div>
                       </td>
                     </tr>

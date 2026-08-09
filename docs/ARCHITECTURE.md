@@ -205,10 +205,17 @@ Audit Actor vs HumanReview Responsibility（Step 6）：
 二者不得互相推导：不得用 `reviewer` 填 Audit Actor；不得从 Audit 反推当前责任人。
 Report Builder 继续使用 `HumanReview.reviewer` 快照；已有 ReportDraft 不随责任人自动同步。
 
+UI Permission Presentation（Step 7）：
+
+- Server 用 `hasPermission()` 派生 capability DTO（`src/domain/uiCapabilities.ts`）
+- Client 组件接收 capability 布尔值做只读呈现；**不**把 Client role 当作安全依据
+- VIEWER：只读 Workbench / Report；隐藏新建；Export disabled 并说明无权限
+- ANALYST / ADMIN：当前 Case/Report 操作 UI 相同（User Admin 属 Step 8）
+- **UI permissions = UX；Server Authorization = 最终安全边界**（不得削弱 `requirePermission`）
+
 **尚未完成（不得宣称 v1.3 已完成）**：
 
-- Admin User Management UI / 密码自助修改
-- UI RBAC（隐藏无权限按钮；Step 7）
+- Admin User Management UI / 密码自助修改（Step 8）
 
 ---
 

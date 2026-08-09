@@ -170,4 +170,12 @@ HumanReview Responsibility（Step 6）自动化必须证明：
 - [x] Legacy reviewer 无 reviewedByUserId 可加载；首轮 semantic 建立认证责任
 - [x] Report 使用 reviewer 快照；已有 ReportDraft 不自动同步
 
-尚未验收（后续 Step）：用户管理 UI、密码自助修改、UI RBAC。
+UI RBAC Presentation（Step 7）必须证明：
+
+- [x] capability 仅由 `hasPermission` 派生；Client 不硬编码 role 作为安全 SoT
+- [x] VIEWER：只读 Workbench（Status/BC/HR/Checklist/Timeline/Handoff）；无新建入口
+- [x] VIEWER：Report 可读；无生成；Export disabled；不触发 Case/Report autosave
+- [x] ANALYST/ADMIN：Case/Report 操作 UI 可用；ADMIN 无 User Management 入口（Step 8）
+- [x] Server Authorization / Trusted Actor / HR Responsibility / Snapshot / OCC 回归保持
+
+尚未验收（后续 Step）：用户管理 UI、密码自助修改。

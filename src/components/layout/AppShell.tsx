@@ -5,9 +5,22 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { userRoleLabels, type UserRole } from "@/domain/auth";
+import type { NavigationCapabilities } from "@/domain/uiCapabilities";
 
-const navItems = [
-  { href: "/cases/new", label: "+ 新建研判", match: (path: string) => path.startsWith("/cases/new") },
+type NavItem = {
+  href: string;
+  label: string;
+  match: (path: string) => boolean;
+  requiresCreateCase?: boolean;
+};
+
+const navItems: NavItem[] = [
+  {
+    href: "/cases/new",
+    label: "+ 新建研判",
+    match: (path: string) => path.startsWith("/cases/new"),
+    requiresCreateCase: true,
+  },
   {
     href: "/cases",
     label: "历史案件",
@@ -29,16 +42,24 @@ export type AppShellUser = {
 
 /**
  * 企业级应用壳：深色侧边栏 + 浅色主内容区。
- * 展示当前用户身份；不按 role 隐藏业务按钮（Server Action RBAC 属 Step 4）。
+ * 导航可见性来自 Server 派生的 NavigationCapabilities（UX）；
+ * 安全边界仍是 Server Authorization。
  */
 export function AppShell({
   children,
   user,
+  navigation,
+  showReadOnlyHint = false,
 }: {
   children: ReactNode;
   user: AppShellUser;
+  navigation: NavigationCapabilities;
+  showReadOnlyHint?: boolean;
 }) {
   const pathname = usePathname() ?? "/cases";
+  const visibleNav = navItems.filter(
+    (item) => !item.requiresCreateCase || navigation.canCreateCase,
+  );
 
   return (
     <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
@@ -50,7 +71,7 @@ export function AppShell({
           <div className="mt-1 text-xs text-slate-400">安全研判助手</div>
         </div>
         <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
-          {navItems.map((item) => {
+          {visibleNav.map((item) => {
             const active = item.match(pathname);
             return (
               <Link
@@ -70,7 +91,14 @@ export function AppShell({
         <div className="space-y-3 border-t border-slate-700 px-5 py-4 text-xs leading-5 text-slate-400">
           <div>
             <div className="text-slate-200">{user.displayName}</div>
-            <div className="mt-0.5">{userRoleLabels[user.role]}</div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+              <span>{userRoleLabels[user.role]}</span>
+              {showReadOnlyHint ? (
+                <span className="rounded border border-slate-600 px-1.5 py-0.5 text-[10px] text-slate-300">
+                  只读
+                </span>
+              ) : null}
+            </div>
             <div className="mt-2">
               <LogoutButton />
             </div>

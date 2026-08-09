@@ -11,6 +11,7 @@ import {
   statusBadgeClass,
 } from "@/components/cases/caseDisplay";
 import { ForbiddenError } from "@/domain/auth";
+import { buildNavigationCapabilities } from "@/domain/uiCapabilities";
 import { requirePermission } from "@/services/auth/requirePermission";
 import { listCases } from "@/services/persistence/caseRepository";
 
@@ -28,14 +29,16 @@ const riskOptions = Object.entries(riskLevelLabels) as [RiskLevel, string][];
 /**
  * 历史案件列表（Server Component）。
  * 搜索与筛选通过 GET searchParams 传递给 listCases，不在客户端过滤。
+ * 新建入口由 Server 派生 canCreateCase 控制（UX）。
  */
 export default async function CasesPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
+  let user;
   try {
-    await requirePermission("CASE_READ");
+    user = await requirePermission("CASE_READ");
   } catch (error) {
     if (error instanceof ForbiddenError) {
       return (
@@ -49,6 +52,7 @@ export default async function CasesPage({
   const q = params.q?.trim() ?? "";
   const status = isCaseStatus(params.status) ? params.status : undefined;
   const risk = isRiskLevel(params.risk) ? params.risk : undefined;
+  const { canCreateCase } = buildNavigationCapabilities(user);
 
   const cases = await listCases({
     search: q || undefined,
@@ -62,15 +66,19 @@ export default async function CasesPage({
         <div>
           <h1 className="text-2xl font-semibold text-neutral-900">历史案件</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            查看并继续处理已保存的安全研判案件
+            {canCreateCase
+              ? "查看并继续处理已保存的安全研判案件"
+              : "查看已保存的安全研判案件（只读）"}
           </p>
         </div>
-        <Link
-          href="/cases/new"
-          className="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700"
-        >
-          + 新建研判
-        </Link>
+        {canCreateCase ? (
+          <Link
+            href="/cases/new"
+            className="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700"
+          >
+            + 新建研判
+          </Link>
+        ) : null}
       </header>
 
       <form
@@ -129,14 +137,18 @@ export default async function CasesPage({
           <div className="px-6 py-16 text-center">
             <p className="text-base font-medium text-neutral-800">暂无历史案件</p>
             <p className="mt-2 text-sm text-neutral-500">
-              创建第一个研判案件后，可在这里继续处理。
+              {canCreateCase
+                ? "创建第一个研判案件后，可在这里继续处理。"
+                : "当前账号为只读访问，暂无可见案件。"}
             </p>
-            <Link
-              href="/cases/new"
-              className="mt-5 inline-block rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700"
-            >
-              + 新建研判
-            </Link>
+            {canCreateCase ? (
+              <Link
+                href="/cases/new"
+                className="mt-5 inline-block rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700"
+              >
+                + 新建研判
+              </Link>
+            ) : null}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -216,7 +228,7 @@ export default async function CasesPage({
                           href={`/cases/${item.id}`}
                           className="text-sm text-slate-800 underline-offset-2 hover:underline"
                         >
-                          继续研判
+                          {canCreateCase ? "继续研判" : "查看案件"}
                         </Link>
                       </td>
                     </tr>

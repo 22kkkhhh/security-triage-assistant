@@ -311,7 +311,11 @@ Trusted Actor（Step 5）：认证用户触发的 Case/Report Audit 使用 `USER
 HumanReview Responsibility（Step 6）：`reviewer` / `reviewedByUserId` 由 Server
 在语义变更时写入；Client / Snapshot 不得伪造。与 Audit Actor 概念分离。
 
-仍未完成：UI RBAC、用户管理、密码自助修改。
+UI Capability（Step 7）：页面 Server Component 经 `hasPermission` 派生
+`CaseWorkbenchCapabilities` / `ReportPageCapabilities` / `NavigationCapabilities`，
+供 Client 只读呈现。权限 SoT 仍只有 `ROLE_PERMISSIONS`；UI 隐藏不等于已授权。
+
+仍未完成：用户管理、密码自助修改。
 
 ---
 

@@ -57,7 +57,8 @@ v1.2 提供案件级操作留痕，**不等于**生产级合规审计系统。
 
 当前局限：
 
-- v1.3 Step 4–6：Server Authorization + Trusted USER Actor + HumanReview 责任人已接入
+- v1.3 Step 4–7：Server Authorization + Trusted USER Actor + HumanReview 责任人 + UI 只读呈现已接入
+- UI 隐藏写控件仅为 UX；**不得**替代 Server `requirePermission` 安全边界
 - 新认证操作 Audit：`actorType=USER`，`actorId` 绑定真实 `User.id`（写入时快照 displayName）
 - HumanReview 责任人来源为 authenticated server identity（`reviewedByUserId` + `reviewer` 快照）；
   仍是产品业务责任字段，**不等于**电子签名 / 不可抵赖 / 合规签章

@@ -42,6 +42,8 @@ export function CaseHeader({
   suggestedRiskLevel,
   saveState,
   navigationError,
+  canChangeStatus,
+  readOnly = false,
   onStatusChange,
   onRetry,
   onBack,
@@ -53,6 +55,8 @@ export function CaseHeader({
   suggestedRiskLevel: RiskLevel | null;
   saveState: AutosaveState;
   navigationError: string | null;
+  canChangeStatus: boolean;
+  readOnly?: boolean;
   onStatusChange: (status: CaseStatus) => void;
   onRetry: () => void;
   onBack: () => void;
@@ -70,23 +74,31 @@ export function CaseHeader({
           ← 返回历史案件
         </button>
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span
-            className={
-              saveState.status === "ERROR"
-                ? "text-red-700"
-                : "text-neutral-500"
-            }
-          >
-            {saveStatusLabel(saveState)}
-          </span>
-          {saveState.status === "ERROR" && (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
-            >
-              重试
-            </button>
+          {readOnly ? (
+            <span className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700">
+              只读模式
+            </span>
+          ) : (
+            <>
+              <span
+                className={
+                  saveState.status === "ERROR"
+                    ? "text-red-700"
+                    : "text-neutral-500"
+                }
+              >
+                {saveStatusLabel(saveState)}
+              </span>
+              {saveState.status === "ERROR" && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+                >
+                  重试
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -97,9 +109,15 @@ export function CaseHeader({
           <h1 className="mt-1 text-xl font-semibold text-neutral-900">
             {title}
           </h1>
-          <p className="mt-1 text-xs text-neutral-500">
-            最后保存：{formatSavedAt(saveState.lastSavedAt)}
-          </p>
+          {!readOnly ? (
+            <p className="mt-1 text-xs text-neutral-500">
+              最后保存：{formatSavedAt(saveState.lastSavedAt)}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-neutral-500">
+              可查看案件内容，但不能修改。
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span
@@ -107,22 +125,33 @@ export function CaseHeader({
           >
             {riskLabel}
           </span>
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            案件状态
-            <select
-              value={status}
-              onChange={(e) => onStatusChange(e.target.value as CaseStatus)}
-              className={`rounded border px-2 py-1 text-xs ${statusBadgeClass(status)}`}
-            >
-              {(Object.entries(caseStatusLabels) as [CaseStatus, string][]).map(
-                ([value, label]) => (
+          {canChangeStatus ? (
+            <label className="flex items-center gap-2 text-sm text-neutral-600">
+              案件状态
+              <select
+                value={status}
+                onChange={(e) => onStatusChange(e.target.value as CaseStatus)}
+                className={`rounded border px-2 py-1 text-xs ${statusBadgeClass(status)}`}
+              >
+                {(
+                  Object.entries(caseStatusLabels) as [CaseStatus, string][]
+                ).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
-                ),
-              )}
-            </select>
-          </label>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-neutral-600">
+              <span>案件状态</span>
+              <span
+                className={`inline-block rounded border px-2 py-1 text-xs ${statusBadgeClass(status)}`}
+              >
+                {caseStatusLabels[status]}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

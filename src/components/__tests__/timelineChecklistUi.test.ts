@@ -35,12 +35,12 @@ describe("TimelinePanel UI 语义", () => {
 describe("ChecklistPanel UI 删除权限", () => {
   const src = readSrc("components/ChecklistPanel.tsx");
 
-  it("仅 MANUAL 显示删除；SYSTEM 不渲染删除按钮", () => {
+  it("仅 canWrite && MANUAL 显示删除；SYSTEM 不渲染删除按钮", () => {
     expect(src).toContain('item.origin === "MANUAL"');
+    expect(src).toContain("canWrite && item.origin === \"MANUAL\"");
     expect(src).toContain("删除");
-    // 删除按钮必须包在 MANUAL 条件内
     expect(src).toMatch(
-      /origin === "MANUAL"[\s\S]*删除[\s\S]*\)\s*\}/,
+      /canWrite && item\.origin === "MANUAL"[\s\S]*删除[\s\S]*\)\s*\}/,
     );
   });
 });

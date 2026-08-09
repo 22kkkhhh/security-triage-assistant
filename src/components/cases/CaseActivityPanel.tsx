@@ -56,6 +56,8 @@ export const CaseActivityPanel = forwardRef<
     initialLatestHandoff: CaseAuditLogView | null;
     /** Handoff 成功后同步 CaseRecord.updatedAt（供后续 Semantic Command base） */
     onCaseRowUpdated?: (updatedAt: string) => void;
+    /** Server 派生：是否显示交接输入（UX；服务端仍校验 HANDOFF_WRITE） */
+    canWriteHandoff?: boolean;
   }
 >(function CaseActivityPanel(
   {
@@ -65,6 +67,7 @@ export const CaseActivityPanel = forwardRef<
     initialHasMore,
     initialLatestHandoff,
     onCaseRowUpdated,
+    canWriteHandoff = true,
   },
   ref,
 ) {
@@ -94,7 +97,7 @@ export const CaseActivityPanel = forwardRef<
   );
 
   const handleAddHandoff = async () => {
-    if (submitting) return;
+    if (!canWriteHandoff || submitting) return;
     setHandoffError(null);
     if (!operationIdRef.current) {
       operationIdRef.current = crypto.randomUUID();
@@ -175,40 +178,42 @@ export const CaseActivityPanel = forwardRef<
           )}
         </section>
 
-        <section className="space-y-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <div className="text-xs font-medium text-neutral-600">交接说明</div>
-            <div className="text-xs text-neutral-400">
-              请勿录入未经授权的真实敏感数据。
+        {canWriteHandoff ? (
+          <section className="space-y-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="text-xs font-medium text-neutral-600">交接说明</div>
+              <div className="text-xs text-neutral-400">
+                请勿录入未经授权的真实敏感数据。
+              </div>
             </div>
-          </div>
-          <textarea
-            className="h-28 w-full rounded border border-neutral-300 px-3 py-2 text-sm leading-6"
-            value={note}
-            maxLength={HANDOFF_NOTE_MAX_LENGTH}
-            placeholder="例如：已完成账号核实；已联系业务负责人；下一班重点核查出口网络日志。"
-            onChange={(e) => setNote(e.target.value)}
-            disabled={submitting}
-          />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs text-neutral-400">
-              {note.trim().length}/{HANDOFF_NOTE_MAX_LENGTH}
+            <textarea
+              className="h-28 w-full rounded border border-neutral-300 px-3 py-2 text-sm leading-6"
+              value={note}
+              maxLength={HANDOFF_NOTE_MAX_LENGTH}
+              placeholder="例如：已完成账号核实；已联系业务负责人；下一班重点核查出口网络日志。"
+              onChange={(e) => setNote(e.target.value)}
+              disabled={submitting}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs text-neutral-400">
+                {note.trim().length}/{HANDOFF_NOTE_MAX_LENGTH}
+              </div>
+              <button
+                type="button"
+                disabled={submitting || !note.trim()}
+                onClick={() => void handleAddHandoff()}
+                className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
+              >
+                {submitting ? "正在添加…" : "添加交接记录"}
+              </button>
             </div>
-            <button
-              type="button"
-              disabled={submitting || !note.trim()}
-              onClick={() => void handleAddHandoff()}
-              className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
-            >
-              {submitting ? "正在添加…" : "添加交接记录"}
-            </button>
-          </div>
-          {handoffError && (
-            <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-              {handoffError}
-            </div>
-          )}
-        </section>
+            {handoffError && (
+              <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                {handoffError}
+              </div>
+            )}
+          </section>
+        ) : null}
 
         <section className="space-y-3">
           <div className="text-xs font-medium text-neutral-600">最近操作</div>

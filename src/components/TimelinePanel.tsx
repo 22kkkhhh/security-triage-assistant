@@ -19,14 +19,16 @@ let humanEventSequence = 0;
 
 /**
  * 事件时间线：安全事件 / 业务事件事实历史。
- * 人工可补充事件事实；研判操作请看 Activity Feed（AuditLog）。
+ * canAdd 来自 Server 派生 capability（UX）。
  */
 export function TimelinePanel({
   events,
   onAdd,
+  canAdd = true,
 }: {
   events: TimelineEvent[];
   onAdd: (event: TimelineEvent) => void;
+  canAdd?: boolean;
 }) {
   const [time, setTime] = useState("");
   const [operator, setOperator] = useState("");
@@ -38,6 +40,7 @@ export function TimelinePanel({
   );
 
   const handleAdd = () => {
+    if (!canAdd) return;
     if (!time || !description.trim()) return;
     humanEventSequence += 1;
     onAdd({
@@ -58,7 +61,9 @@ export function TimelinePanel({
     <Panel title={`事件时间线（${sorted.length} 条）`}>
       {sorted.length === 0 && (
         <p className="text-sm text-neutral-500">
-          暂无时间线记录，可在下方补充案件实际发生的事件事实。
+          {canAdd
+            ? "暂无时间线记录，可在下方补充案件实际发生的事件事实。"
+            : "暂无时间线记录。"}
         </p>
       )}
       <ol className="relative space-y-3 border-l border-neutral-200 pl-4">
@@ -92,55 +97,57 @@ export function TimelinePanel({
           </li>
         ))}
       </ol>
-      <div className="mt-4 space-y-2 border-t border-neutral-100 pt-3">
-        <div className="text-xs font-medium text-neutral-700">
-          补充事件时间线
+      {canAdd ? (
+        <div className="mt-4 space-y-2 border-t border-neutral-100 pt-3">
+          <div className="text-xs font-medium text-neutral-700">
+            补充事件时间线
+          </div>
+          <p className="text-xs leading-5 text-neutral-500">
+            用于补充案件实际发生的事件事实，不用于记录研判人员操作。
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="datetime-local"
+              className="rounded border border-neutral-300 px-2 py-1 text-sm"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+            <input
+              className="w-32 rounded border border-neutral-300 px-2 py-1 text-sm"
+              value={operator}
+              placeholder="录入人"
+              onChange={(e) => setOperator(e.target.value)}
+            />
+            <select
+              className="rounded border border-neutral-300 px-2 py-1 text-sm"
+              value={eventType}
+              onChange={(e) => setEventType(e.target.value)}
+            >
+              {eventTypeOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <input
+              className="min-w-0 flex-1 rounded border border-neutral-300 px-2 py-1 text-sm"
+              value={description}
+              placeholder="事件事实说明…"
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <button
+              type="button"
+              className="rounded bg-neutral-800 px-3 py-1 text-sm text-white hover:bg-neutral-700 disabled:opacity-40"
+              disabled={!time || !description.trim()}
+              onClick={handleAdd}
+            >
+              添加
+            </button>
+          </div>
         </div>
-        <p className="text-xs leading-5 text-neutral-500">
-          用于补充案件实际发生的事件事实，不用于记录研判人员操作。
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="datetime-local"
-            className="rounded border border-neutral-300 px-2 py-1 text-sm"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-          />
-          <input
-            className="w-32 rounded border border-neutral-300 px-2 py-1 text-sm"
-            value={operator}
-            placeholder="录入人"
-            onChange={(e) => setOperator(e.target.value)}
-          />
-          <select
-            className="rounded border border-neutral-300 px-2 py-1 text-sm"
-            value={eventType}
-            onChange={(e) => setEventType(e.target.value)}
-          >
-            {eventTypeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex gap-2">
-          <input
-            className="min-w-0 flex-1 rounded border border-neutral-300 px-2 py-1 text-sm"
-            value={description}
-            placeholder="事件事实说明…"
-            onChange={(e) => setDescription(e.target.value)}
-          />
-          <button
-            type="button"
-            className="rounded bg-neutral-800 px-3 py-1 text-sm text-white hover:bg-neutral-700 disabled:opacity-40"
-            disabled={!time || !description.trim()}
-            onClick={handleAdd}
-          >
-            添加
-          </button>
-        </div>
-      </div>
+      ) : null}
     </Panel>
   );
 }

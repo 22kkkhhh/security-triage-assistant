@@ -9,15 +9,20 @@ import type {
 import { Panel } from "./common";
 
 /**
- * 人工最终研判：与系统建议严格分离，系统建议不得自动覆盖本区域内容。
- * reviewer / reviewedByUserId 为 Server-owned 责任人快照，客户端只读展示。
+ * 人工最终研判：与系统建议严格分离。
+ * reviewer / reviewedByUserId 为 Server-owned 责任人快照，始终只读。
+ * canWriteSemantic / canWriteNote 来自 Server 派生 capability（UX）。
  */
 export function HumanReviewPanel({
   humanReview,
   onChange,
+  canWriteSemantic = true,
+  canWriteNote = true,
 }: {
   humanReview: HumanReview;
   onChange: (next: HumanReview) => void;
+  canWriteSemantic?: boolean;
+  canWriteNote?: boolean;
 }) {
   const update = (patch: Partial<HumanReview>) =>
     onChange({ ...humanReview, ...patch });
@@ -35,7 +40,9 @@ export function HumanReviewPanel({
       title="人工最终研判"
       extra={
         <span className="text-xs text-neutral-400">
-          系统建议不会自动修改本区域
+          {canWriteSemantic || canWriteNote
+            ? "系统建议不会自动修改本区域"
+            : "只读查看"}
         </span>
       }
     >
@@ -51,55 +58,77 @@ export function HumanReviewPanel({
         </div>
         <label className="block text-sm">
           <span className="text-neutral-500">最终结论</span>
-          <select
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1 text-sm"
-            value={humanReview.finalConclusion ?? ""}
-            onChange={(e) =>
-              update({
-                finalConclusion: (e.target.value ||
-                  null) as FinalConclusion | null,
-              })
-            }
-          >
-            <option value="">（尚未确认）</option>
-            {Object.entries(finalConclusionLabels).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
+          {canWriteSemantic ? (
+            <select
+              className="mt-1 w-full rounded border border-neutral-300 px-2 py-1 text-sm"
+              value={humanReview.finalConclusion ?? ""}
+              onChange={(e) =>
+                update({
+                  finalConclusion: (e.target.value ||
+                    null) as FinalConclusion | null,
+                })
+              }
+            >
+              <option value="">（尚未确认）</option>
+              {Object.entries(finalConclusionLabels).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="mt-1 rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-800">
+              {humanReview.finalConclusion
+                ? finalConclusionLabels[humanReview.finalConclusion]
+                : "（尚未确认）"}
+            </p>
+          )}
         </label>
         <label className="block text-sm">
           <span className="text-neutral-500">人工风险等级</span>
-          <select
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1 text-sm"
-            value={humanReview.humanRiskLevel ?? ""}
-            onChange={(e) =>
-              update({
-                humanRiskLevel: (e.target.value || null) as RiskLevel | null,
-              })
-            }
-          >
-            <option value="">（尚未评定）</option>
-            {Object.entries(riskLevelLabels).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
+          {canWriteSemantic ? (
+            <select
+              className="mt-1 w-full rounded border border-neutral-300 px-2 py-1 text-sm"
+              value={humanReview.humanRiskLevel ?? ""}
+              onChange={(e) =>
+                update({
+                  humanRiskLevel: (e.target.value || null) as RiskLevel | null,
+                })
+              }
+            >
+              <option value="">（尚未评定）</option>
+              {Object.entries(riskLevelLabels).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="mt-1 rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-800">
+              {humanReview.humanRiskLevel
+                ? riskLevelLabels[humanReview.humanRiskLevel]
+                : "（尚未评定）"}
+            </p>
+          )}
         </label>
       </div>
       <label className="mt-3 block text-sm">
         <span className="text-neutral-500">研判说明</span>
-        <textarea
-          className="mt-1 w-full rounded border border-neutral-300 px-2 py-1 text-sm"
-          rows={3}
-          value={humanReview.conclusionNote ?? ""}
-          placeholder="请使用“疑似 / 存在风险 / 建议进一步核查”等措辞…"
-          onChange={(e) =>
-            update({ conclusionNote: e.target.value.trim() || null })
-          }
-        />
+        {canWriteNote ? (
+          <textarea
+            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1 text-sm"
+            rows={3}
+            value={humanReview.conclusionNote ?? ""}
+            placeholder="请使用“疑似 / 存在风险 / 建议进一步核查”等措辞…"
+            onChange={(e) =>
+              update({ conclusionNote: e.target.value.trim() || null })
+            }
+          />
+        ) : (
+          <p className="mt-1 whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-800">
+            {humanReview.conclusionNote ?? "（未填写）"}
+          </p>
+        )}
       </label>
     </Panel>
   );

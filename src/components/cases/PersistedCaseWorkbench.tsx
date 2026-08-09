@@ -38,6 +38,8 @@ import { Field } from "@/components/common";
 import { actionErrorMessage } from "@/lib/actionErrorMessage";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import type { CaseAuditLogView } from "@/services/persistence/auditRepository";
+import type { CaseWorkbenchCapabilities } from "@/domain/uiCapabilities";
+import { isCaseWorkbenchReadOnly } from "@/domain/uiCapabilities";
 import {
   CaseActivityPanel,
   type CaseActivityPanelHandle,
@@ -65,12 +67,13 @@ type LivePayload = {
 
 /**
  * 持久化案件工作台：恢复 caseState → 本地编辑 → 自动保存 / 语义命令。
- * 分析结果现场派生；SuggestedAssessment 不覆盖 HumanReview。
+ * capabilities 仅控制 UX 呈现；Server Authorization 仍是最终安全边界。
  */
 export function PersistedCaseWorkbench({
   initial,
   hasReport = false,
   initialAudit,
+  capabilities,
 }: {
   initial: RestoredWorkbenchView;
   hasReport?: boolean;
@@ -80,8 +83,10 @@ export function PersistedCaseWorkbench({
     hasMore: boolean;
     latestHandoff: CaseAuditLogView | null;
   };
+  capabilities: CaseWorkbenchCapabilities;
 }) {
   const router = useRouter();
+  const readOnly = isCaseWorkbenchReadOnly(capabilities);
   const [status, setStatus] = useState<CaseStatus>(initial.status);
   const [businessContext, setBusinessContext] = useState<BusinessContext>(
     initial.draft.businessContext,
@@ -208,7 +213,7 @@ export function PersistedCaseWorkbench({
 
   const {
     saveState,
-    scheduleSave,
+    scheduleSave: scheduleSaveRaw,
     flushSave,
     retrySave,
     cancelPendingSave,
@@ -226,6 +231,15 @@ export function PersistedCaseWorkbench({
       setCommandError(null);
     },
   });
+
+  /** VIEWER：禁止 Snapshot autosave（含误触 onChange） */
+  const scheduleSave: typeof scheduleSaveRaw = useCallback(
+    (mode, patch) => {
+      if (!capabilities.canSnapshotWrite) return;
+      scheduleSaveRaw(mode, patch);
+    },
+    [capabilities.canSnapshotWrite, scheduleSaveRaw],
+  );
 
   type CommandActionResult = Awaited<
     ReturnType<typeof changeCaseStatusAction>
@@ -253,6 +267,13 @@ export function PersistedCaseWorkbench({
   };
 
   const handleBusinessContextChange = (next: BusinessContext) => {
+    const structured = hasStructuredBusinessContextChange(
+      businessContext,
+      next,
+    );
+    if (structured && !capabilities.canWriteBusinessContext) return;
+    if (!structured && !capabilities.canSnapshotWrite) return;
+
     const prevBc = businessContext;
     const prevChecklistBase = checklistBase;
     const nextAnalyzed = analyzeSecurityCase({
@@ -264,10 +285,6 @@ export function PersistedCaseWorkbench({
     const nextChecklist = mergeChecklistOnRestore(
       checklistBase,
       nextAnalyzed.checklist,
-    );
-    const structured = hasStructuredBusinessContextChange(
-      businessContext,
-      next,
     );
 
     setBusinessContext(next);
@@ -334,8 +351,11 @@ export function PersistedCaseWorkbench({
   };
 
   const handleHumanReviewChange = (next: HumanReview) => {
-    const prev = humanReview;
     const structured = hasStructuredHumanReviewChange(humanReview, next);
+    if (structured && !capabilities.canWriteHumanReview) return;
+    if (!structured && !capabilities.canSnapshotWrite) return;
+
+    const prev = humanReview;
     setHumanReview(next);
     payloadRef.current = { ...payloadRef.current, humanReview: next };
 
@@ -386,6 +406,7 @@ export function PersistedCaseWorkbench({
   };
 
   const handleStatusChange = (next: CaseStatus) => {
+    if (!capabilities.canChangeStatus) return;
     const prev = status;
     setStatus(next);
     payloadRef.current = { ...payloadRef.current, status: next };
@@ -456,9 +477,10 @@ export function PersistedCaseWorkbench({
   const handleBack = async () => {
     setNavigationError(null);
     if (
-      saveState.status === "DIRTY" ||
-      saveState.status === "SAVING" ||
-      saveState.status === "ERROR"
+      capabilities.canSnapshotWrite &&
+      (saveState.status === "DIRTY" ||
+        saveState.status === "SAVING" ||
+        saveState.status === "ERROR")
     ) {
       const ok = await flushSave();
       if (!ok) {
@@ -475,9 +497,10 @@ export function PersistedCaseWorkbench({
     setNavigationError(null);
     setCommandError(null);
     if (
-      saveState.status === "DIRTY" ||
-      saveState.status === "SAVING" ||
-      saveState.status === "ERROR"
+      capabilities.canSnapshotWrite &&
+      (saveState.status === "DIRTY" ||
+        saveState.status === "SAVING" ||
+        saveState.status === "ERROR")
     ) {
       const ok = await flushSave();
       if (!ok) {
@@ -488,6 +511,11 @@ export function PersistedCaseWorkbench({
 
     if (hasReport) {
       router.push(`/cases/${initial.caseId}/report`);
+      return;
+    }
+
+    if (!capabilities.canWriteReport) {
+      setCommandError("该案件尚未生成调查报告。");
       return;
     }
 
@@ -524,6 +552,8 @@ export function PersistedCaseWorkbench({
         }
         saveState={saveState}
         navigationError={navigationError}
+        canChangeStatus={capabilities.canChangeStatus}
+        readOnly={readOnly}
         onStatusChange={handleStatusChange}
         onRetry={() => {
           setNavigationError(null);
@@ -531,6 +561,12 @@ export function PersistedCaseWorkbench({
         }}
         onBack={() => void handleBack()}
       />
+
+      {readOnly && (
+        <div className="rounded border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
+          只读模式：可查看案件内容与操作记录，但不能修改。
+        </div>
+      )}
 
       {staleNotice && (
         <div className="rounded border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
@@ -585,13 +621,18 @@ export function PersistedCaseWorkbench({
       <BusinessContextPanel
         businessContext={businessContext}
         onChange={handleBusinessContextChange}
+        canWriteStructured={capabilities.canWriteBusinessContext}
+        canWriteSnapshot={capabilities.canSnapshotWrite}
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <EvidencePanel evidences={analyzed.evidences} />
         <ChecklistPanel
           items={checklist}
+          canWrite={capabilities.canWriteChecklist}
+          canEditNote={capabilities.canSnapshotWrite}
           onToggle={(id) => {
+            if (!capabilities.canWriteChecklist) return;
             const current = checklist.find((item) => item.id === id);
             if (!current) return;
             const prevBase = checklistBase;
@@ -608,6 +649,7 @@ export function PersistedCaseWorkbench({
             );
           }}
           onEditNote={(id, note) => {
+            if (!capabilities.canSnapshotWrite) return;
             const next = checklist.map((item) =>
               item.id === id ? { ...item, note: note || null } : item,
             );
@@ -618,11 +660,13 @@ export function PersistedCaseWorkbench({
             });
           }}
           onDelete={(id) => {
+            if (!capabilities.canWriteChecklist) return;
             const prevBase = checklistBase;
             const next = checklist.filter((item) => item.id !== id);
             runChecklistCommand("delete", id, next, prevBase);
           }}
           onAdd={(item) => {
+            if (!capabilities.canWriteChecklist) return;
             const prevBase = checklistBase;
             const next = [...checklist, item];
             runChecklistCommand("add", item.id, next, prevBase);
@@ -633,11 +677,15 @@ export function PersistedCaseWorkbench({
       <HumanReviewPanel
         humanReview={humanReview}
         onChange={handleHumanReviewChange}
+        canWriteSemantic={capabilities.canWriteHumanReview}
+        canWriteNote={capabilities.canSnapshotWrite}
       />
 
       <TimelinePanel
         events={timeline}
+        canAdd={capabilities.canWriteTimeline}
         onAdd={(event) => {
+          if (!capabilities.canWriteTimeline) return;
           const prev = timeline;
           const next = [...timeline, event];
           setTimeline(next);
@@ -676,20 +724,33 @@ export function PersistedCaseWorkbench({
         initialNextCursor={initialAudit?.nextCursor ?? null}
         initialHasMore={initialAudit?.hasMore ?? false}
         initialLatestHandoff={initialAudit?.latestHandoff ?? null}
+        canWriteHandoff={capabilities.canWriteHandoff}
         onCaseRowUpdated={(updatedAt) => {
           // Handoff 会触摸 CaseRecord（@updatedAt），同步 base token
           commitExternalSave(updatedAt);
         }}
       />
 
-      <div className="flex justify-end rounded-md border border-neutral-200 bg-white px-4 py-3">
-        <button
-          type="button"
-          className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700"
-          onClick={() => void goToReport()}
-        >
-          {hasReport ? "继续编辑报告" : "生成报告"}
-        </button>
+      <div className="flex flex-wrap items-center justify-end gap-3 rounded-md border border-neutral-200 bg-white px-4 py-3">
+        {hasReport ? (
+          <button
+            type="button"
+            className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700"
+            onClick={() => void goToReport()}
+          >
+            {capabilities.canWriteReport ? "继续编辑报告" : "查看报告"}
+          </button>
+        ) : capabilities.canWriteReport ? (
+          <button
+            type="button"
+            className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700"
+            onClick={() => void goToReport()}
+          >
+            生成报告
+          </button>
+        ) : (
+          <p className="text-sm text-neutral-500">该案件尚未生成调查报告。</p>
+        )}
       </div>
     </div>
   );

@@ -7,12 +7,13 @@ import {
   UnauthenticatedError,
   type AuthUser,
 } from "@/domain/auth";
+import { buildAppShellCapabilities } from "@/domain/uiCapabilities";
 import { auth } from "@/lib/auth";
 import { requireAuthenticatedUser } from "@/services/auth/currentUser";
 
 /**
  * 受保护 App Layout：Server 侧 requireAuthenticatedUser。
- * 注意：页面保护 ≠ Server Action RBAC（Step 4）。
+ * UI 导航能力由 Permission SoT 派生；安全边界仍是 Server Authorization。
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
   let user: AuthUser;
@@ -29,12 +30,16 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     redirect("/login");
   }
 
+  const shell = buildAppShellCapabilities(user);
+
   return (
     <AppShell
       user={{
         displayName: user.displayName,
         role: user.role,
       }}
+      navigation={shell.navigation}
+      showReadOnlyHint={shell.showReadOnlyHint}
     >
       {children}
     </AppShell>
