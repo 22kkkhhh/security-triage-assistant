@@ -318,9 +318,9 @@ describe("CaseCompliancePanel UI 契约（源码）", () => {
     expect(workbench).toContain("compliancePanel");
     expect(workbench).not.toContain("resolveCaseCompliance");
     expect(workbench).not.toContain("curatedPackToResolutionGraph");
-    expect(page).toContain("loadCaseCompliancePanelView");
+    expect(page).toContain("loadCaseComplianceWorkbenchViews");
     expect(page).toContain("loadCaseCompliancePanel");
-    expect(page).toContain("compliancePanel={compliancePanel}");
+    expect(page).toContain("compliancePanel={complianceViews.panel}");
   });
 
 

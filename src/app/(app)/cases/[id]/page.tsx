@@ -8,7 +8,7 @@ import {
   getLatestHandoffNote,
   listCaseAuditLogs,
 } from "@/services/persistence/auditRepository";
-import { loadCaseCompliancePanelView } from "@/services/knowledge/loadCaseCompliancePanel";
+import { loadCaseComplianceWorkbenchViews } from "@/services/knowledge/loadCaseCompliancePanel";
 import { getCaseById } from "@/services/persistence/caseRepository";
 import { restoreWorkbenchFromPersisted } from "@/services/persistence/restoreWorkbench";
 
@@ -43,10 +43,10 @@ export default async function CaseDetailPage({
   }
 
   const initial = restoreWorkbenchFromPersisted(record);
-  const [auditPage, latestHandoff, compliancePanel] = await Promise.all([
+  const [auditPage, latestHandoff, complianceViews] = await Promise.all([
     listCaseAuditLogs({ caseId: id, limit: 40 }),
     getLatestHandoffNote(id),
-    loadCaseCompliancePanelView(record),
+    loadCaseComplianceWorkbenchViews(record),
   ]);
   const capabilities = buildCaseWorkbenchCapabilities(user);
 
@@ -55,7 +55,8 @@ export default async function CaseDetailPage({
       initial={initial}
       hasReport={record.hasReport}
       capabilities={capabilities}
-      compliancePanel={compliancePanel}
+      compliancePanel={complianceViews.panel}
+      complianceChecklist={complianceViews.checklist}
       initialAudit={{
         items: auditPage.items,
         nextCursor: auditPage.nextCursor,

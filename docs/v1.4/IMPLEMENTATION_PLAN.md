@@ -113,22 +113,23 @@
 
 ---
 
-## Step 5 — Case-aware Compliance Panel（后续增强）
+## Step 5 — Compliance Verification Checklist（本提交）
 
-**目标：** 工作台增强（原文锚点、更细 evidence 绑定等）。
+**目标：** 基于 Step 2B findings 的 ContextRequirement / EvidenceSuggestion / ChecklistSuggestion，在 Case 详情页展示只读「建议核查事项」。
 
-- 跳转 Knowledge 原文锚点  
-- Disclaimer 细化  
+- 稳定 key 去重 + provenance；INSUFFICIENT_CONTEXT 优先  
+- 分组：待确认信息 / 建议收集证据 / 建议核查动作  
+- Top-N=8 分层选取；不写 Prisma ChecklistItem、不勾选保存  
 
-**不做：** Report 快照重算。
+**不做：** 自动写入核查清单、原文锚点跳转、扩 pack。
 
-**出口：** VIEWER 只读；ANALYST 可见建议但不自动写入。
+**出口：** CaseComplianceChecklistPanel + Case A/B 聚合测试。
 
 ---
 
 ## Step 6 — Checklist / Evidence Suggestions (Opt-in)
 
-**目标：** 「加入核查清单」Server Action。
+**目标：** 「加入核查清单」Server Action（把建议项写入 Case ChecklistItem）。
 
 - 去重 + operationId  
 - 来源 metadata  

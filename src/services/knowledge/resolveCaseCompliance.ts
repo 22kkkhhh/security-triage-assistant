@@ -163,7 +163,13 @@ export type ResolveCaseComplianceInput = {
 };
 
 export type ResolveCaseComplianceResult = {
+  /** Top-N 截断后的 findings（与 snapshots 对齐，供参考面板） */
   findings: CaseComplianceFinding[];
+  /**
+   * 截断前全量 findings（供建议核查清单等聚合；不含 Snapshot）。
+   * 与 findings 同序规则排序，仅未做 Top-N 分层截断。
+   */
+  allFindings: CaseComplianceFinding[];
   snapshots: ComplianceReferenceSnapshot[];
   caseDate: string | null;
   versionSelectionBasis: VersionSelectionBasis;
@@ -534,6 +540,7 @@ export function resolveCaseComplianceFromGraph(
 
   return {
     findings: limited,
+    allFindings: findings,
     snapshots,
     caseDate,
     versionSelectionBasis,
