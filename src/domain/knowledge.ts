@@ -272,21 +272,40 @@ export type CaseComplianceRelevance =
 export const VERSION_SELECTION_BASES = ["CASE_DATE", "CURRENT_DATE"] as const;
 export type VersionSelectionBasis = (typeof VERSION_SELECTION_BASES)[number];
 
+/**
+ * Case 运行时合规关联（computed；不持久化表）。
+ * INSUFFICIENT_CONTEXT 仅出现在本结构，不得回写静态 Mapping。
+ */
 export type CaseComplianceFinding = {
+  /** 主规则（命中规则中 priority 最高者） */
   ruleId: string;
+  /** 同一 control+clause 聚合的其他命中规则 */
+  supportingRuleIds: string[];
+  /** 关联 Evidence 溯源（来自命中 AnalysisResult） */
+  evidenceIds: string[];
   controlId: string;
+  controlCode: string;
   documentId: string;
+  documentCanonicalCode: string;
   documentVersionId: string;
+  versionKey: string;
   clauseId: string;
+  clauseKey: string;
+  relationType: ControlClauseRelation;
   relevance: CaseComplianceRelevance;
   rationale: string;
   missingContext: ContextRequirement[];
   suggestedEvidence: EvidenceSuggestion[];
   suggestedChecklist: ChecklistSuggestion[];
   versionSelectionBasis: VersionSelectionBasis;
+  /** 用于选版的案件日历日；CURRENT_DATE 时可为 null */
+  caseDate: string | null;
 };
 
-/** ReportDraft JSON 嵌入快照（Step 1 仅 Domain；不建表） */
+/**
+ * Report 用法规引用快照（嵌入 ReportDraft JSON；Step 2B 不建表、不接报告 UI）。
+ * 必须固定 caseDate / versionSelectionBasis / versionKey / clauseKey，避免导出时重选版本。
+ */
 export type ComplianceReferenceSnapshot = {
   documentId: string;
   documentVersionId: string;
@@ -302,6 +321,14 @@ export type ComplianceReferenceSnapshot = {
   rationaleSnapshot: string | null;
   sourceUrl: string | null;
   capturedAt: string;
+  caseDate: string | null;
+  versionSelectionBasis: VersionSelectionBasis;
+  controlId: string;
+  controlCode: string;
+  ruleId: string;
+  supportingRuleIds: string[];
+  evidenceIds: string[];
+  relevance: CaseComplianceRelevance;
 };
 
 // ---------------------------------------------------------------------------

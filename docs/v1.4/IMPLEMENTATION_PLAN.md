@@ -70,18 +70,29 @@
 
 ---
 
-## Step 4 — Compliance Relevance Engine
+## Step 2B — Runtime Compliance Resolution（本提交）
 
-**目标：** 纯服务端引擎：Rule×Control×Clause → CaseComplianceFinding[]。
+**目标：** Case 运行时从命中 ruleId 解析 Findings + Snapshot（不建表、不接报告 UI）。
 
-- CaseRelevantDate 选版本  
-- Missing Context 计算  
-- relation/relevance 排序截断  
-- 单测覆盖 Case A/B 夹具  
+- 复用 `selectApplicableVersionAt` / `selectCurrentApplicableVersion`  
+- 仅 ABNORMAL / UNKNOWN 命中规则；不反推新事件  
+- relevance 保守：SUPPORT→RELEVANT，POSSIBLE_OBLIGATION→POSSIBLE，缺上下文→INSUFFICIENT_CONTEXT；第一版不自动 DIRECT  
+- control+clause 去重，保留 supportingRuleIds / evidenceIds  
+- Snapshot 固定 caseDate / VersionSelectionBasis / versionKey / clauseKey  
+
+**不做：** Prisma schema 变更、Finding 表、报告集成、RAG/Admin UI。
+
+**出口：** `resolveCaseCompliance` + 历史选版 / 去重 / Case A/B 测试。
+
+---
+
+## Step 4 — Compliance Relevance Engine（后续增强）
+
+**目标：** 在 Step 2B 基础上增强排序截断、Case UI Top-N 策略与更细 evidence 绑定。
 
 **不做：** 自动写 Checklist。
 
-**出口：** Case B 稳定 3–6 findings（测试断言）。
+**出口：** Case B 稳定 3–6 findings（UI 展示断言）。
 
 ---
 
