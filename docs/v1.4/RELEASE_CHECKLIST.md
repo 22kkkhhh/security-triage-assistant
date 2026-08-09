@@ -2,7 +2,7 @@
 
 **主题：** Security Compliance Knowledge（Case 集成切片）  
 **基线：** `v1.3.0` (`7f61fbc`)  
-**冻结 HEAD：** `793a6191bdda68f744cef6caf7a520f1cd389c20`（含 `chore: harden v1.4 release` + checklist hash pin）  
+**Release hardening 主提交：** `f886387`（`chore: harden v1.4 release`）；后续仅文档 hash 锚定微调，门禁证据以本文件为准。  
 **范围声明：** v1.4.0 交付 **Case 侧合规知识闭环**（Schema / Pack / Resolve / Report Snapshot / Case UI / Checklist opt-in / Official Source Navigation）。  
 **明确延期：** Step 3 独立 Knowledge Center 浏览 UI；Step 8 可执行规则扩量至 25–30。
 
