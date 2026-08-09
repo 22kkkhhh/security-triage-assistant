@@ -87,6 +87,7 @@
 - [ ] Timeline 与 Audit 语义分离（安全事件历史 vs 运营操作历史）
 - [ ] Semantic Command 与业务状态同事务写入 Audit
 - [ ] Snapshot Autosave 不刷 Audit（业务备注 / 人工说明 / 报告同会话后续保存）
+- [ ] Snapshot Autosave 仅接受 allowlisted `CaseSnapshotPatch`；Semantic-owned 字段不得经 Snapshot 写入（未知字段 reject）
 - [ ] `operationId` 幂等（重试不重复副作用）
 - [ ] `lastActivityAt` 仅在有意义 Audit 时更新，且与最新 Audit 时间语义一致
 - [ ] Activity Feed 按时间 DESC；支持 pagination（加载更多）

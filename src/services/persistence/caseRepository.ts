@@ -16,6 +16,12 @@ import type {
   PersistedCaseState,
   SaveCaseStateInput,
 } from "./types";
+import {
+  applyCaseSnapshotPatch,
+  parseCaseSnapshotPatch,
+  snapshotPatchHasFields,
+  type CaseSnapshotPatch,
+} from "./caseSnapshotPatch";
 
 /** 可注入事务客户端（与 Audit 同事务） */
 export type CaseDbClient = Prisma.TransactionClient | typeof prisma;
@@ -245,7 +251,8 @@ export async function saveCaseStateIfVersionMatches(
 
 /**
  * 保存案件可恢复状态（单一 caseState Source of Truth）。
- * 普通 autosave 路径：不更新 lastActivityAt。
+ * 供 Semantic Command 等受信路径构造完整 nextCaseState 后写入。
+ * 普通客户端 Snapshot Autosave 不得直接调用；应使用 saveCaseSnapshot。
  * 提供 baseUpdatedAt 时走条件更新（与 Semantic Command 共用版本约束）。
  * 可注入事务客户端，供 Semantic Command 与 Audit 同提交。
  */
@@ -272,6 +279,59 @@ export async function saveCaseState(
   });
   return rowToPersistedCase(row);
 }
+
+/**
+ * Snapshot Autosave：仅应用 allowlisted CaseSnapshotPatch。
+ * - 从 canonical case 合并，禁止客户端提交完整 nextCaseState
+ * - 空 patch / 无实际变化：NO-OP（不抬升 updatedAt）
+ * - 成功写入不产生 Audit、不更新 lastActivityAt
+ * - 必须带 baseUpdatedAt，走 OCC 条件更新
+ */
+export async function saveCaseSnapshot(
+  id: string,
+  rawPatch: unknown,
+  client: CaseDbClient = prisma,
+): Promise<PersistedCase> {
+  const parsed = parseCaseSnapshotPatch(rawPatch);
+  if (typeof parsed === "string") {
+    throw new Error(parsed);
+  }
+
+  const baseUpdatedAt =
+    typeof parsed.baseUpdatedAt === "string" && parsed.baseUpdatedAt.trim()
+      ? parsed.baseUpdatedAt.trim()
+      : null;
+  if (!baseUpdatedAt) {
+    throw new Error("缺少 baseUpdatedAt");
+  }
+
+  const canonical = await getCaseById(id, client);
+  if (!canonical) throw new Error(`案件不存在：${id}`);
+
+  if (!snapshotPatchHasFields(parsed)) {
+    return canonical;
+  }
+
+  const applied = applyCaseSnapshotPatch(canonical, {
+    ...parsed,
+    baseUpdatedAt,
+  });
+  if (!applied.ok) {
+    throw new Error(applied.error);
+  }
+  if (!applied.changed) {
+    return canonical;
+  }
+
+  return saveCaseStateIfVersionMatches(
+    id,
+    applied.next,
+    baseUpdatedAt,
+    client,
+  );
+}
+
+export type { CaseSnapshotPatch };
 
 /** stale report autosave：禁止用旧草稿覆盖较新 reportUpdatedAt */
 export class StaleReportDraftError extends Error {

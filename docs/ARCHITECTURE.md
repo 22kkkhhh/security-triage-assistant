@@ -81,7 +81,13 @@ src/
 
 ### A. Snapshot Autosave
 
-用于：普通文本 / 非语义状态草稿保存（如业务说明、人工研判备注、核查项备注、报告正文连续编辑）。
+用于：allowlisted 非语义字段的 silent debounced 保存（业务说明 / 工单号 / 业务负责人文本、人工研判说明、核查项备注；报告正文连续编辑走独立 ReportDraft 路径）。
+
+客户端提交 `CaseSnapshotPatch`（字段补丁），**不得**提交完整 `PersistedCaseState`。
+
+服务端流程：parse/allowlist 校验 → 加载 canonical case → 仅合并允许字段 → OCC（`baseUpdatedAt`）条件写入。
+
+空 patch / 无实际变化：NO-OP（不抬升 `updatedAt`）。未知字段与 Semantic-owned 字段：**reject**（不静默忽略）。
 
 特点：
 
@@ -90,9 +96,18 @@ src/
 - 普通案件备注：`updatedAt` 变化，`lastActivityAt` 不变
 - 普通报告 autosave：`reportUpdatedAt` 变化；同编辑会话首次 audited update 除外，`lastActivityAt` 不变
 
+Snapshot-owned（案件路径）示例：
+
+- `businessContext.businessJustification` / `changeTicketId` / `businessOwner`
+- `humanReview.conclusionNote`
+- `humanReview.reviewer`（temporary compatibility，待 Trusted Actor 改为 Server-owned）
+- checklist **note only**（按 `checklistId`）
+
 ### B. Semantic Command
 
 用于：明确业务动作（状态变更、Checklist 完成/重开/增删、结构化业务核查、结构化人工结论、添加 Timeline、交接、报告创建/导出会话首次更新/导出等）。
+
+Semantic-owned 字段**只能**由 Command 修改，例如：`status`、结构化 BusinessContext、`finalConclusion` / `humanRiskLevel`、checklist 完成态/增删/身份字段、timeline、`caseData`、`suggestedRiskLevel`。
 
 ```text
 Client

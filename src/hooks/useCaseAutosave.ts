@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { saveCaseStateAction } from "@/app/(app)/cases/actions";
 import type { CaseStatus } from "@/domain/types";
+import {
+  mergeCaseSnapshotPatches,
+  type CaseSnapshotPatch,
+} from "@/services/persistence/caseSnapshotPatch";
 import type { PersistedCaseState } from "@/services/persistence/types";
 import {
   autosaveReducer,
@@ -19,10 +23,12 @@ export type CaseStalePayload = {
   caseState: PersistedCaseState;
 };
 
+type SnapshotPatchInput = Omit<CaseSnapshotPatch, "baseUpdatedAt">;
+
 /**
- * 案件自动保存：
- * - 文本类变更 debounce
- * - 明确操作可 immediate flush
+ * 案件 Snapshot 自动保存：
+ * - 仅提交 CaseSnapshotPatch（allowlisted 非语义字段）
+ * - 文本类变更 debounce；明确操作可 immediate flush
  * - 以 saveSeq 忽略过期响应，避免状态倒退
  * - 失败不清除调用方本地业务状态
  * - Semantic Command 可通过 cancelPendingSave / commitExternalSave 协调
@@ -30,7 +36,6 @@ export type CaseStalePayload = {
  */
 export function useCaseAutosave(options: {
   caseId: string;
-  getPayload: () => unknown;
   debounceMs?: number;
   initialSavedAt?: string | null;
   /** STALE 时由调用方同步服务端状态 */
@@ -42,17 +47,13 @@ export function useCaseAutosave(options: {
     status: options.initialSavedAt ? "SAVED" : "IDLE",
     lastSavedAt: options.initialSavedAt ?? null,
   });
-  const getPayloadRef = useRef(options.getPayload);
   const onStaleRef = useRef(options.onStale);
   const seqRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef(state);
   const abortRef = useRef<AbortController | null>(null);
   const generationRef = useRef(0);
-
-  useEffect(() => {
-    getPayloadRef.current = options.getPayload;
-  }, [options.getPayload]);
+  const pendingPatchRef = useRef<SnapshotPatchInput | null>(null);
 
   useEffect(() => {
     onStaleRef.current = options.onStale;
@@ -72,6 +73,7 @@ export function useCaseAutosave(options: {
   const cancelPendingSave = useCallback(() => {
     clearTimer();
     generationRef.current += 1;
+    pendingPatchRef.current = null;
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
@@ -83,6 +85,7 @@ export function useCaseAutosave(options: {
   const commitExternalSave = useCallback((savedAt: string) => {
     clearTimer();
     generationRef.current += 1;
+    pendingPatchRef.current = null;
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
@@ -93,6 +96,11 @@ export function useCaseAutosave(options: {
 
   const runSave = useCallback(async (): Promise<boolean> => {
     clearTimer();
+    const patch = pendingPatchRef.current;
+    if (!patch) {
+      return true;
+    }
+
     const generation = generationRef.current;
     const seq = ++seqRef.current;
     dispatch({ type: "SAVE_START", seq });
@@ -108,10 +116,9 @@ export function useCaseAutosave(options: {
         return false;
       }
 
-      const payload = getPayloadRef.current() as Record<string, unknown>;
       const baseUpdatedAt = stateRef.current.lastSavedAt;
       const result = await saveCaseStateAction(caseId, {
-        ...payload,
+        ...patch,
         baseUpdatedAt,
       });
 
@@ -145,6 +152,7 @@ export function useCaseAutosave(options: {
         dispatch({ type: "SAVE_ERROR", seq, message: result.error });
         return false;
       }
+      pendingPatchRef.current = null;
       dispatch({
         type: "SAVE_SUCCESS",
         seq,
@@ -167,7 +175,13 @@ export function useCaseAutosave(options: {
   }, [caseId, cancelPendingSave]);
 
   const scheduleSave = useCallback(
-    (mode: "debounce" | "immediate" = "debounce") => {
+    (
+      mode: "debounce" | "immediate" = "debounce",
+      patch: SnapshotPatchInput,
+    ) => {
+      pendingPatchRef.current = pendingPatchRef.current
+        ? mergeCaseSnapshotPatches(pendingPatchRef.current, patch)
+        : patch;
       dispatch({ type: "MARK_DIRTY" });
       if (mode === "immediate") {
         void runSave();

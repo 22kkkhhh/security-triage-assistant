@@ -149,7 +149,8 @@ export function PersistedCaseWorkbench({
     analyzed.suggestedAssessment?.suggestedRiskLevel,
   ]);
 
-  const getPayload = useCallback(
+  /** Semantic Command 仍提交完整 nextCaseState；Snapshot Autosave 另走 CaseSnapshotPatch */
+  const getCommandPayload = useCallback(
     () => ({
       caseData: {
         name: draftBase.name,
@@ -213,7 +214,6 @@ export function PersistedCaseWorkbench({
     getPersistedUpdatedAt,
   } = useCaseAutosave({
     caseId: initial.caseId,
-    getPayload,
     initialSavedAt: initial.updatedAt,
     onStale: (payload) => {
       applyCanonicalState({
@@ -283,7 +283,13 @@ export function PersistedCaseWorkbench({
         next.businessJustification !== prevBc.businessJustification ||
         next.changeTicketId !== prevBc.changeTicketId ||
         next.businessOwner !== prevBc.businessOwner;
-      scheduleSave(isTextHeavy ? "debounce" : "immediate");
+      scheduleSave(isTextHeavy ? "debounce" : "immediate", {
+        businessContext: {
+          businessJustification: next.businessJustification,
+          changeTicketId: next.changeTicketId,
+          businessOwner: next.businessOwner,
+        },
+      });
       return;
     }
 
@@ -295,7 +301,7 @@ export function PersistedCaseWorkbench({
       const result = await updateBusinessContextAction(
         initial.caseId,
         operationId,
-        getPayload(),
+        getCommandPayload(),
         baseUpdatedAt,
       );
       if (!result.ok) {
@@ -333,7 +339,13 @@ export function PersistedCaseWorkbench({
       const noteChanged =
         next.conclusionNote !== prev.conclusionNote ||
         next.reviewer !== prev.reviewer;
-      scheduleSave(noteChanged ? "debounce" : "immediate");
+      scheduleSave(noteChanged ? "debounce" : "immediate", {
+        humanReview: {
+          conclusionNote: next.conclusionNote,
+          // temporary compatibility：Trusted Actor 落地前仍允许 Snapshot 写 reviewer
+          reviewer: next.reviewer,
+        },
+      });
       return;
     }
 
@@ -345,7 +357,7 @@ export function PersistedCaseWorkbench({
       const result = await updateHumanReviewAction(
         initial.caseId,
         operationId,
-        getPayload(),
+        getCommandPayload(),
         baseUpdatedAt,
       );
       if (!result.ok) {
@@ -373,7 +385,7 @@ export function PersistedCaseWorkbench({
         initial.caseId,
         next,
         operationId,
-        getPayload(),
+        getCommandPayload(),
         baseUpdatedAt,
       );
       if (!result.ok) {
@@ -406,7 +418,7 @@ export function PersistedCaseWorkbench({
         action,
         itemId,
         operationId,
-        getPayload(),
+        getCommandPayload(),
         baseUpdatedAt,
       );
       if (!result.ok) {
@@ -582,7 +594,9 @@ export function PersistedCaseWorkbench({
             );
             setChecklistBase(next);
             payloadRef.current = { ...payloadRef.current, checklist: next };
-            scheduleSave("debounce");
+            scheduleSave("debounce", {
+              checklistNotes: [{ checklistId: id, note: note || null }],
+            });
           }}
           onDelete={(id) => {
             const prevBase = checklistBase;
@@ -618,7 +632,7 @@ export function PersistedCaseWorkbench({
               initial.caseId,
               event.id,
               operationId,
-              getPayload(),
+              getCommandPayload(),
               baseUpdatedAt,
             );
             if (!result.ok) {
