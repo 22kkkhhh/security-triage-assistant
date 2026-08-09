@@ -712,6 +712,8 @@ export function PersistedCaseWorkbench({
         onChange={handleBusinessContextChange}
         canWriteStructured={capabilities.canWriteBusinessContext}
         canWriteSnapshot={capabilities.canSnapshotWrite}
+        saveState={saveState}
+        onRetrySave={retrySave}
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
