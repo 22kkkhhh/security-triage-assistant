@@ -104,6 +104,16 @@ export function PersistedCaseWorkbench({
 }) {
   const router = useRouter();
   const readOnly = isCaseWorkbenchReadOnly(capabilities);
+
+  /**
+   * Context 已成功持久化后：软刷新 Server Component，
+   * 由案件详情页服务端 loader 重算合规面板与建议清单。
+   * Client 不执行 compliance resolver；刷新完成前保留旧 props。
+   */
+  const refreshComplianceAfterContextPersist = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
   const [status, setStatus] = useState<CaseStatus>(initial.status);
   const [businessContext, setBusinessContext] = useState<BusinessContext>(
     initial.draft.businessContext,
@@ -249,6 +259,14 @@ export function PersistedCaseWorkbench({
       });
       setStaleNotice("案件已发生更新，已刷新到最新状态。");
       setCommandError(null);
+      // 服务端 canonical 已变：重拉合规 runtime 视图
+      refreshComplianceAfterContextPersist();
+    },
+    onSaved: (patch) => {
+      // 仅 businessContext Snapshot 字段会影响 compliance context keys
+      if (patch.businessContext) {
+        refreshComplianceAfterContextPersist();
+      }
     },
   });
 
@@ -283,6 +301,7 @@ export function PersistedCaseWorkbench({
     commitExternalSave(result.updatedAt);
     setStaleNotice("案件已发生更新，已刷新到最新状态。");
     setCommandError(null);
+    refreshComplianceAfterContextPersist();
     return true;
   };
 
@@ -367,6 +386,7 @@ export function PersistedCaseWorkbench({
       }
       commitExternalSave(result.updatedAt);
       mergeReturnedAudit(result.audit);
+      refreshComplianceAfterContextPersist();
     })();
   };
 

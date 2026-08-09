@@ -41,6 +41,12 @@ export function useCaseAutosave(options: {
   initialSavedAt?: string | null;
   /** STALE 时由调用方同步服务端状态 */
   onStale?: (payload: CaseStalePayload) => void;
+  /**
+   * Snapshot 成功持久化后回调（仅 ok 路径）。
+   * 用于 Case context → compliance UI 的 server re-load（router.refresh），
+   * 不得在 Client 侧重跑 compliance resolver。
+   */
+  onSaved?: (patch: SnapshotPatchInput) => void;
 }) {
   const { caseId, debounceMs = DEFAULT_DEBOUNCE_MS } = options;
   const [state, dispatch] = useReducer(autosaveReducer, {
@@ -49,6 +55,7 @@ export function useCaseAutosave(options: {
     lastSavedAt: options.initialSavedAt ?? null,
   });
   const onStaleRef = useRef(options.onStale);
+  const onSavedRef = useRef(options.onSaved);
   const seqRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef(state);
@@ -59,6 +66,10 @@ export function useCaseAutosave(options: {
   useEffect(() => {
     onStaleRef.current = options.onStale;
   }, [options.onStale]);
+
+  useEffect(() => {
+    onSavedRef.current = options.onSaved;
+  }, [options.onSaved]);
 
   useEffect(() => {
     stateRef.current = state;
@@ -163,6 +174,7 @@ export function useCaseAutosave(options: {
         seq,
         savedAt: result.updatedAt,
       });
+      onSavedRef.current?.(patch);
       return true;
     } catch (error) {
       if (controller.signal.aborted || generation !== generationRef.current) {

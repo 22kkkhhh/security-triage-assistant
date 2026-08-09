@@ -89,6 +89,8 @@ describe("Case Workbench Viewer presentation", () => {
     expect(src).toContain("handleAddComplianceSuggestion");
     expect(src).not.toContain("resolveCaseCompliance");
     expect(src).not.toContain("loadCaseComplianceWorkbenchViews");
+    expect(src).not.toContain("refreshCaseComplianceRuntimeViews");
+    expect(src).toContain("router.refresh()");
     const panel = readSrc("components/cases/CaseComplianceChecklistPanel.tsx");
     expect(panel).toContain("加入核查清单");
     expect(panel).toContain("已加入");
