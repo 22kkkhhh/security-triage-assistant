@@ -225,7 +225,7 @@ User Admin 边界（Step 8）：
 - password set 与 session revoke 在 Better Auth 侧为独立 API；部分失败须显式提示，不得回滚已成功的 `enabled=false`
 - 无 SystemAuditLog：Login / 改密 / 用户管理操作尚无独立全局审计（Known Limitation）
 
-**v1.3 Release Candidate：功能与 hardening 完成后，正式 tag 须单独执行。**
+**v1.3.0（2026-08-09）已正式发布。**
 
 已知限制（不得宣称已具备）：
 

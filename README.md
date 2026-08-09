@@ -2,8 +2,8 @@
 
 数据与网络安全联合研判及案件运营助手。
 
-当前稳定版本：**v1.2.x**（本地可运行的安全研判与案件运营 **MVP / Prototype**）。  
-不是 Production-ready 企业平台。
+当前稳定版本：**v1.3.0**（2026-08-09；本地可运行的安全研判与案件运营 **MVP / Prototype**）。  
+不是 Production-ready 企业平台 / Enterprise IAM。
 
 ## 一、项目是什么
 
@@ -53,7 +53,7 @@
 - Vitest
 - docx（原生可编辑 Word）
 
-### 开发登录（v1.3 Step 3–4）
+### 开发登录（v1.3.0）
 
 `npm run db:seed`（非 production）会幂等创建 Demo Users：
 

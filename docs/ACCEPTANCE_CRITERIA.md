@@ -114,7 +114,7 @@ v1.2 Case 双 Tab 并发（I）：已在发布前用真实双 Page 浏览器一�
 
 ---
 
-## v1.3 验收条件（Identity / Access — Release Candidate）
+## v1.3 验收条件（Identity / Access — v1.3.0）
 
 Domain foundation（Step 1）自动化必须证明：
 
@@ -198,6 +198,6 @@ Release Hardening（Step 9）必须证明：
 - [x] Snapshot / Trusted Actor / operationId / OCC / HR responsibility 回归
 - [x] User admin / Password / last ADMIN / bootstrap / Demo isolation
 - [x] fresh migrate + v1.2.1 forward migration；Case A/B 与 UNKNOWN 语义保持
-- [x] production build smoke + 三角色 HTTP/页面冒烟；无 tag / 无 push
+- [x] production build smoke + 三角色 HTTP/页面冒烟
 
-**正式 `v1.3.0` tag 须在本 Review PASS 后单独执行。**
+**v1.3.0 正式 release / annotated tag 在 Final Release Gate 完成。**

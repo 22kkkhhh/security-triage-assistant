@@ -1,5 +1,5 @@
 /**
- * v1.3 RC 轻量 HTTP smoke（三角色页面边界 + 读路径无突变指纹）。
+ * v1.3 轻量 HTTP smoke（三角色页面边界 + 读路径无突变指纹）。
  * 不新增 Playwright；依赖本地已启动的 app（dev 或 next start）。
  */
 import { getDemoAuthPassword } from "../src/services/demo/seedDemoUsers";

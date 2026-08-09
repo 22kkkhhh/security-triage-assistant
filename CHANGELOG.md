@@ -2,7 +2,7 @@
 
 本项目采用轻量变更记录。版本号遵循语义化约定；未打正式 tag 的条目以 `-rc` 标记。
 
-## v1.3.0-rc
+## v1.3.0 — 2026-08-09
 
 Added:
 - 身份认证（username + password）与 Database Session（Better Auth 1.6.26）
