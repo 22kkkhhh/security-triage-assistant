@@ -10,7 +10,6 @@ import {
   CASE_COMPLIANCE_PANEL_DISCLAIMER,
   formatCaseComplianceRelevanceLabel,
 } from "@/services/knowledge/caseCompliancePanel";
-
 function versionBasisText(item: CaseCompliancePanelItem): string {
   if (item.versionSelectionBasis === "CASE_DATE" && item.caseDate) {
     return `案件日期 ${item.caseDate} 适用版本`;
@@ -18,8 +17,25 @@ function versionBasisText(item: CaseCompliancePanelItem): string {
   return "当前日期适用版本";
 }
 
+function sourceTypeLabel(sourceType: CaseCompliancePanelItem["sourceType"]): string {
+  if (!sourceType) return "（未标注）";
+  switch (sourceType) {
+    case "OFFICIAL_PUBLIC":
+      return "官方公开";
+    case "USER_PROVIDED":
+      return "用户提供";
+    case "LICENSED":
+      return "授权许可";
+    case "OTHER":
+      return "其他";
+    default:
+      return sourceType;
+  }
+}
+
 function ComplianceCard({ item }: { item: CaseCompliancePanelItem }) {
   const [open, setOpen] = useState(false);
+  const nav = item.officialSource;
 
   return (
     <article className="rounded border border-neutral-200 bg-neutral-50/40 px-3 py-2.5">
@@ -59,8 +75,20 @@ function ComplianceCard({ item }: { item: CaseCompliancePanelItem }) {
             {item.documentCanonicalCode}
           </p>
           <p>
+            <span className="text-neutral-500">发布机关：</span>
+            {item.issuingAuthority ?? "（未标注）"}
+          </p>
+          <p>
+            <span className="text-neutral-500">来源权威性：</span>
+            {sourceTypeLabel(item.sourceType)}
+          </p>
+          <p>
             <span className="text-neutral-500">版本：</span>
             {item.versionLabel}（{item.versionKey}）
+          </p>
+          <p>
+            <span className="text-neutral-500">生效日期：</span>
+            {item.effectiveDate ?? "（未标注）"}
           </p>
           <p>
             <span className="text-neutral-500">版本选择依据：</span>
@@ -72,19 +100,36 @@ function ComplianceCard({ item }: { item: CaseCompliancePanelItem }) {
               {item.missingContext.map((m) => m.label).join("、")}
             </p>
           )}
-          {item.sourceUrl && (
-            <p>
-              <span className="text-neutral-500">来源：</span>
-              <a
-                href={item.sourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="underline underline-offset-2"
-              >
-                {item.sourceUrl}
-              </a>
-            </p>
-          )}
+
+          <div className="rounded border border-neutral-200 bg-white px-2 py-1.5">
+            <p className="font-medium text-neutral-800">官方来源</p>
+            {nav.available && nav.href ? (
+              <p className="mt-1">
+                <a
+                  href={nav.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2"
+                >
+                  查看官方来源
+                </a>
+                <span className="ml-2 text-neutral-500">
+                  {nav.targetKind === "CLAUSE_ANCHOR"
+                    ? "（含条款定位）"
+                    : "（官方文档页）"}
+                </span>
+              </p>
+            ) : (
+              <p className="mt-1 text-neutral-500">暂无可用官方来源链接</p>
+            )}
+            {/* SUMMARY_ONLY / GB/T：明确不提供「查看原文条款」假入口 */}
+            {item.isSummaryOnly && (
+              <p className="mt-1 text-[11px] text-neutral-500">
+                本条为标准要求摘要/控制参考，不提供原文条款跳转。
+              </p>
+            )}
+          </div>
+
           <div className="rounded border border-dashed border-neutral-300 bg-white px-2 py-1.5">
             <p className="font-medium text-neutral-800">审计信息</p>
             <p className="mt-0.5">

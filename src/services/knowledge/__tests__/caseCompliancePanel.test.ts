@@ -47,7 +47,22 @@ function snap(
     clauseHeading: overrides.clauseHeading ?? "安全保护义务",
     relationType: overrides.relationType ?? "CONTROL_SUPPORT",
     rationaleSnapshot: overrides.rationaleSnapshot ?? "基于命中规则 DATA-001 关联。",
-    sourceUrl: overrides.sourceUrl ?? null,
+    sourceUrl:
+      overrides.sourceUrl !== undefined
+        ? overrides.sourceUrl
+        : "https://www.npc.gov.cn/",
+    issuingAuthority:
+      overrides.issuingAuthority !== undefined
+        ? overrides.issuingAuthority
+        : "全国人民代表大会常务委员会",
+    effectiveDate:
+      overrides.effectiveDate !== undefined
+        ? overrides.effectiveDate
+        : "2021-09-01",
+    sourceType:
+      overrides.sourceType !== undefined
+        ? overrides.sourceType
+        : "OFFICIAL_PUBLIC",
     capturedAt: CAPTURED,
     caseDate: overrides.caseDate ?? "2026-08-08",
     versionSelectionBasis: overrides.versionSelectionBasis ?? "CASE_DATE",
@@ -202,6 +217,8 @@ describe("buildCaseCompliancePanelView", () => {
         relevance: "RELEVANT",
         controlCode: "CTRL-DATA-ACCESS-01",
         contentMode: "SUMMARY_ONLY",
+        sourceUrl: "https://openstd.samr.gov.cn/",
+        issuingAuthority: "国家市场监督管理总局",
         rationaleSnapshot: "基于命中规则 DATA-001 关联控制 CTRL-DATA-ACCESS-01。",
       }),
     ]);
@@ -210,6 +227,31 @@ describe("buildCaseCompliancePanelView", () => {
     expect(item.summary).toMatch(/标准要求摘要\/控制参考/);
     expect(item.summary).not.toMatch(/DATA-001/);
     expect(item.ruleIds).toContain("DATA-001");
+    expect(item.officialSource.available).toBe(true);
+    expect(item.officialSource.allowsOriginalClauseView).toBe(false);
+    expect(item.officialSource.href).toContain("openstd.samr.gov.cn");
+  });
+
+  it("无可用官方来源时 officialSource 空态；version/authority 仍展示", () => {
+    const view = buildCaseCompliancePanelView([
+      snap({
+        documentCanonicalCode: "CN-DSL",
+        clauseKey: "article-27",
+        relevance: "RELEVANT",
+        controlCode: "CTRL-DATA-ACCESS-01",
+        sourceUrl: null,
+        issuingAuthority: "全国人民代表大会常务委员会",
+        effectiveDate: "2021-09-01",
+        versionLabel: "2021年公布施行",
+        versionKey: "2021-original",
+      }),
+    ]);
+    const item = view.groups[0]!.items[0]!;
+    expect(item.officialSource.available).toBe(false);
+    expect(item.officialSource.emptyMessage).toMatch(/暂无可用官方来源/);
+    expect(item.issuingAuthority).toContain("全国人民代表大会");
+    expect(item.effectiveDate).toBe("2021-09-01");
+    expect(item.versionKey).toBe("2021-original");
   });
 
   it("首屏 summary 不含 ruleId；ruleIds 仅在审计字段", () => {

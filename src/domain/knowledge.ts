@@ -319,7 +319,13 @@ export type ComplianceReferenceSnapshot = {
   clauseHeading: string | null;
   relationType: ControlClauseRelation;
   rationaleSnapshot: string | null;
+  /** 文档版本级官方来源 URL（来自 pack/DB provenance，非前端硬编码） */
   sourceUrl: string | null;
+  /** 发布机关（展示用 authority） */
+  issuingAuthority: string | null;
+  /** 版本生效日 YYYY-MM-DD */
+  effectiveDate: string | null;
+  sourceType: KnowledgeSourceType | null;
   capturedAt: string;
   caseDate: string | null;
   versionSelectionBasis: VersionSelectionBasis;

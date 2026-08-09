@@ -525,6 +525,11 @@ export function resolveCaseComplianceFromGraph(
       relationType: f.relationType,
       rationaleSnapshot: f.rationale,
       sourceUrl: version?.sourceUrl ?? null,
+      issuingAuthority: document?.issuingAuthority ?? null,
+      effectiveDate: version?.effectiveDate
+        ? toCaseCalendarDateKey(version.effectiveDate)
+        : null,
+      sourceType: version?.sourceType ?? null,
       capturedAt,
       caseDate: f.caseDate,
       versionSelectionBasis: f.versionSelectionBasis,

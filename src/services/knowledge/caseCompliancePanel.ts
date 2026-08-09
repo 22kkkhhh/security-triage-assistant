@@ -10,8 +10,13 @@ import type {
   ContentMode,
   ContextRequirement,
   ControlClauseRelation,
+  KnowledgeSourceType,
   VersionSelectionBasis,
 } from "@/domain/knowledge";
+import {
+  resolveComplianceSourceNavigation,
+  type ComplianceSourceNavigation,
+} from "@/services/knowledge/complianceSourceNavigation";
 
 /** Case UI Top-N：落在产品要求的 5～8 区间，由后端分层配额截断 */
 export const CASE_UI_COMPLIANCE_TOP_N = 8;
@@ -42,7 +47,13 @@ export type CaseCompliancePanelItem = {
   caseDate: string | null;
   contentMode: ContentMode;
   isSummaryOnly: boolean;
+  /** pack/DB 原始 sourceUrl（未校验）；展示导航请用 officialSource */
   sourceUrl: string | null;
+  issuingAuthority: string | null;
+  effectiveDate: string | null;
+  sourceType: KnowledgeSourceType | null;
+  /** 校验后的官方来源导航（禁止硬编码 URL） */
+  officialSource: ComplianceSourceNavigation;
   missingContext: ContextRequirement[];
   /** 审计：主规则 + supporting */
   ruleIds: string[];
@@ -216,6 +227,14 @@ export function buildCaseCompliancePanelView(
         contentMode: snap.contentMode,
         isSummaryOnly,
         sourceUrl: snap.sourceUrl,
+        issuingAuthority: snap.issuingAuthority ?? null,
+        effectiveDate: snap.effectiveDate ?? null,
+        sourceType: snap.sourceType ?? null,
+        officialSource: resolveComplianceSourceNavigation({
+          sourceUrl: snap.sourceUrl,
+          contentMode: snap.contentMode,
+          documentCanonicalCode: snap.documentCanonicalCode,
+        }),
         missingContext,
         ruleIds,
         supportingRuleIds: [...snap.supportingRuleIds].sort(),

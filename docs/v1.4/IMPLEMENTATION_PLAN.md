@@ -141,17 +141,26 @@
 
 ---
 
-## Step 7 — Report Integration
+## Step 7 — Compliance Source & Clause Navigation（本提交）
 
-**目标：** Report 章节 + ComplianceReferenceSnapshot。
+**目标：** Case 合规参考展开区提供官方来源导航（可核验），不引入搜索/RAG/PDF viewer。
 
-- createReportDraft 写入快照  
-- 旧报告兼容  
-- DOCX 章节 + 免责声明  
+- URL 来自 pack/persisted `sourceUrl`；http(s)+批准域名校验  
+- 无稳定条款锚点时只跳官方文档页；SUMMARY_ONLY/GB/T 不提供「查看原文条款」  
+- 展示 issuingAuthority / canonicalCode / version / effectiveDate  
 
-**不做：** 自动刷新已有草稿。
+**不做：** 法规全文搜索、内嵌 PDF、抓取官网、Admin 编辑来源、Prisma migration。
 
-**出口：** 知识库变更不改已导出/已存草稿快照。
+**出口：** complianceSourceNavigation + CaseCompliancePanel 来源区测试。
+
+---
+
+## Step 7b — Report Integration（已在 Step 2C 完成）
+
+**目标：** Report 章节 + ComplianceReferenceSnapshot（历史）。
+
+- createReportDraft 写入快照；DOCX 章节 + 免责声明  
+- 知识库变更不改已导出/已存草稿快照
 
 ---
 
