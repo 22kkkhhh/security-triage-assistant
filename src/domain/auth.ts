@@ -59,6 +59,7 @@ export const PERMISSIONS = [
   "USER_ADMIN",
   "PASSWORD_SELF_CHANGE",
   "PASSWORD_ADMIN_RESET",
+  "KNOWLEDGE_READ",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -68,6 +69,7 @@ const VIEWER_PERMISSIONS: readonly Permission[] = [
   "ACTIVITY_READ",
   "REPORT_READ",
   "PASSWORD_SELF_CHANGE",
+  "KNOWLEDGE_READ",
 ];
 
 const ANALYST_PERMISSIONS: readonly Permission[] = [

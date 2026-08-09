@@ -36,6 +36,8 @@
 - [ ] 不存在「Rule 唯一直连 Clause」作为 SoT
 - [ ] Rule→Control、Control→Clause 均可追溯 rationale
 - [ ] 关系枚举无 VIOLATED / ILLEGAL / NON_COMPLIANT
+- [ ] 静态 ControlClauseRelation **无** `INSUFFICIENT_CONTEXT`（该值仅 Case finding relevance）
+- [x] Step 1：Prisma Knowledge schema + Domain + `KNOWLEDGE_READ` + additive migration
 
 ## F. Case-aware Findings
 

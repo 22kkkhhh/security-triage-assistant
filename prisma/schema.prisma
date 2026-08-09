@@ -174,3 +174,191 @@ model Verification {
   @@index([identifier])
   @@map("verification")
 }
+
+// ---------------------------------------------------------------------------
+// Security & Compliance Knowledge Center（v1.4 Step 1）
+// Domain 枚举以 TypeScript 为 SoT；SQLite 存 String / Json。
+// Executable SecurityRule 仍在 TS registry；RuleControlMapping.ruleId 为字符串引用。
+// ---------------------------------------------------------------------------
+
+/// 逻辑文档（跨版本稳定身份）
+model ComplianceDocument {
+  id               String  @id @default(cuid())
+  /// 内部稳定编码（非法律文号），如 CN-DSL
+  canonicalCode    String  @unique
+  title            String
+  /// DocumentType
+  documentType     String
+  jurisdiction     String
+  issuingAuthority String
+  description      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions ComplianceDocumentVersion[]
+
+  @@index([documentType])
+  @@index([title])
+}
+
+/// 文档版本（展示 label 与内部 versionKey 分离）
+model ComplianceDocumentVersion {
+  id         String             @id @default(cuid())
+  documentId String
+  document   ComplianceDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+
+  /// 内部稳定版本键（非展示文案）
+  versionKey     String
+  versionLabel   String
+  documentNumber String?
+
+  publishDate   DateTime?
+  /// 日历日语义：以 UTC 日期部分为准；窗口 [effectiveDate, expiryDate)
+  effectiveDate DateTime
+  expiryDate    DateTime?
+
+  /// PublicationStatus：知识库工作流
+  publicationStatus String
+  /// LegalStatus：现实效力（历史选版不因 SUPERSEDED 排除）
+  legalStatus       String
+
+  /// KnowledgeSourceType
+  sourceType String
+  sourceUrl  String?
+
+  /// RightsStatus / ContentMode
+  rightsStatus String
+  contentMode  String
+
+  sourceFileName String?
+  sourceFileHash String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  reviewedAt  DateTime?
+  publishedAt DateTime?
+
+  clauses ComplianceClause[]
+
+  @@unique([documentId, versionKey])
+  @@index([publicationStatus])
+  @@index([legalStatus])
+  @@index([effectiveDate])
+}
+
+/// 条款（parentClauseId + sortOrder 表达层级）
+model ComplianceClause {
+  id                String                    @id @default(cuid())
+  documentVersionId String
+  documentVersion   ComplianceDocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Restrict)
+
+  clauseKey     String
+  articleNumber String?
+  chapter       String?
+  section       String?
+  heading       String?
+
+  parentClauseId String?
+  parentClause   ComplianceClause?  @relation("ClauseHierarchy", fields: [parentClauseId], references: [id], onDelete: Restrict)
+  childClauses   ComplianceClause[] @relation("ClauseHierarchy")
+
+  originalText   String?
+  summary        String?
+  interpretation String?
+
+  /// string[] JSON
+  topics Json
+
+  sortOrder Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  controlMappings ControlClauseMapping[]
+
+  @@unique([documentVersionId, clauseKey])
+  @@index([documentVersionId, sortOrder])
+  @@index([articleNumber])
+}
+
+/// 产品内部控制词汇（非法律文件）
+model ComplianceControl {
+  id          String  @id @default(cuid())
+  controlCode String  @unique
+  title       String
+  /// ComplianceControlDomain
+  domain      String
+  description String
+  objectives  String?
+
+  /// ContextRequirement[] JSON
+  requiredContext         Json
+  /// EvidenceSuggestion[] JSON
+  suggestedEvidence       Json
+  /// ChecklistSuggestion[] JSON
+  suggestedChecklistItems Json
+
+  /// ComplianceControlStatus：DRAFT | ACTIVE | RETIRED
+  status String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ruleMappings   RuleControlMapping[]
+  clauseMappings ControlClauseMapping[]
+
+  @@index([domain])
+  @@index([status])
+}
+
+/// Rule → Control（ruleId 字符串引用 TS registry；无 Prisma FK）
+model RuleControlMapping {
+  id        String            @id @default(cuid())
+  ruleId    String
+  controlId String
+  control   ComplianceControl @relation(fields: [controlId], references: [id], onDelete: Restrict)
+
+  /// RuleControlRelation：PRIMARY | SUPPORTING
+  relation  String
+  rationale String?
+
+  /// ContextRequirement[] JSON
+  requiredContext Json
+  priority        Int  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([ruleId, controlId])
+  @@index([ruleId])
+  @@index([controlId])
+}
+
+/// Control → Clause（静态知识关系；不含 INSUFFICIENT_CONTEXT）
+model ControlClauseMapping {
+  id        String            @id @default(cuid())
+  controlId String
+  control   ComplianceControl @relation(fields: [controlId], references: [id], onDelete: Restrict)
+  clauseId  String
+  clause    ComplianceClause  @relation(fields: [clauseId], references: [id], onDelete: Restrict)
+
+  /// ControlClauseRelation：CONTROL_SUPPORT | POSSIBLE_OBLIGATION | ESCALATION_TRIGGER
+  relationType String
+  rationale    String
+
+  requiredContext         Json
+  suggestedEvidence       Json
+  suggestedChecklistItems Json
+
+  /// MappingReviewStatus：DRAFT | REVIEWED | APPROVED
+  reviewStatus String
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([controlId, clauseId, relationType])
+  @@index([controlId])
+  @@index([clauseId])
+}

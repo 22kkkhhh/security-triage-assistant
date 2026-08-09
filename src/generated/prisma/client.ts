@@ -71,3 +71,33 @@ export type Account = Prisma.AccountModel
  * 
  */
 export type Verification = Prisma.VerificationModel
+/**
+ * Model ComplianceDocument
+ * 逻辑文档（跨版本稳定身份）
+ */
+export type ComplianceDocument = Prisma.ComplianceDocumentModel
+/**
+ * Model ComplianceDocumentVersion
+ * 文档版本（展示 label 与内部 versionKey 分离）
+ */
+export type ComplianceDocumentVersion = Prisma.ComplianceDocumentVersionModel
+/**
+ * Model ComplianceClause
+ * 条款（parentClauseId + sortOrder 表达层级）
+ */
+export type ComplianceClause = Prisma.ComplianceClauseModel
+/**
+ * Model ComplianceControl
+ * 产品内部控制词汇（非法律文件）
+ */
+export type ComplianceControl = Prisma.ComplianceControlModel
+/**
+ * Model RuleControlMapping
+ * Rule → Control（ruleId 字符串引用 TS registry；无 Prisma FK）
+ */
+export type RuleControlMapping = Prisma.RuleControlMappingModel
+/**
+ * Model ControlClauseMapping
+ * Control → Clause（静态知识关系；不含 INSUFFICIENT_CONTEXT）
+ */
+export type ControlClauseMapping = Prisma.ControlClauseMappingModel

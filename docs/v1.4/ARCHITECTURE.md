@@ -99,7 +99,8 @@ missing = required − present(non-null / non-UNKNOWN where applicable)
 
 若目标义务（如「数据出境」）依赖缺失字段（destinationRegion 等）：
 
-- relation / relevance → `INSUFFICIENT_CONTEXT`
+- **Case** `CaseComplianceFinding.relevance` → `INSUFFICIENT_CONTEXT`
+- 静态 `ControlClauseMapping.relationType` **不含** `INSUFFICIENT_CONTEXT`
 - **不得**升级为出境/泄露/违法结论
 
 ---

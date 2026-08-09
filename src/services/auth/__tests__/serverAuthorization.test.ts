@@ -742,6 +742,8 @@ describe("Permission 入口覆盖", () => {
       REPORT_EXPORT: () => exportReportAction(created.id, randomUUID(), true),
       CASE_READ: async () => ({ ok: true, code: "SKIP" }),
       REPORT_READ: async () => ({ ok: true, code: "SKIP" }),
+      // v1.4 Step 1：权限已就绪，尚无 Knowledge Server Action（Step 3）
+      KNOWLEDGE_READ: async () => ({ ok: true, code: "SKIP" }),
       USER_ADMIN: () => listUsersAction(1),
       PASSWORD_SELF_CHANGE: async () => {
         // VIEWER 拥有自改密码：改用无 Session 验证入口存在

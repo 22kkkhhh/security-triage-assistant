@@ -358,7 +358,8 @@ describe("migration gates", () => {
         existsSync(path.join(migrationsRoot, name, "migration.sql")),
       )
       .sort();
-    const preAuth = all.filter((name) => name !== authMigration);
+    // 仅取 auth migration 之前的迁移（后续 Knowledge 等 additive migration 不影响本门禁）
+    const preAuth = all.filter((name) => name < authMigration);
     expect(preAuth.length).toBe(3);
 
     const db = new Database(FORWARD_DB_FILE);

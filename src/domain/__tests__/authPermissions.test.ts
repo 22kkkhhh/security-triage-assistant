@@ -37,6 +37,7 @@ const VIEWER_ALLOW: Permission[] = [
   "ACTIVITY_READ",
   "REPORT_READ",
   "PASSWORD_SELF_CHANGE",
+  "KNOWLEDGE_READ",
 ];
 
 const VIEWER_DENY: Permission[] = [
@@ -193,6 +194,16 @@ describe("Permission completeness", () => {
     expect(roleHasPermission("VIEWER", "PASSWORD_ADMIN_RESET")).toBe(false);
     expect(roleHasPermission("ANALYST", "PASSWORD_ADMIN_RESET")).toBe(false);
     expect(roleHasPermission("ADMIN", "PASSWORD_ADMIN_RESET")).toBe(true);
+  });
+
+  it("KNOWLEDGE_READ：VIEWER / ANALYST / ADMIN 均有；无 KNOWLEDGE_ADMIN", () => {
+    for (const role of USER_ROLES) {
+      expect(roleHasPermission(role, "KNOWLEDGE_READ")).toBe(true);
+    }
+    expect((PERMISSIONS as readonly string[]).includes("KNOWLEDGE_ADMIN")).toBe(
+      false,
+    );
+    expect(roleHasPermission("VIEWER", "REPORT_EXPORT")).toBe(false);
   });
 
   it("CASE_SNAPSHOT_WRITE：仅 ANALYST / ADMIN", () => {

@@ -97,35 +97,35 @@ type RuleSourceType =
   | "OTHER";
 ```
 
-### 1.8 Mapping Relation（选定方案）
+### 1.8 Control↔Clause 静态 Mapping Relation（选定）
 
-比较：
-
-| 方案 A | 方案 B（选定） |
-| --- | --- |
-| DIRECT / RELEVANT / POSSIBLE / INSUFFICIENT_CONTEXT | CONTROL_SUPPORT / POSSIBLE_OBLIGATION / ESCALATION_TRIGGER / INSUFFICIENT_CONTEXT |
-
-**选定 B**：更强调「控制支持 / 可能义务 / 升级触发」，避免用户把 DIRECT 读成「已违规」。
+**Step 1 修正：** 静态知识库中的 Control→Clause 关系 **不得** 包含 `INSUFFICIENT_CONTEXT`。  
+信息不足属于某个 Case 的运行时状态，不是两个知识实体之间的永久关系。
 
 ```ts
-type ComplianceRelationType =
+/** ControlClauseMapping.relationType — 仅静态知识 */
+type ControlClauseRelation =
   | "CONTROL_SUPPORT"        // 支撑某项安全管理控制的核查
   | "POSSIBLE_OBLIGATION"    // 在补齐上下文后可能涉及相关义务
-  | "ESCALATION_TRIGGER"     // 达到阈值时应升级人工/流程核查
-  | "INSUFFICIENT_CONTEXT";  // 当前证据不足以建立更强关联
+  | "ESCALATION_TRIGGER";    // 达到阈值时应升级人工/流程核查
 ```
 
-**禁止：** `VIOLATED` / `NON_COMPLIANT` / `ILLEGAL`。
+**禁止：** `VIOLATED` / `NON_COMPLIANT` / `ILLEGAL` / `INSUFFICIENT_CONTEXT`（静态 Mapping）。
 
-### 1.9 Finding Relevance（Case UI）
+Rule→Control 使用独立枚举：`PRIMARY` | `SUPPORTING`。
+
+### 1.9 Case Finding Relevance（运行时）
 
 ```ts
-type FindingRelevance =
-  | "HIGH"
-  | "MEDIUM"
-  | "LOW"
-  | "INSUFFICIENT_CONTEXT";
+/** CaseComplianceFinding.relevance — 案件计算层 */
+type CaseComplianceRelevance =
+  | "DIRECT"
+  | "RELEVANT"
+  | "POSSIBLE"
+  | "INSUFFICIENT_CONTEXT";  // 仅运行时：缺 requiredContext 等
 ```
+
+静态 Mapping Relation ≠ Case Runtime Relevance。
 
 ---
 
@@ -154,24 +154,25 @@ type FindingRelevance =
 | --- | --- | --- |
 | id | string | |
 | documentId | FK → Document | |
-| versionLabel | string | 如 `2021` / `修订版` |
+| versionKey | string | **内部稳定版本键**（Mapping / Snapshot / Import 幂等依赖） |
+| versionLabel | string | 展示文案（可缺失/变更，不作技术唯一标识） |
 | documentNumber | string? | 文号 |
-| publishDate | date? | 公布 |
-| effectiveDate | date? | 施行 |
-| expiryDate | date? | 废止/失效 |
-| publicationStatus | PublicationStatus | 知识库状态 |
-| legalStatus | LegalStatus | 法律效力 |
-| sourceType | KnowledgeSourceType | |
+| publishDate | DateTime? | 公布（日历日语义，UTC 日期部分） |
+| effectiveDate | DateTime | 版本开始适用；窗口 `[effectiveDate, expiryDate)` |
+| expiryDate | DateTime? | 开始不再适用；须 `effectiveDate < expiryDate` |
+| publicationStatus | PublicationStatus | 知识库工作流（DRAFT/REVIEWED/PUBLISHED） |
+| legalStatus | LegalStatus | 现实效力；历史选版 **不因 SUPERSEDED 排除** |
+| sourceType | KnowledgeSourceType | 与 Rights 分离；OFFICIAL_PUBLIC ≠ 可任意再分发 |
 | rightsStatus | RightsStatus | |
-| contentMode | ContentMode | |
+| contentMode | ContentMode | `UNKNOWN` rights **禁止** `FULL_TEXT` |
 | sourceUrl | string? | 官方来源 |
 | sourceFileName | string? | 可选本地文件名（不入库 binary） |
 | sourceFileHash | string? | sha256 |
 | createdAt / updatedAt | datetime | |
 | reviewedAt / publishedAt | datetime? | |
 
-建议：同一 `documentId` 下 `(versionLabel)` unique；  
-查询索引：`(documentId, publicationStatus, legalStatus, effectiveDate)`。
+Unique：`(documentId, versionKey)`。  
+适用版本选择：`selectApplicableVersionAt(date)` / `selectCurrentApplicableVersion(now)`；仅 `PUBLISHED`。
 
 ---
 
@@ -219,24 +220,25 @@ Invariant：`originalText` 不得被 summary/AI 覆盖。
 
 ## 6. SecurityRuleMetadata（Catalog）
 
+**Step 1：纯 Domain type，无 Prisma 表。** Executable 规则 SoT 仍为 `src/services/analysis` TS registry。
+
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| ruleId | string | PK，对齐可执行规则 ID，如 `DATA-001` |
+| ruleId | string | 对齐可执行规则 ID，如 `DATA-001` |
 | title | string | |
 | dimension | SecurityDomain | 分析维度 |
 | description | string | |
 | requiredFields | string[] | |
-| unknownPolicy | string? | UNKNOWN 语义说明 |
-| sourceType | RuleSourceType | |
+| sourceType | RuleSourceType | 仅 provenance；不执行 Sigma DSL |
 | upstreamRuleId / upstreamVersion | string? | |
 | sourceUrl | string? | |
 | licenseId / licenseUrl | string? | |
 | attribution | string? | |
 | adaptationNote | string? | |
-| capabilityStatus | RuleCapabilityStatus | |
+| capabilityStatus | RuleCapabilityStatus | SUPPORTED / NEEDS_CONTEXT / OUT_OF_SCOPE |
 | executable | boolean | 是否挂到当前引擎（SUPPORTED 才可为 true） |
 
-**外部 adapted 规则：** 无 license review → 不得 `executable=true` / 不得进入内置可运行集。
+**外部 adapted 规则：** 无 license review → 不得 `executable=true`。完整 metadata registry 留 Step 8。
 
 ---
 
@@ -245,14 +247,14 @@ Invariant：`originalText` 不得被 summary/AI 覆盖。
 | 字段 | 类型 |
 | --- | --- |
 | id | string |
-| ruleId | FK metadata |
+| ruleId | string（无 Prisma FK；importer 校验 registry） |
 | controlId | FK control |
-| relation | ComplianceRelationType |
-| rationale | string |
-| requiredContext | string[] |
+| relation | `PRIMARY` \| `SUPPORTING` |
+| rationale | string? |
+| requiredContext | ContextRequirement[] JSON |
 | priority | int |
 
-Unique：`(ruleId, controlId, relation)`（或更简 `(ruleId, controlId)`）。
+Unique：`(ruleId, controlId)`。
 
 ---
 
@@ -263,64 +265,66 @@ Unique：`(ruleId, controlId, relation)`（或更简 `(ruleId, controlId)`）。
 | id | string |
 | controlId | FK |
 | clauseId | FK |
-| relationType | ComplianceRelationType |
+| relationType | ControlClauseRelation（无 INSUFFICIENT_CONTEXT） |
 | rationale | string |
-| requiredContext | string[] |
-| suggestedEvidence | string[] |
-| suggestedChecklistItems | string[] |
-| reviewStatus | `DRAFT` \| `REVIEWED` \| `PUBLISHED` |
-| reviewedBy / reviewedAt | optional |
+| requiredContext | ContextRequirement[] JSON |
+| suggestedEvidence | EvidenceSuggestion[] JSON |
+| suggestedChecklistItems | ChecklistSuggestion[] JSON |
+| reviewStatus | `DRAFT` \| `REVIEWED` \| `APPROVED` |
+| reviewedAt | optional（无 reviewedByUserId） |
+
+Unique：`(controlId, clauseId, relationType)`。删除语义：`onDelete: Restrict`。
 
 ---
 
 ## 9. CaseComplianceFinding（Computed View）
 
-**第一版不持久化表**（可后续加 cache 表）。
+**第一版不持久化表**（Step 1 仅 Domain type）。
 
 ```ts
 type CaseComplianceFinding = {
-  caseId: string;
   ruleId: string;
   controlId: string;
+  documentId: string;
   documentVersionId: string;
   clauseId: string;
-  relevance: FindingRelevance;
-  relationType: ComplianceRelationType;
+  relevance: CaseComplianceRelevance; // INSUFFICIENT_CONTEXT 在此
   rationale: string;
-  missingContext: string[];
-  suggestedEvidence: string[];
-  suggestedChecklist: string[];
-  basedOnCurrentEffectiveVersion: boolean;
-  caseRelevantDate: string | null;
+  missingContext: ContextRequirement[];
+  suggestedEvidence: EvidenceSuggestion[];
+  suggestedChecklist: ChecklistSuggestion[];
+  versionSelectionBasis: "CASE_DATE" | "CURRENT_DATE";
 };
 ```
+
+不得含 `VIOLATED` / `COMPLIANT` / `ILLEGAL` / `BREACH_CONFIRMED`。
 
 ---
 
 ## 10. ComplianceReferenceSnapshot（Report）
 
-嵌入 `ReportDraft` JSON（optional）：
+嵌入 `ReportDraft` JSON（optional）；Step 1 **不建 Prisma 表**。
 
 ```ts
 type ComplianceReferenceSnapshot = {
   documentId: string;
   documentVersionId: string;
+  documentCanonicalCode: string;
   documentTitle: string;
+  versionKey: string;
   versionLabel: string;
   clauseId: string;
-  articleNumber: string;
-  clauseHeading?: string | null;
-  summarySnapshot?: string | null; // 生成时摘要快照，非 live
-  sourceUrl?: string | null;
-  relationType: ComplianceRelationType;
-  rationale: string;
-  ruleId?: string | null;
-  controlId?: string | null;
+  clauseKey: string;
+  articleNumber: string | null;
+  clauseHeading: string | null;
+  relationType: ControlClauseRelation;
+  rationaleSnapshot: string | null;
+  sourceUrl: string | null;
   capturedAt: string; // ISO
 };
 ```
 
-旧草稿缺失该数组 → 兼容。
+不嵌入动态 User / reviewer 名称（沿用 Report Actor / HumanReview）。旧草稿缺失该数组 → 兼容。
 
 ---
 
@@ -343,28 +347,31 @@ type ComplianceReferenceSnapshot = {
 
 ---
 
-## 12. 权限（Domain 候选）
+## 12. 权限
 
 ```ts
-// 候选 Permission（Step 1 实现时加入 ROLE_PERMISSIONS）
-"KNOWLEDGE_READ"
-// 未来
+"KNOWLEDGE_READ" // Step 1 已加入 ROLE_PERMISSIONS（VIEWER/ANALYST/ADMIN）
+// 未来有管理行为时再加
 "KNOWLEDGE_ADMIN"
 ```
 
-v1.4.0：`KNOWLEDGE_READ` ∈ VIEWER/ANALYST/ADMIN。  
-`KNOWLEDGE_ADMIN`：deferred。
+不扩展 UI capability（留 Step 3）。
 
 ---
 
-## 13. SQLite / 存储决策
+## 13. SQLite / 存储决策（Step 1 落地）
 
 | 决策 | 结论 |
 | --- | --- |
-| v1.4 Knowledge schema | **可继续 SQLite** |
+| v1.4 Knowledge schema | **继续 SQLite**；migration `20260809150332_add_security_compliance_knowledge` |
+| Domain 枚举 | TypeScript SoT；DB 存 String；Row→Domain 严格 parse |
+| 数组 / 结构 | Prisma `Json`（topics / requiredContext / suggestions） |
+| 日期 | Prisma DateTime；domain 按 UTC 日历日比较 |
+| Executable SecurityRule | **仍仅 TS registry**；无 SecurityRule 表；`RuleControlMapping.ruleId` 无 FK |
 | 条款正文 | DB 文本字段（受 contentMode 约束） |
-| PDF/DOCX binary | **不**进 SQLite；仅 file ref（v1.4.0 curated pack 可无 binary） |
-| PostgreSQL | v1.5 Production Foundation 再迁；migration 保持可前向 |
+| PDF/DOCX binary | **不**进 SQLite |
+| 删除 | 产品无删除；FK `Restrict`；测试用 db reset |
+| PostgreSQL | v1.5 再迁；本 migration 对 Case/Auth/Report **完全 additive** |
 
 ---
 

@@ -56,7 +56,13 @@ export const ModelName = {
   User: 'User',
   Session: 'Session',
   Account: 'Account',
-  Verification: 'Verification'
+  Verification: 'Verification',
+  ComplianceDocument: 'ComplianceDocument',
+  ComplianceDocumentVersion: 'ComplianceDocumentVersion',
+  ComplianceClause: 'ComplianceClause',
+  ComplianceControl: 'ComplianceControl',
+  RuleControlMapping: 'RuleControlMapping',
+  ControlClauseMapping: 'ControlClauseMapping'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -178,6 +184,119 @@ export const VerificationScalarFieldEnum = {
 } as const
 
 export type VerificationScalarFieldEnum = (typeof VerificationScalarFieldEnum)[keyof typeof VerificationScalarFieldEnum]
+
+
+export const ComplianceDocumentScalarFieldEnum = {
+  id: 'id',
+  canonicalCode: 'canonicalCode',
+  title: 'title',
+  documentType: 'documentType',
+  jurisdiction: 'jurisdiction',
+  issuingAuthority: 'issuingAuthority',
+  description: 'description',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ComplianceDocumentScalarFieldEnum = (typeof ComplianceDocumentScalarFieldEnum)[keyof typeof ComplianceDocumentScalarFieldEnum]
+
+
+export const ComplianceDocumentVersionScalarFieldEnum = {
+  id: 'id',
+  documentId: 'documentId',
+  versionKey: 'versionKey',
+  versionLabel: 'versionLabel',
+  documentNumber: 'documentNumber',
+  publishDate: 'publishDate',
+  effectiveDate: 'effectiveDate',
+  expiryDate: 'expiryDate',
+  publicationStatus: 'publicationStatus',
+  legalStatus: 'legalStatus',
+  sourceType: 'sourceType',
+  sourceUrl: 'sourceUrl',
+  rightsStatus: 'rightsStatus',
+  contentMode: 'contentMode',
+  sourceFileName: 'sourceFileName',
+  sourceFileHash: 'sourceFileHash',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  reviewedAt: 'reviewedAt',
+  publishedAt: 'publishedAt'
+} as const
+
+export type ComplianceDocumentVersionScalarFieldEnum = (typeof ComplianceDocumentVersionScalarFieldEnum)[keyof typeof ComplianceDocumentVersionScalarFieldEnum]
+
+
+export const ComplianceClauseScalarFieldEnum = {
+  id: 'id',
+  documentVersionId: 'documentVersionId',
+  clauseKey: 'clauseKey',
+  articleNumber: 'articleNumber',
+  chapter: 'chapter',
+  section: 'section',
+  heading: 'heading',
+  parentClauseId: 'parentClauseId',
+  originalText: 'originalText',
+  summary: 'summary',
+  interpretation: 'interpretation',
+  topics: 'topics',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ComplianceClauseScalarFieldEnum = (typeof ComplianceClauseScalarFieldEnum)[keyof typeof ComplianceClauseScalarFieldEnum]
+
+
+export const ComplianceControlScalarFieldEnum = {
+  id: 'id',
+  controlCode: 'controlCode',
+  title: 'title',
+  domain: 'domain',
+  description: 'description',
+  objectives: 'objectives',
+  requiredContext: 'requiredContext',
+  suggestedEvidence: 'suggestedEvidence',
+  suggestedChecklistItems: 'suggestedChecklistItems',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ComplianceControlScalarFieldEnum = (typeof ComplianceControlScalarFieldEnum)[keyof typeof ComplianceControlScalarFieldEnum]
+
+
+export const RuleControlMappingScalarFieldEnum = {
+  id: 'id',
+  ruleId: 'ruleId',
+  controlId: 'controlId',
+  relation: 'relation',
+  rationale: 'rationale',
+  requiredContext: 'requiredContext',
+  priority: 'priority',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RuleControlMappingScalarFieldEnum = (typeof RuleControlMappingScalarFieldEnum)[keyof typeof RuleControlMappingScalarFieldEnum]
+
+
+export const ControlClauseMappingScalarFieldEnum = {
+  id: 'id',
+  controlId: 'controlId',
+  clauseId: 'clauseId',
+  relationType: 'relationType',
+  rationale: 'rationale',
+  requiredContext: 'requiredContext',
+  suggestedEvidence: 'suggestedEvidence',
+  suggestedChecklistItems: 'suggestedChecklistItems',
+  reviewStatus: 'reviewStatus',
+  reviewedAt: 'reviewedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ControlClauseMappingScalarFieldEnum = (typeof ControlClauseMappingScalarFieldEnum)[keyof typeof ControlClauseMappingScalarFieldEnum]
 
 
 export const SortOrder = {

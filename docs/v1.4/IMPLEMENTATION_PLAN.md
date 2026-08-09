@@ -22,15 +22,19 @@
 
 **目标：** 落地 candidate schema 的最小 Prisma 模型 + Domain types + Permissions。
 
-- Document / Version / Clause / Control  
-- RuleMetadata（可先 TS 常量表，视实现成本）  
-- Mappings  
+- Document / Version（含 `versionKey`）/ Clause / Control  
+- `SecurityRuleMetadata` Domain type（无 DB 表；executable SoT 仍为 TS）  
+- RuleControlMapping / ControlClauseMapping  
+- `CaseComplianceFinding` / `ComplianceReferenceSnapshot`（纯 Domain）  
 - `KNOWLEDGE_READ`  
-- 权利门禁校验函数  
+- 权利门禁、日期窗口、历史选版、missing-context helpers  
+- 最小 Knowledge Repository（upsert，服务 Step 2）  
 
-**不做：** UI、import 大量正文、规则扩写。
+**设计修正：** `INSUFFICIENT_CONTEXT` 仅在 Case runtime relevance，不在静态 Mapping。
 
-**出口：** migrate + unit tests（枚举/门禁/唯一约束）。
+**不做：** UI、真实法规导入、规则扩写、Checklist/Report 集成。
+
+**出口：** migrate `add_security_compliance_knowledge` + unit/persistence/forward tests。
 
 ---
 

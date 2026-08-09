@@ -402,7 +402,13 @@ export const ModelName = {
   User: 'User',
   Session: 'Session',
   Account: 'Account',
-  Verification: 'Verification'
+  Verification: 'Verification',
+  ComplianceDocument: 'ComplianceDocument',
+  ComplianceDocumentVersion: 'ComplianceDocumentVersion',
+  ComplianceClause: 'ComplianceClause',
+  ComplianceControl: 'ComplianceControl',
+  RuleControlMapping: 'RuleControlMapping',
+  ControlClauseMapping: 'ControlClauseMapping'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -418,7 +424,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "caseRecord" | "caseAuditLog" | "user" | "session" | "account" | "verification"
+    modelProps: "caseRecord" | "caseAuditLog" | "user" | "session" | "account" | "verification" | "complianceDocument" | "complianceDocumentVersion" | "complianceClause" | "complianceControl" | "ruleControlMapping" | "controlClauseMapping"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -866,6 +872,450 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ComplianceDocument: {
+      payload: Prisma.$ComplianceDocumentPayload<ExtArgs>
+      fields: Prisma.ComplianceDocumentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ComplianceDocumentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ComplianceDocumentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload>
+        }
+        findFirst: {
+          args: Prisma.ComplianceDocumentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ComplianceDocumentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload>
+        }
+        findMany: {
+          args: Prisma.ComplianceDocumentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload>[]
+        }
+        create: {
+          args: Prisma.ComplianceDocumentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload>
+        }
+        createMany: {
+          args: Prisma.ComplianceDocumentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ComplianceDocumentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload>[]
+        }
+        delete: {
+          args: Prisma.ComplianceDocumentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload>
+        }
+        update: {
+          args: Prisma.ComplianceDocumentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload>
+        }
+        deleteMany: {
+          args: Prisma.ComplianceDocumentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ComplianceDocumentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ComplianceDocumentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload>[]
+        }
+        upsert: {
+          args: Prisma.ComplianceDocumentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentPayload>
+        }
+        aggregate: {
+          args: Prisma.ComplianceDocumentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateComplianceDocument>
+        }
+        groupBy: {
+          args: Prisma.ComplianceDocumentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComplianceDocumentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ComplianceDocumentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComplianceDocumentCountAggregateOutputType> | number
+        }
+      }
+    }
+    ComplianceDocumentVersion: {
+      payload: Prisma.$ComplianceDocumentVersionPayload<ExtArgs>
+      fields: Prisma.ComplianceDocumentVersionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ComplianceDocumentVersionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ComplianceDocumentVersionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload>
+        }
+        findFirst: {
+          args: Prisma.ComplianceDocumentVersionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ComplianceDocumentVersionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload>
+        }
+        findMany: {
+          args: Prisma.ComplianceDocumentVersionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload>[]
+        }
+        create: {
+          args: Prisma.ComplianceDocumentVersionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload>
+        }
+        createMany: {
+          args: Prisma.ComplianceDocumentVersionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ComplianceDocumentVersionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload>[]
+        }
+        delete: {
+          args: Prisma.ComplianceDocumentVersionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload>
+        }
+        update: {
+          args: Prisma.ComplianceDocumentVersionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload>
+        }
+        deleteMany: {
+          args: Prisma.ComplianceDocumentVersionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ComplianceDocumentVersionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ComplianceDocumentVersionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload>[]
+        }
+        upsert: {
+          args: Prisma.ComplianceDocumentVersionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceDocumentVersionPayload>
+        }
+        aggregate: {
+          args: Prisma.ComplianceDocumentVersionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateComplianceDocumentVersion>
+        }
+        groupBy: {
+          args: Prisma.ComplianceDocumentVersionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComplianceDocumentVersionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ComplianceDocumentVersionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComplianceDocumentVersionCountAggregateOutputType> | number
+        }
+      }
+    }
+    ComplianceClause: {
+      payload: Prisma.$ComplianceClausePayload<ExtArgs>
+      fields: Prisma.ComplianceClauseFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ComplianceClauseFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ComplianceClauseFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload>
+        }
+        findFirst: {
+          args: Prisma.ComplianceClauseFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ComplianceClauseFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload>
+        }
+        findMany: {
+          args: Prisma.ComplianceClauseFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload>[]
+        }
+        create: {
+          args: Prisma.ComplianceClauseCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload>
+        }
+        createMany: {
+          args: Prisma.ComplianceClauseCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ComplianceClauseCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload>[]
+        }
+        delete: {
+          args: Prisma.ComplianceClauseDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload>
+        }
+        update: {
+          args: Prisma.ComplianceClauseUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload>
+        }
+        deleteMany: {
+          args: Prisma.ComplianceClauseDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ComplianceClauseUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ComplianceClauseUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload>[]
+        }
+        upsert: {
+          args: Prisma.ComplianceClauseUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceClausePayload>
+        }
+        aggregate: {
+          args: Prisma.ComplianceClauseAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateComplianceClause>
+        }
+        groupBy: {
+          args: Prisma.ComplianceClauseGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComplianceClauseGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ComplianceClauseCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComplianceClauseCountAggregateOutputType> | number
+        }
+      }
+    }
+    ComplianceControl: {
+      payload: Prisma.$ComplianceControlPayload<ExtArgs>
+      fields: Prisma.ComplianceControlFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ComplianceControlFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ComplianceControlFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload>
+        }
+        findFirst: {
+          args: Prisma.ComplianceControlFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ComplianceControlFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload>
+        }
+        findMany: {
+          args: Prisma.ComplianceControlFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload>[]
+        }
+        create: {
+          args: Prisma.ComplianceControlCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload>
+        }
+        createMany: {
+          args: Prisma.ComplianceControlCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ComplianceControlCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload>[]
+        }
+        delete: {
+          args: Prisma.ComplianceControlDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload>
+        }
+        update: {
+          args: Prisma.ComplianceControlUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload>
+        }
+        deleteMany: {
+          args: Prisma.ComplianceControlDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ComplianceControlUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ComplianceControlUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload>[]
+        }
+        upsert: {
+          args: Prisma.ComplianceControlUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComplianceControlPayload>
+        }
+        aggregate: {
+          args: Prisma.ComplianceControlAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateComplianceControl>
+        }
+        groupBy: {
+          args: Prisma.ComplianceControlGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComplianceControlGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ComplianceControlCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComplianceControlCountAggregateOutputType> | number
+        }
+      }
+    }
+    RuleControlMapping: {
+      payload: Prisma.$RuleControlMappingPayload<ExtArgs>
+      fields: Prisma.RuleControlMappingFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RuleControlMappingFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RuleControlMappingFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload>
+        }
+        findFirst: {
+          args: Prisma.RuleControlMappingFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RuleControlMappingFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload>
+        }
+        findMany: {
+          args: Prisma.RuleControlMappingFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload>[]
+        }
+        create: {
+          args: Prisma.RuleControlMappingCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload>
+        }
+        createMany: {
+          args: Prisma.RuleControlMappingCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RuleControlMappingCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload>[]
+        }
+        delete: {
+          args: Prisma.RuleControlMappingDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload>
+        }
+        update: {
+          args: Prisma.RuleControlMappingUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload>
+        }
+        deleteMany: {
+          args: Prisma.RuleControlMappingDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RuleControlMappingUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RuleControlMappingUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload>[]
+        }
+        upsert: {
+          args: Prisma.RuleControlMappingUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RuleControlMappingPayload>
+        }
+        aggregate: {
+          args: Prisma.RuleControlMappingAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRuleControlMapping>
+        }
+        groupBy: {
+          args: Prisma.RuleControlMappingGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RuleControlMappingGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RuleControlMappingCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RuleControlMappingCountAggregateOutputType> | number
+        }
+      }
+    }
+    ControlClauseMapping: {
+      payload: Prisma.$ControlClauseMappingPayload<ExtArgs>
+      fields: Prisma.ControlClauseMappingFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ControlClauseMappingFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ControlClauseMappingFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload>
+        }
+        findFirst: {
+          args: Prisma.ControlClauseMappingFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ControlClauseMappingFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload>
+        }
+        findMany: {
+          args: Prisma.ControlClauseMappingFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload>[]
+        }
+        create: {
+          args: Prisma.ControlClauseMappingCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload>
+        }
+        createMany: {
+          args: Prisma.ControlClauseMappingCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ControlClauseMappingCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload>[]
+        }
+        delete: {
+          args: Prisma.ControlClauseMappingDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload>
+        }
+        update: {
+          args: Prisma.ControlClauseMappingUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload>
+        }
+        deleteMany: {
+          args: Prisma.ControlClauseMappingDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ControlClauseMappingUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ControlClauseMappingUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload>[]
+        }
+        upsert: {
+          args: Prisma.ControlClauseMappingUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ControlClauseMappingPayload>
+        }
+        aggregate: {
+          args: Prisma.ControlClauseMappingAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateControlClauseMapping>
+        }
+        groupBy: {
+          args: Prisma.ControlClauseMappingGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ControlClauseMappingGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ControlClauseMappingCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ControlClauseMappingCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1008,6 +1458,119 @@ export const VerificationScalarFieldEnum = {
 } as const
 
 export type VerificationScalarFieldEnum = (typeof VerificationScalarFieldEnum)[keyof typeof VerificationScalarFieldEnum]
+
+
+export const ComplianceDocumentScalarFieldEnum = {
+  id: 'id',
+  canonicalCode: 'canonicalCode',
+  title: 'title',
+  documentType: 'documentType',
+  jurisdiction: 'jurisdiction',
+  issuingAuthority: 'issuingAuthority',
+  description: 'description',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ComplianceDocumentScalarFieldEnum = (typeof ComplianceDocumentScalarFieldEnum)[keyof typeof ComplianceDocumentScalarFieldEnum]
+
+
+export const ComplianceDocumentVersionScalarFieldEnum = {
+  id: 'id',
+  documentId: 'documentId',
+  versionKey: 'versionKey',
+  versionLabel: 'versionLabel',
+  documentNumber: 'documentNumber',
+  publishDate: 'publishDate',
+  effectiveDate: 'effectiveDate',
+  expiryDate: 'expiryDate',
+  publicationStatus: 'publicationStatus',
+  legalStatus: 'legalStatus',
+  sourceType: 'sourceType',
+  sourceUrl: 'sourceUrl',
+  rightsStatus: 'rightsStatus',
+  contentMode: 'contentMode',
+  sourceFileName: 'sourceFileName',
+  sourceFileHash: 'sourceFileHash',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  reviewedAt: 'reviewedAt',
+  publishedAt: 'publishedAt'
+} as const
+
+export type ComplianceDocumentVersionScalarFieldEnum = (typeof ComplianceDocumentVersionScalarFieldEnum)[keyof typeof ComplianceDocumentVersionScalarFieldEnum]
+
+
+export const ComplianceClauseScalarFieldEnum = {
+  id: 'id',
+  documentVersionId: 'documentVersionId',
+  clauseKey: 'clauseKey',
+  articleNumber: 'articleNumber',
+  chapter: 'chapter',
+  section: 'section',
+  heading: 'heading',
+  parentClauseId: 'parentClauseId',
+  originalText: 'originalText',
+  summary: 'summary',
+  interpretation: 'interpretation',
+  topics: 'topics',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ComplianceClauseScalarFieldEnum = (typeof ComplianceClauseScalarFieldEnum)[keyof typeof ComplianceClauseScalarFieldEnum]
+
+
+export const ComplianceControlScalarFieldEnum = {
+  id: 'id',
+  controlCode: 'controlCode',
+  title: 'title',
+  domain: 'domain',
+  description: 'description',
+  objectives: 'objectives',
+  requiredContext: 'requiredContext',
+  suggestedEvidence: 'suggestedEvidence',
+  suggestedChecklistItems: 'suggestedChecklistItems',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ComplianceControlScalarFieldEnum = (typeof ComplianceControlScalarFieldEnum)[keyof typeof ComplianceControlScalarFieldEnum]
+
+
+export const RuleControlMappingScalarFieldEnum = {
+  id: 'id',
+  ruleId: 'ruleId',
+  controlId: 'controlId',
+  relation: 'relation',
+  rationale: 'rationale',
+  requiredContext: 'requiredContext',
+  priority: 'priority',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RuleControlMappingScalarFieldEnum = (typeof RuleControlMappingScalarFieldEnum)[keyof typeof RuleControlMappingScalarFieldEnum]
+
+
+export const ControlClauseMappingScalarFieldEnum = {
+  id: 'id',
+  controlId: 'controlId',
+  clauseId: 'clauseId',
+  relationType: 'relationType',
+  rationale: 'rationale',
+  requiredContext: 'requiredContext',
+  suggestedEvidence: 'suggestedEvidence',
+  suggestedChecklistItems: 'suggestedChecklistItems',
+  reviewStatus: 'reviewStatus',
+  reviewedAt: 'reviewedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ControlClauseMappingScalarFieldEnum = (typeof ControlClauseMappingScalarFieldEnum)[keyof typeof ControlClauseMappingScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1269,6 +1832,12 @@ export type GlobalOmitConfig = {
   session?: Prisma.SessionOmit
   account?: Prisma.AccountOmit
   verification?: Prisma.VerificationOmit
+  complianceDocument?: Prisma.ComplianceDocumentOmit
+  complianceDocumentVersion?: Prisma.ComplianceDocumentVersionOmit
+  complianceClause?: Prisma.ComplianceClauseOmit
+  complianceControl?: Prisma.ComplianceControlOmit
+  ruleControlMapping?: Prisma.RuleControlMappingOmit
+  controlClauseMapping?: Prisma.ControlClauseMappingOmit
 }
 
 /* Types for Logging */
