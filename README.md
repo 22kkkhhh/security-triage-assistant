@@ -53,7 +53,7 @@
 - Vitest
 - docx（原生可编辑 Word）
 
-### 开发登录（v1.3 Step 3）
+### 开发登录（v1.3 Step 3–4）
 
 `npm run db:seed`（非 production）会幂等创建 Demo Users：
 
@@ -66,7 +66,9 @@
 口令：环境变量 `DEMO_AUTH_PASSWORD`，未设置时使用 `.env.example` 中的 Development-only 默认值。  
 **production seed 不会创建 Demo Users。**
 
-说明：页面已要求登录；**Server Action RBAC / Trusted Actor 尚未完成**，勿当作完整权限上线。
+说明：页面已要求登录；Case/Report/Activity **Server Authorization 已接入**（Step 4）。  
+VIEWER 可查看案件与报告，但写操作与 Word 导出会被服务端拒绝。  
+**Trusted Actor / UI RBAC / 用户管理尚未完成**，勿当作完整 v1.3 上线。
 
 ## 五、核心流程
 
@@ -98,7 +100,7 @@
 
 原因包括：
 
-- 已有 Login / Session，但 Case/Report Server Action RBAC 与 Trusted Actor **尚未**接入
+- 已有 Login / Session，且 Case/Report Server Action 权限校验已接入；Trusted Actor **尚未**接入
 - `MANUAL` actorName 仍不可信为真实身份
 - SQLite 本地库
 - 无独立审计库

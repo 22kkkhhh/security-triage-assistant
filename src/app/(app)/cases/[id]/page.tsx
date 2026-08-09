@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
+import { ForbiddenPanel } from "@/components/auth/ForbiddenPanel";
 import { PersistedCaseWorkbench } from "@/components/cases/PersistedCaseWorkbench";
+import { ForbiddenError } from "@/domain/auth";
+import { requirePermission } from "@/services/auth/requirePermission";
 import {
   getLatestHandoffNote,
   listCaseAuditLogs,
@@ -18,6 +21,18 @@ export default async function CaseDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  try {
+    await requirePermission("CASE_READ");
+    await requirePermission("ACTIVITY_READ");
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      return (
+        <ForbiddenPanel message="当前账号无权限查看此案件或活动记录。" />
+      );
+    }
+    throw error;
+  }
+
   const { id } = await params;
   const record = await getCaseById(id);
   if (!record) {

@@ -277,7 +277,10 @@ type UserRole = "ADMIN" | "ANALYST" | "VIEWER";
 
 Persistence（Step 2）已加入 User/Session/Account/Verification；密码仅存 `Account.password`。  
 Login / Session（Step 3）已接入：`requireAuthenticatedUser()` 从 DB 重载 `enabled` / `role`。  
-本段仍不代表 Server Action RBAC / Trusted Actor 已上线。
+Server Authorization（Step 4）已接入：Case/Report/Activity 的 Server Actions 与页面 loaders
+经 `requirePermission` 使用本 Permission 模型；VIEWER 写操作与 `REPORT_EXPORT` 服务端拒绝。
+
+仍未完成：Trusted Actor（Audit Actor 仍可能为 `MANUAL`/`SYSTEM`）、UI RBAC、用户管理。
 
 ---
 

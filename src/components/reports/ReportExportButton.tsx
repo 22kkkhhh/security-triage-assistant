@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { exportReportAction } from "@/app/(app)/cases/reportActions";
+import { actionErrorMessage } from "@/lib/actionErrorMessage";
 
 /**
  * 报告中心导出：与报告页共用 exportReportCommand / exportReportAction。
@@ -24,7 +25,7 @@ export function ReportExportButton({ caseId }: { caseId: string }) {
         true,
       );
       if (!result.ok) {
-        setError(result.error || "Word 报告导出失败，请重试。");
+        setError(actionErrorMessage(result, "Word 报告导出失败，请重试。"));
         return;
       }
       const bytes = Uint8Array.from(atob(result.fileBase64), (c) =>

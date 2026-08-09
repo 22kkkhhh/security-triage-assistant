@@ -11,6 +11,10 @@ import {
   type ChecklistCommandAction,
 } from "@/services/caseCommands";
 import {
+  requirePermission,
+  toAuthActionFailure,
+} from "@/services/auth/requirePermission";
+import {
   listCaseAuditLogs,
   type CaseAuditLogView,
   type ListCaseAuditLogsResult,
@@ -35,7 +39,7 @@ export type SemanticCommandActionResult =
   | {
       ok: false;
       error: string;
-      code?: "STALE";
+      code?: "STALE" | "UNAUTHENTICATED" | "FORBIDDEN";
       updatedAt?: string;
       lastActivityAt?: string;
       status?: CaseStatus;
@@ -115,6 +119,11 @@ export async function changeCaseStatusAction(
   rawNextState: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
+  try {
+    await requirePermission("CASE_STATUS_CHANGE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (!isCaseStatus(nextStatus)) return { ok: false, error: "案件状态无效" };
   if (typeof operationId !== "string" || !operationId.trim()) {
@@ -145,6 +154,11 @@ export async function applyChecklistCommandAction(
   rawNextState: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
+  try {
+    await requirePermission("CHECKLIST_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (
     typeof action !== "string" ||
@@ -182,6 +196,11 @@ export async function updateBusinessContextAction(
   rawNextState: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
+  try {
+    await requirePermission("BUSINESS_CONTEXT_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (typeof operationId !== "string" || !operationId.trim()) {
     return { ok: false, error: "operationId 无效" };
@@ -208,6 +227,11 @@ export async function updateHumanReviewAction(
   rawNextState: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
+  try {
+    await requirePermission("HUMAN_REVIEW_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (typeof operationId !== "string" || !operationId.trim()) {
     return { ok: false, error: "operationId 无效" };
@@ -235,6 +259,11 @@ export async function addTimelineEventAction(
   rawNextState: unknown,
   baseUpdatedAt: unknown,
 ): Promise<SemanticCommandActionResult> {
+  try {
+    await requirePermission("TIMELINE_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (typeof eventId !== "string" || !eventId.trim()) {
     return { ok: false, error: "时间线事件 ID 无效" };
@@ -267,7 +296,11 @@ export type HandoffActionResult =
       lastActivityAt: string;
       audit: CaseAuditLogView;
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      code?: "UNAUTHENTICATED" | "FORBIDDEN";
+    };
 
 /** 添加交接说明（append-only Audit） */
 export async function addHandoffNoteAction(
@@ -275,6 +308,11 @@ export async function addHandoffNoteAction(
   note: unknown,
   operationId: unknown,
 ): Promise<HandoffActionResult> {
+  try {
+    await requirePermission("HANDOFF_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (typeof note !== "string") return { ok: false, error: "交接说明无效" };
   if (typeof operationId !== "string" || !operationId.trim()) {
@@ -305,8 +343,17 @@ export async function loadMoreCaseAuditLogsAction(
   limit: unknown = 40,
 ): Promise<
   | { ok: true; result: ListCaseAuditLogsResult }
-  | { ok: false; error: string }
+  | {
+      ok: false;
+      error: string;
+      code?: "UNAUTHENTICATED" | "FORBIDDEN";
+    }
 > {
+  try {
+    await requirePermission("ACTIVITY_READ");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (cursor != null && (typeof cursor !== "string" || !cursor.trim())) {
     return { ok: false, error: "分页游标无效" };

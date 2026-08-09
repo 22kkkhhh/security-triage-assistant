@@ -150,7 +150,7 @@ Client
 
 ---
 
-## Auth / Session（v1.3 Step 1–3）
+## Auth / Session / Server Authorization（v1.3 Step 1–4）
 
 业务授权模型独立于 Better Auth 内部 ACL，定义于 `src/domain/auth.ts`：
 
@@ -158,9 +158,11 @@ Client
 /api/auth/[...all]（Better Auth handler）
   → Session（DB）
   → getCurrentAuthUser / requireAuthenticatedUser
-       （Session 仅取 userId → Prisma reload User → toAuthUser）
-  → (app) Layout 页面保护
-  → ROLE_PERMISSIONS / authorize → Server Actions（Step 4，尚未接入）
+       （Session 仅取 userId → Prisma reload User → toAuthUser + enabled）
+  → (app) Layout：Session 边界（是否有效登录）
+  → requirePermission(permission)
+       （authorize → ROLE_PERMISSIONS）
+  → Case / Report / Activity Server Actions 与受保护页面 loaders
 ```
 
 已建立：
@@ -170,15 +172,20 @@ Client
 - Login：`/login`（username + password）；Logout；开发 Demo Users
 - Auth DAL：`disableCookieCache` + DB reload（enabled/role/displayName 新鲜度）
 - `(app)` Layout Server 保护：未登录 → `/login`；disabled → 清 Session 并提示
+- Server Authorization（Step 4）：`requirePermission` 接入全部 Case/Report/Activity
+  读写入口；顺序为 Authentication → DB reload → enabled → Permission →
+  parse / operationId / OCC / mutation；拒绝时无 DB 副作用
 
-**尚未完成（不得宣称 RBAC / v1.3 已完成）**：
+写边界两层仍独立且必须同时满足：
 
-- Server Action `authorize` 接入（Step 4）
-- Trusted Actor / `reviewedByUserId`
+1. Permission（谁可以写）
+2. Snapshot Payload Allowlist（允许写什么）
+
+**尚未完成（不得宣称 v1.3 已完成）**：
+
+- Trusted Actor / Audit `actorId = User.id` / cross-user operationId ownership（Step 5）
 - Admin User Management UI / 密码自助修改
-
-写边界两层仍独立：Authorization + Snapshot Payload Allowlist。  
-页面受保护 ≠ Server Action 授权已完成。
+- UI RBAC（隐藏无权限按钮；Step 7）
 
 ---
 

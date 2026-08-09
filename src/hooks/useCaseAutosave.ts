@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { saveCaseStateAction } from "@/app/(app)/cases/actions";
+import { actionErrorMessage } from "@/lib/actionErrorMessage";
 import type { CaseStatus } from "@/domain/types";
 import {
   mergeCaseSnapshotPatches,
@@ -149,7 +150,11 @@ export function useCaseAutosave(options: {
           });
           return false;
         }
-        dispatch({ type: "SAVE_ERROR", seq, message: result.error });
+        dispatch({
+          type: "SAVE_ERROR",
+          seq,
+          message: actionErrorMessage(result, "保存失败，请重试"),
+        });
         return false;
       }
       pendingPatchRef.current = null;

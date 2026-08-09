@@ -7,6 +7,10 @@ import {
   saveReportDraftCommand,
 } from "@/services/caseCommands";
 import {
+  requirePermission,
+  toAuthActionFailure,
+} from "@/services/auth/requirePermission";
+import {
   getCaseById,
   StaleReportDraftError,
 } from "@/services/persistence/caseRepository";
@@ -23,7 +27,7 @@ export type SaveReportActionResult =
   | {
       ok: false;
       error: string;
-      code?: "STALE_REPORT";
+      code?: "STALE_REPORT" | "UNAUTHENTICATED" | "FORBIDDEN";
       reportUpdatedAt?: string | null;
     };
 
@@ -36,7 +40,11 @@ export type CreateReportActionResult =
       reportUpdatedAt: string | null;
       lastActivityAt: string;
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      code?: "UNAUTHENTICATED" | "FORBIDDEN";
+    };
 
 export type ExportReportActionResult =
   | {
@@ -47,7 +55,11 @@ export type ExportReportActionResult =
       lastActivityAt: string;
       reportUpdatedAt: string | null;
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      code?: "UNAUTHENTICATED" | "FORBIDDEN";
+    };
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -72,6 +84,11 @@ export async function createReportDraftAction(
   caseId: string,
   operationId: unknown,
 ): Promise<CreateReportActionResult> {
+  try {
+    await requirePermission("REPORT_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (typeof operationId !== "string" || !operationId.trim()) {
     return { ok: false, error: "operationId 无效" };
@@ -100,6 +117,11 @@ export async function saveReportDraftAction(
     auditOperationId?: string | null;
   },
 ): Promise<SaveReportActionResult> {
+  try {
+    await requirePermission("REPORT_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
   if (!caseId || typeof caseId !== "string" || !caseId.trim()) {
     return { ok: false, error: "案件 ID 无效" };
   }
@@ -158,6 +180,11 @@ export async function exportReportAction(
   operationId: unknown,
   maskSensitive: unknown = true,
 ): Promise<ExportReportActionResult> {
+  try {
+    await requirePermission("REPORT_EXPORT");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
   if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
   if (typeof operationId !== "string" || !operationId.trim()) {
     return { ok: false, error: "operationId 无效" };

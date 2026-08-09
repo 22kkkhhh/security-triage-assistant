@@ -18,6 +18,10 @@ import {
 } from "@/services/caseCommands";
 import { saveCaseStateAction } from "@/app/(app)/cases/actions";
 import { resetPrismaClient } from "@/lib/prisma";
+import {
+  setVitestDefaultAuthUser,
+  VITEST_ANALYST_USER,
+} from "@/services/auth/testAuthContext";
 import { listCaseAuditLogs } from "@/services/persistence/auditRepository";
 import {
   getCaseById,
@@ -86,6 +90,7 @@ beforeAll(async () => {
     stdio: "pipe",
   });
   await resetPrismaClient(TEST_DB_URL);
+  setVitestDefaultAuthUser(VITEST_ANALYST_USER);
 });
 
 beforeEach(async () => {
@@ -95,6 +100,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  setVitestDefaultAuthUser(null);
   const { prisma } = await import("@/lib/prisma");
   await prisma.$disconnect();
   cleanDbFiles();

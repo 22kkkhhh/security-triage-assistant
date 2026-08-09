@@ -57,7 +57,8 @@ v1.2 提供案件级操作留痕，**不等于**生产级合规审计系统。
 
 当前局限：
 
-- v1.3 Step 3 已强制 Login / Session 进入 `(app)` 页面，但 **尚未** 将 `authorize()` 接入 Case/Report Server Actions；Audit Actor 仍可能为 `MANUAL`
+- v1.3 Step 4 已将 `requirePermission` / `authorize` 接入 Case/Report/Activity Server Actions 与受保护页面；无权限请求不得 mutation / Audit
+- Audit Actor 仍可能为 `MANUAL`（Trusted Actor 属 Step 5，尚未完成）
 - `MANUAL` actorName 不可信为真实身份；未来 USER Actor 才绑定真实 `User.id`
 - SQLite 本地库；无独立审计库
 - 无防篡改 / 无不可抵赖保证

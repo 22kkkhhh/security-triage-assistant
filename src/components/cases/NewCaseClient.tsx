@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createCaseAction } from "@/app/(app)/cases/actions";
 import { ImportFlow } from "@/components/import/ImportFlow";
+import { actionErrorMessage } from "@/lib/actionErrorMessage";
 import type { NormalizedSecurityInput } from "@/services/normalization/types";
 
 /**
@@ -28,7 +29,7 @@ export function NewCaseClient() {
     try {
       const result = await createCaseAction(input, operationIdRef.current);
       if (!result.ok) {
-        setError("案件创建失败，请重试。");
+        setError(actionErrorMessage(result, "案件创建失败，请重试。"));
         setCreating(false);
         submittingRef.current = false;
         return;

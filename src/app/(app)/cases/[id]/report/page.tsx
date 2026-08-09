@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
+import { ForbiddenPanel } from "@/components/auth/ForbiddenPanel";
 import { CreateReportPanel } from "@/components/report/CreateReportPanel";
 import { PersistedReportEditor } from "@/components/report/PersistedReportEditor";
+import { ForbiddenError } from "@/domain/auth";
+import { requirePermission } from "@/services/auth/requirePermission";
 import { loadReportPage } from "@/services/persistence/reportDraftService";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +18,17 @@ export default async function CaseReportPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  try {
+    await requirePermission("REPORT_READ");
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      return (
+        <ForbiddenPanel message="当前账号无权限查看报告。" />
+      );
+    }
+    throw error;
+  }
+
   const { id } = await params;
   const loaded = await loadReportPage(id);
 

@@ -6,6 +6,10 @@ import { buildSecurityCaseDraft } from "@/services/normalization/buildSecurityCa
 import type { NormalizedSecurityInput } from "@/services/normalization/types";
 import { createCaseWithAudit } from "@/services/caseCommands";
 import {
+  requirePermission,
+  toAuthActionFailure,
+} from "@/services/auth/requirePermission";
+import {
   getCaseById,
   saveCaseSnapshot,
   StaleCaseStateError,
@@ -16,7 +20,7 @@ export type SaveCaseActionResult =
   | {
       ok: false;
       error: string;
-      code?: "STALE";
+      code?: "STALE" | "UNAUTHENTICATED" | "FORBIDDEN";
       /** STALE 时返回服务端真实版本，供客户端同步 baseUpdatedAt */
       updatedAt?: string;
       lastActivityAt?: string;
@@ -36,6 +40,12 @@ export async function saveCaseStateAction(
   caseId: string,
   rawInput: unknown,
 ): Promise<SaveCaseActionResult> {
+  try {
+    await requirePermission("CASE_SNAPSHOT_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
+
   if (!caseId || typeof caseId !== "string" || !caseId.trim()) {
     return { ok: false, error: "案件 ID 无效" };
   }
@@ -74,7 +84,11 @@ export async function saveCaseStateAction(
 
 export type CreateCaseActionResult =
   | { ok: true; id: string; caseNumber: string; alreadyApplied?: boolean }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      code?: "UNAUTHENTICATED" | "FORBIDDEN";
+    };
 
 const SOURCE_TYPES = [
   "DATABASE_AUDIT",
@@ -113,6 +127,12 @@ export async function createCaseAction(
   rawInput: unknown,
   operationId?: unknown,
 ): Promise<CreateCaseActionResult> {
+  try {
+    await requirePermission("CASE_CREATE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
+
   const parsed = parseNormalizedInput(rawInput);
   if (typeof parsed === "string") {
     return { ok: false, error: parsed };

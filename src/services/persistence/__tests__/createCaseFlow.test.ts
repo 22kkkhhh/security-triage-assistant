@@ -16,6 +16,10 @@ import { parsePastedText } from "@/services/normalization/textParser";
 import { emptyNormalizedInput } from "@/services/normalization/types";
 import { resetPrismaClient } from "@/lib/prisma";
 import {
+  setVitestDefaultAuthUser,
+  VITEST_ANALYST_USER,
+} from "@/services/auth/testAuthContext";
+import {
   getCaseById,
   listCases,
 } from "@/services/persistence/caseRepository";
@@ -39,6 +43,7 @@ beforeAll(async () => {
     stdio: "pipe",
   });
   await resetPrismaClient(TEST_DB_URL);
+  setVitestDefaultAuthUser(VITEST_ANALYST_USER);
 });
 
 beforeEach(async () => {
@@ -48,6 +53,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  setVitestDefaultAuthUser(null);
   const { prisma } = await import("@/lib/prisma");
   await prisma.$disconnect();
   cleanDbFiles();

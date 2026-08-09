@@ -35,6 +35,7 @@ import { HumanReviewPanel } from "@/components/HumanReviewPanel";
 import { SuggestedAssessmentBar } from "@/components/SuggestedAssessmentBar";
 import { TimelinePanel } from "@/components/TimelinePanel";
 import { Field } from "@/components/common";
+import { actionErrorMessage } from "@/lib/actionErrorMessage";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import type { CaseAuditLogView } from "@/services/persistence/auditRepository";
 import {
@@ -321,7 +322,9 @@ export function PersistedCaseWorkbench({
             }).checklist,
           ),
         };
-        setCommandError(result.error || "业务核查信息更新失败，请重试。");
+        setCommandError(
+          actionErrorMessage(result, "业务核查信息更新失败，请重试。"),
+        );
         return;
       }
       commitExternalSave(result.updatedAt);
@@ -364,7 +367,9 @@ export function PersistedCaseWorkbench({
         if (applyCommandStale(result)) return;
         setHumanReview(prev);
         payloadRef.current = { ...payloadRef.current, humanReview: prev };
-        setCommandError(result.error || "人工研判更新失败，请重试。");
+        setCommandError(
+          actionErrorMessage(result, "人工研判更新失败，请重试。"),
+        );
         return;
       }
       commitExternalSave(result.updatedAt);
@@ -392,7 +397,9 @@ export function PersistedCaseWorkbench({
         if (applyCommandStale(result)) return;
         setStatus(prev);
         payloadRef.current = { ...payloadRef.current, status: prev };
-        setCommandError(result.error || "状态修改失败，请重试。");
+        setCommandError(
+          actionErrorMessage(result, "状态修改失败，请重试。"),
+        );
         return;
       }
       commitExternalSave(result.updatedAt);
@@ -428,7 +435,9 @@ export function PersistedCaseWorkbench({
           ...payloadRef.current,
           checklist: prevChecklistBase,
         };
-        setCommandError(result.error || "核查项更新失败，请重试。");
+        setCommandError(
+          actionErrorMessage(result, "核查项更新失败，请重试。"),
+        );
         return;
       }
       commitExternalSave(result.updatedAt);
@@ -483,7 +492,9 @@ export function PersistedCaseWorkbench({
         createReportOperationIdRef.current,
       );
       if (!result.ok) {
-        setCommandError(result.error || "报告初稿生成失败，请重试。");
+        setCommandError(
+          actionErrorMessage(result, "报告初稿生成失败，请重试。"),
+        );
         return;
       }
       commitExternalSave(result.updatedAt);
@@ -639,7 +650,9 @@ export function PersistedCaseWorkbench({
               if (applyCommandStale(result)) return;
               setTimeline(prev);
               payloadRef.current = { ...payloadRef.current, timeline: prev };
-              setCommandError(result.error || "时间线事件添加失败，请重试。");
+              setCommandError(
+                actionErrorMessage(result, "时间线事件添加失败，请重试。"),
+              );
               return;
             }
             commitExternalSave(result.updatedAt);

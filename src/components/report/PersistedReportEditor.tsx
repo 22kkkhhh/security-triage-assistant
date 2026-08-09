@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { evidenceSourceTypeLabels } from "@/domain/labels";
 import type { Evidence, ReportData, TimelineEvent } from "@/domain/types";
 import { exportReportAction } from "@/app/(app)/cases/reportActions";
+import { actionErrorMessage } from "@/lib/actionErrorMessage";
 import {
   scanSensitive,
   sensitiveTypeLabels,
@@ -130,7 +131,9 @@ export function PersistedReportEditor({
         maskSensitive,
       );
       if (!result.ok) {
-        setExportError(result.error || "Word 报告导出失败，请重试。");
+        setExportError(
+          actionErrorMessage(result, "Word 报告导出失败，请重试。"),
+        );
         setExportFindings(null);
         return;
       }

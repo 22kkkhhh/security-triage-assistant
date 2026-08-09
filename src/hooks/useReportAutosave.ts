@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { saveReportDraftAction } from "@/app/(app)/cases/reportActions";
+import { actionErrorMessage } from "@/lib/actionErrorMessage";
 import type { ReportData } from "@/domain/types";
 import {
   autosaveReducer,
@@ -88,7 +89,11 @@ export function useReportAutosave(options: {
           });
           return false;
         }
-        dispatch({ type: "SAVE_ERROR", seq, message: result.error });
+        dispatch({
+          type: "SAVE_ERROR",
+          seq,
+          message: actionErrorMessage(result, "报告保存失败，请重试"),
+        });
         return false;
       }
       if (result.audited) {

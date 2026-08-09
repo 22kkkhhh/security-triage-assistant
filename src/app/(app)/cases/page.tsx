@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ForbiddenPanel } from "@/components/auth/ForbiddenPanel";
 import { caseStatusLabels, riskLevelLabels } from "@/domain/labels";
 import type { CaseStatus, RiskLevel } from "@/domain/types";
 import {
@@ -9,6 +10,8 @@ import {
   riskBadgeClass,
   statusBadgeClass,
 } from "@/components/cases/caseDisplay";
+import { ForbiddenError } from "@/domain/auth";
+import { requirePermission } from "@/services/auth/requirePermission";
 import { listCases } from "@/services/persistence/caseRepository";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +34,17 @@ export default async function CasesPage({
 }: {
   searchParams: SearchParams;
 }) {
+  try {
+    await requirePermission("CASE_READ");
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      return (
+        <ForbiddenPanel message="当前账号无权限查看案件列表。" />
+      );
+    }
+    throw error;
+  }
+
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const status = isCaseStatus(params.status) ? params.status : undefined;

@@ -11,6 +11,7 @@ import {
   addHandoffNoteAction,
   loadMoreCaseAuditLogsAction,
 } from "@/app/(app)/cases/commandActions";
+import { actionErrorMessage } from "@/lib/actionErrorMessage";
 import { HANDOFF_NOTE_MAX_LENGTH } from "@/domain/audit";
 import {
   formatAuditActionLabel,
@@ -106,7 +107,9 @@ export const CaseActivityPanel = forwardRef<
         operationIdRef.current,
       );
       if (!result.ok) {
-        setHandoffError(result.error || "交接记录添加失败，请重试。");
+        setHandoffError(
+          actionErrorMessage(result, "交接记录添加失败，请重试。"),
+        );
         return;
       }
       setLatestHandoff(result.audit);
@@ -132,7 +135,9 @@ export const CaseActivityPanel = forwardRef<
         40,
       );
       if (!result.ok) {
-        setLoadError(result.error || "操作记录加载失败，请重试。");
+        setLoadError(
+          actionErrorMessage(result, "操作记录加载失败，请重试。"),
+        );
         return;
       }
       setItems((prev) => mergeByIdDesc(prev, result.result.items));

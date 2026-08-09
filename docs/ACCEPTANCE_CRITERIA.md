@@ -123,7 +123,7 @@ Domain foundation（Step 1）自动化必须证明：
 - [ ] `enabled === false` 时 `hasPermission` / `authorize` 一律拒绝
 - [ ] `ForbiddenError.code === "FORBIDDEN"`；`UnauthenticatedError.code === "UNAUTHENTICATED"`
 - [ ] Auth Domain 不依赖 Better Auth package
-- [ ] Server Actions 尚未强制 authorize（待后续 Authorization 接入 Step）
+- [x] Server Actions 通过 `requirePermission` 强制 authorize（Step 4）
 
 Persistence foundation（Step 2）自动化必须证明：
 
@@ -143,4 +143,14 @@ Login / Session（Step 3）自动化必须证明：
 - [ ] `(app)` 未登录跳转 `/login`；logout 失效 Session
 - [ ] 开发 Demo Users 幂等；production 不 provisioning
 
-尚未验收（后续 Step）：Server Action authorize、Trusted Actor、用户管理 UI、密码自助修改。
+Server Authorization（Step 4）自动化必须证明：
+
+- [x] Authentication → DB reload → enabled → Permission → 业务逻辑顺序
+- [x] VIEWER：读 Case/Activity/Report 允许；全部写与 REPORT_EXPORT 拒绝且无副作用
+- [x] ANALYST/ADMIN：Case Semantic / Snapshot / Report create-edit-export 允许
+- [x] 未授权优先于 validation / STALE / operationId
+- [x] Snapshot allowlist 与 OCC / same-user operationId retry 保持
+- [x] `/cases/new` VIEWER → Forbidden（非 redirect login）
+- [x] cross-user operationId ownership **明确推迟到 Step 5**
+
+尚未验收（后续 Step）：Trusted Actor、用户管理 UI、密码自助修改、UI RBAC。

@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { ForbiddenPanel } from "@/components/auth/ForbiddenPanel";
 import { finalConclusionLabels, riskLevelLabels } from "@/domain/labels";
 import {
   displayCaseListRisk,
   riskBadgeClass,
 } from "@/components/cases/caseDisplay";
 import { ReportExportButton } from "@/components/reports/ReportExportButton";
+import { ForbiddenError } from "@/domain/auth";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
+import { requirePermission } from "@/services/auth/requirePermission";
 import { listReportCases } from "@/services/persistence/caseRepository";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +17,17 @@ export const dynamic = "force-dynamic";
  * 报告中心：仅列出 hasReport=true 的案件。
  */
 export default async function ReportsPage() {
+  try {
+    await requirePermission("REPORT_READ");
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      return (
+        <ForbiddenPanel message="当前账号无权限查看报告中心。" />
+      );
+    }
+    throw error;
+  }
+
   const reports = await listReportCases();
 
   return (

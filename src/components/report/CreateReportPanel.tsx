@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createReportDraftAction } from "@/app/(app)/cases/reportActions";
+import { actionErrorMessage } from "@/lib/actionErrorMessage";
 
 /**
  * 案件尚未生成报告时的显式创建入口（GET 无副作用）。
@@ -34,7 +35,7 @@ export function CreateReportPanel({
         operationIdRef.current,
       );
       if (!result.ok) {
-        setError(result.error || "报告初稿生成失败，请重试。");
+        setError(actionErrorMessage(result, "报告初稿生成失败，请重试。"));
         setBusy(false);
         return;
       }
