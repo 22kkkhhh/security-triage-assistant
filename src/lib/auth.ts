@@ -22,15 +22,10 @@ import {
   authAccessControl,
   authAdminRoles,
 } from "@/lib/auth-access";
+import { validateBetterAuthSecret } from "@/lib/envConfig";
 
 function requireAuthSecret(): string {
-  const secret = process.env.BETTER_AUTH_SECRET?.trim();
-  if (!secret || secret.length < 32) {
-    throw new Error(
-      "BETTER_AUTH_SECRET 未配置或熵不足（至少 32 字符）。请在 .env 中设置高熵密钥。",
-    );
-  }
-  return secret;
+  return validateBetterAuthSecret(process.env.BETTER_AUTH_SECRET);
 }
 
 function resolveBaseURL(): string {
