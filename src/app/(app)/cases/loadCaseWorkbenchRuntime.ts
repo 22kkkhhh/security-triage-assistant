@@ -3,6 +3,7 @@
  * 勿从 Client Component 引用本模块。
  */
 import type { InvestigationProgressSummary } from "@/domain/investigationProgress";
+import { shouldForceComplianceResolutionUnavailable } from "@/lib/e2eHarness";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
 import {
   CASE_UI_COMPLIANCE_TOP_N,
@@ -65,6 +66,14 @@ export async function loadCaseWorkbenchRuntimeViews(
   const capturedAt = deriveRuntimeCapturedAt(record);
 
   try {
+    // E2E-only test seam：仅在 development + 精确 e2e.db + 显式 harness flag 下
+    // 生效，代码级禁止在 production 触发；详见 src/lib/e2eHarness.ts。
+    // 强制路径与真实 resolver failure 共用同一个既有 catch，不旁路、不伪造响应。
+    if (shouldForceComplianceResolutionUnavailable()) {
+      throw new Error(
+        "E2E harness: forced compliance resolution unavailable",
+      );
+    }
     const resolved = await resolveCaseCompliance({
       draft,
       analysisResults: analyzed.analysisResults,
