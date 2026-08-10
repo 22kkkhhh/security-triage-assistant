@@ -6,6 +6,7 @@ import { expect, type Page } from "@playwright/test";
  */
 export const DEMO_USERS = {
   analyst: "demo-analyst",
+  viewer: "demo-viewer",
 } as const;
 
 export function getDemoAuthPassword(): string {
