@@ -37,11 +37,21 @@
   并保留 OCC、idempotency、authorization、audit、SYSTEM checklist protection 与
   KNOWLEDGE_SUGGESTED provenance 的测试。
 
+### M4 Release Acceptance — COMPLETE
+
+Release Acceptance: PASS
+
+- Autosave silent data loss / false SAVED 已修复。
+- Report autosave race 已修复。
+- Compliance resolver failure 已显式标记为 `RESOLUTION_UNAVAILABLE`。
+- Semantic Command minimal intent 已完成。
+- Production hardening、error sanitization 与 D2 fail-closed 均通过。
+- Auth/RBAC/OCC/HumanReview/Evidence provenance/Frozen Report 均通过。
+- 最终 full Verification：66 files / 688 tests PASS。
+
 ## NEXT
 
-### M4 Release Acceptance
-
-执行 release acceptance review 和完整 repository gates；本计划项不启动新的产品开发。
+### v1.5 Release / Tag — pending explicit user approval
 
 ## DEFERRED / NON-BLOCKING
 
