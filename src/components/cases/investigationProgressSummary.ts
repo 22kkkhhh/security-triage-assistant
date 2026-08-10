@@ -51,7 +51,7 @@ export type InvestigationProgressPanelView = {
 };
 
 export const INVESTIGATION_PROGRESS_DISCLAIMER =
-  "调查进度来自服务端投影，仅汇总尚未解决的调查事项；全部已解决不等于案件正常或可结案，最终结论须人工确认。";
+  "调查进度为系统汇总概览，仅汇总尚未解决的调查事项；全部已解决不等于案件正常或可结案，最终结论须人工确认。";
 
 /**
  * DTO → 面板展示模型。不做 BC missing + CONTEXT suggestion 二次计数。

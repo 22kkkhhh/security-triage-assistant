@@ -28,7 +28,7 @@ const CHECKLIST_EMPTY_SUCCESS_MESSAGE = "当前暂无额外合规核查事项";
 
 const PROGRESS_UNAVAILABLE_MESSAGE =
   "调查进度暂不可用。当前无法完成重新解析，请稍后刷新后继续核查；不得将当前状态视为已完成核查或全部已解决。";
-const PROGRESS_SUCCESS_ONLY_LABEL = "服务端投影 · 非最终结论";
+const PROGRESS_SUCCESS_ONLY_LABEL = "调查概览 · 非最终结论";
 
 const HUMAN_REVIEW_UNAVAILABLE_HINT =
   "调查进度暂不可用，当前无法确认核查状态；请结合现有证据完成人工研判。";

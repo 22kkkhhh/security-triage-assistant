@@ -338,14 +338,16 @@ describe("CaseCompliancePanel UI 契约（源码）", () => {
     "utf8",
   );
 
-  it("默认折叠审计细节；ruleId 仅在展开的审计信息块", () => {
-    expect(panel).toContain("审计信息");
+  it("默认折叠技术详情；ruleId 仅在二级技术详情块", () => {
+    expect(panel).toContain("技术详情");
     expect(panel).toContain("展开详情");
     expect(panel).toContain("{open &&");
     expect(panel).toContain("item.ruleIds");
-    // 首屏区域不直接渲染 ruleIds
-    const beforeAudit = panel.split("审计信息")[0] ?? "";
-    expect(beforeAudit).not.toContain("{item.ruleIds");
+    expect(panel).not.toContain("审计信息");
+    expect(panel).not.toContain("supportingRuleIds：");
+    // 一级详情区域不直接渲染 ruleIds（仅出现在技术详情 children）
+    const beforeTech = panel.split("技术详情")[0] ?? "";
+    expect(beforeTech).not.toContain("{item.ruleIds");
   });
 
   it("空态文案与 GB/T 摘要标签存在；分组为空不渲染依赖 groups.map", () => {

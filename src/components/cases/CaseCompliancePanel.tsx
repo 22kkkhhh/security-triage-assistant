@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Panel } from "@/components/common";
 import type {
   CaseCompliancePanelItem,
@@ -43,6 +43,31 @@ function sourceTypeLabel(sourceType: CaseCompliancePanelItem["sourceType"]): str
   }
 }
 
+function TechnicalDetailsDisclosure({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-2 rounded border border-dashed border-neutral-300 bg-neutral-50/80 px-2 py-1.5">
+      <button
+        type="button"
+        className="text-[11px] text-neutral-500 underline underline-offset-2"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? "收起技术详情" : "技术详情"}
+      </button>
+      {open ? (
+        <div className="mt-1.5 space-y-0.5 text-[11px] leading-5 text-neutral-500">
+          {children}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ComplianceCard({ item }: { item: CaseCompliancePanelItem }) {
   const [open, setOpen] = useState(false);
   const nav = item.officialSource;
@@ -81,10 +106,6 @@ function ComplianceCard({ item }: { item: CaseCompliancePanelItem }) {
       {open && (
         <div className="mt-2 space-y-1 border-t border-neutral-200 pt-2 text-xs leading-5 text-neutral-700">
           <p>
-            <span className="text-neutral-500">文档编码：</span>
-            {item.documentCanonicalCode}
-          </p>
-          <p>
             <span className="text-neutral-500">发布机关：</span>
             {item.issuingAuthority ?? "（未标注）"}
           </p>
@@ -94,7 +115,7 @@ function ComplianceCard({ item }: { item: CaseCompliancePanelItem }) {
           </p>
           <p>
             <span className="text-neutral-500">版本：</span>
-            {item.versionLabel}（{item.versionKey}）
+            {item.versionLabel}
           </p>
           <p>
             <span className="text-neutral-500">生效日期：</span>
@@ -102,7 +123,7 @@ function ComplianceCard({ item }: { item: CaseCompliancePanelItem }) {
           </p>
           <p>
             <span className="text-neutral-500">版本选择依据：</span>
-            {versionBasisText(item)}（{item.versionSelectionBasis}）
+            {versionBasisText(item)}
           </p>
           {item.missingContext.length > 0 && (
             <p>
@@ -140,25 +161,36 @@ function ComplianceCard({ item }: { item: CaseCompliancePanelItem }) {
             )}
           </div>
 
-          <div className="rounded border border-dashed border-neutral-300 bg-white px-2 py-1.5">
-            <p className="font-medium text-neutral-800">审计信息</p>
-            <p className="mt-0.5">
-              <span className="text-neutral-500">规则：</span>
+          <TechnicalDetailsDisclosure>
+            <p>
+              <span className="text-neutral-400">文档内部编码：</span>
+              {item.documentCanonicalCode}
+            </p>
+            <p>
+              <span className="text-neutral-400">版本键：</span>
+              {item.versionKey}
+            </p>
+            <p>
+              <span className="text-neutral-400">版本选择类型：</span>
+              {item.versionSelectionBasis}
+            </p>
+            <p>
+              <span className="text-neutral-400">关联规则：</span>
               {item.ruleIds.join("、") || "（无）"}
             </p>
             <p>
-              <span className="text-neutral-500">supportingRuleIds：</span>
+              <span className="text-neutral-400">支撑规则：</span>
               {item.supportingRuleIds.join("、") || "（无）"}
             </p>
             <p>
-              <span className="text-neutral-500">evidenceIds：</span>
+              <span className="text-neutral-400">关联证据：</span>
               {item.evidenceIds.join("、") || "（无）"}
             </p>
             <p>
-              <span className="text-neutral-500">关系类型：</span>
-              {item.relationTypes.join("、")}
+              <span className="text-neutral-400">关系类型：</span>
+              {item.relationTypes.join("、") || "（无）"}
             </p>
-          </div>
+          </TechnicalDetailsDisclosure>
         </div>
       )}
     </article>

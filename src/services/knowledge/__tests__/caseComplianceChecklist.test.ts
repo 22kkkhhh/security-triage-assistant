@@ -329,13 +329,15 @@ describe("CaseComplianceChecklistPanel UI 契约", () => {
     "utf8",
   );
 
-  it("默认折叠依据；ruleId 仅在审计区；空态文案存在", () => {
+  it("默认折叠依据；ruleId 仅在二级技术详情；空态文案存在", () => {
     expect(panel).toContain("当前暂无额外合规核查事项");
     expect(panel).toContain("依据");
     expect(panel).toContain("{open &&");
-    expect(panel).toContain("审计信息");
-    const beforeAudit = panel.split("审计信息")[0] ?? "";
-    expect(beforeAudit).not.toContain("{item.ruleIds");
+    expect(panel).toContain("技术详情");
+    expect(panel).not.toContain("审计信息");
+    expect(panel).not.toContain("supportingRuleIds：");
+    const beforeTech = panel.split("技术详情")[0] ?? "";
+    expect(beforeTech).not.toContain("{item.ruleIds");
     expect(panel).not.toMatch(/必须认定违法|已构成违规|责任成立/);
   });
 

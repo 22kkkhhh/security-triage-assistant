@@ -73,7 +73,7 @@ export function InvestigationProgressPanel({
         title="调查进度"
         extra={
           <span className="text-xs text-neutral-500">
-            服务端投影 · 非最终结论
+            调查概览 · 非最终结论
           </span>
         }
       >
