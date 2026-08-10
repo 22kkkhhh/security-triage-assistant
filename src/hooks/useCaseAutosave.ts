@@ -176,13 +176,16 @@ export function useCaseAutosave(options: {
       });
       onSavedRef.current?.(patch);
       return true;
-    } catch (error) {
+    } catch {
       if (controller.signal.aborted || generation !== generationRef.current) {
         return false;
       }
-      const message =
-        error instanceof Error ? error.message : "保存失败，请重试";
-      dispatch({ type: "SAVE_ERROR", seq, message });
+      // 未知异常：不展示 error.message / stack，只给稳定中文文案
+      dispatch({
+        type: "SAVE_ERROR",
+        seq,
+        message: "保存暂未完成，请稍后重试。",
+      });
       return false;
     } finally {
       if (abortRef.current === controller) {

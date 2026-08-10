@@ -105,10 +105,13 @@ export function useReportAutosave(options: {
         savedAt: result.reportUpdatedAt,
       });
       return true;
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "报告保存失败，请重试";
-      dispatch({ type: "SAVE_ERROR", seq, message });
+    } catch {
+      // 未知异常：不展示 error.message / stack，只给稳定中文文案
+      dispatch({
+        type: "SAVE_ERROR",
+        seq,
+        message: "报告保存暂未完成，请稍后重试。",
+      });
       return false;
     }
   }, [caseId]);

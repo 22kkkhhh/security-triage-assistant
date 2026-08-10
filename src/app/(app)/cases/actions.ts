@@ -15,6 +15,13 @@ import {
   saveCaseSnapshot,
   StaleCaseStateError,
 } from "@/services/persistence/caseRepository";
+import {
+  sanitizeActionErrorMessage,
+  unknownActionErrorMessage,
+} from "@/app/(app)/actionErrorSanitizer";
+
+const SAVE_CASE_FALLBACK = "案件保存暂未完成，请稍后重试。";
+const CREATE_CASE_FALLBACK = "案件创建暂未完成，请稍后重试。";
 
 export type SaveCaseActionResult =
   | { ok: true; updatedAt: string; status: CaseStatus; stale?: boolean }
@@ -78,8 +85,7 @@ export async function saveCaseStateAction(
         caseState: latest.caseState,
       };
     }
-    const message = error instanceof Error ? error.message : "保存失败";
-    return { ok: false, error: message };
+    return { ok: false, error: unknownActionErrorMessage(SAVE_CASE_FALLBACK) };
   }
 }
 
@@ -189,7 +195,7 @@ export async function createCaseAction(
     if (!created.ok) {
       return {
         ok: false,
-        error: created.error,
+        error: sanitizeActionErrorMessage(created.error, CREATE_CASE_FALLBACK),
         code: created.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
       };
     }
@@ -200,8 +206,10 @@ export async function createCaseAction(
       caseNumber: created.case.caseNumber,
       alreadyApplied: created.alreadyApplied,
     };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "案件创建失败";
-    return { ok: false, error: message };
+  } catch {
+    return {
+      ok: false,
+      error: unknownActionErrorMessage(CREATE_CASE_FALLBACK),
+    };
   }
 }
