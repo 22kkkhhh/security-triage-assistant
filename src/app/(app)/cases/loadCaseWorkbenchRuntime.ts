@@ -29,8 +29,15 @@ export type InvestigationProgressViewDto =
       resolutionStatus: "RESOLUTION_UNAVAILABLE";
     };
 
+/**
+ * SUCCESS = compliance resolver 正常 resolve（含真实零 findings）；
+ * RESOLUTION_UNAVAILABLE = resolver 失败，绝不能与「真实零 findings」展示相同文案。
+ */
+export type ComplianceResolutionStatus = "SUCCESS" | "RESOLUTION_UNAVAILABLE";
+
 export type CaseWorkbenchRuntimeViews = {
   compliance: CaseComplianceWorkbenchViews;
+  complianceResolutionStatus: ComplianceResolutionStatus;
   investigationProgress: InvestigationProgressViewDto;
 };
 
@@ -71,11 +78,13 @@ export async function loadCaseWorkbenchRuntimeViews(
     });
     return {
       compliance,
+      complianceResolutionStatus: "SUCCESS",
       investigationProgress: toProgressDto(progress.summary),
     };
   } catch {
     return {
       compliance: emptyCaseComplianceWorkbenchViews(),
+      complianceResolutionStatus: "RESOLUTION_UNAVAILABLE",
       investigationProgress: unavailableInvestigationProgressViewDto(),
     };
   }

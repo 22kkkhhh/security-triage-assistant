@@ -96,8 +96,10 @@ describe("Case Context → Compliance UI Refresh（router.refresh）", () => {
 describe("Case A/B UI regression（合规面板接入）", () => {
   it("Workbench 仍挂载合规参考与建议核查面板", () => {
     const workbench = readSrc("components/cases/PersistedCaseWorkbench.tsx");
+    expect(workbench).toContain("<CaseCompliancePanel");
+    expect(workbench).toContain("view={compliancePanel}");
     expect(workbench).toContain(
-      "<CaseCompliancePanel view={compliancePanel} />",
+      "resolutionStatus={complianceResolutionStatus}",
     );
     expect(workbench).toContain("complianceChecklist");
     expect(workbench).toContain("CaseComplianceChecklistPanel");

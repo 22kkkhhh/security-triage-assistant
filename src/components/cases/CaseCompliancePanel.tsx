@@ -10,6 +10,16 @@ import {
   CASE_COMPLIANCE_PANEL_DISCLAIMER,
   formatCaseComplianceRelevanceLabel,
 } from "@/services/knowledge/caseCompliancePanel";
+
+/**
+ * SUCCESS = resolver 正常 resolve（含真实零 findings）；
+ * RESOLUTION_UNAVAILABLE = resolver 失败，绝不能与「真实零 findings」展示相同文案。
+ * 与 Server `ComplianceResolutionStatus` 对齐的只读形状（避免 Client import resolver）。
+ */
+export type ComplianceResolutionStatus = "SUCCESS" | "RESOLUTION_UNAVAILABLE";
+
+export const CASE_COMPLIANCE_PANEL_UNAVAILABLE_MESSAGE =
+  "合规参考暂不可用，请稍后重试。";
 function versionBasisText(item: CaseCompliancePanelItem): string {
   if (item.versionSelectionBasis === "CASE_DATE" && item.caseDate) {
     return `案件日期 ${item.caseDate} 适用版本`;
@@ -161,14 +171,18 @@ function ComplianceCard({ item }: { item: CaseCompliancePanelItem }) {
  */
 export function CaseCompliancePanel({
   view,
+  resolutionStatus = "SUCCESS",
 }: {
   view: CaseCompliancePanelView;
+  /** 默认 SUCCESS：保持既有调用方/测试不受影响 */
+  resolutionStatus?: ComplianceResolutionStatus;
 }) {
+  const unavailable = resolutionStatus === "RESOLUTION_UNAVAILABLE";
   return (
     <Panel
       title="合规参考"
       extra={
-        !view.empty ? (
+        !unavailable && !view.empty ? (
           <span className="text-xs text-neutral-500">{view.totalCount} 条</span>
         ) : undefined
       }
@@ -177,7 +191,11 @@ export function CaseCompliancePanel({
         {CASE_COMPLIANCE_PANEL_DISCLAIMER}
       </p>
 
-      {view.empty ? (
+      {unavailable ? (
+        <p className="text-sm text-amber-700">
+          {CASE_COMPLIANCE_PANEL_UNAVAILABLE_MESSAGE}
+        </p>
+      ) : view.empty ? (
         <p className="text-sm text-neutral-500">当前未发现可展示的合规参考</p>
       ) : (
         <div className="space-y-4">

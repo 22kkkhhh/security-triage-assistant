@@ -10,6 +10,10 @@ import {
   CASE_COMPLIANCE_CHECKLIST_DISCLAIMER,
 } from "@/services/knowledge/caseComplianceChecklist";
 import { formatCaseComplianceRelevanceLabel } from "@/services/knowledge/caseCompliancePanel";
+import type { ComplianceResolutionStatus } from "./CaseCompliancePanel";
+
+export const CASE_COMPLIANCE_CHECKLIST_UNAVAILABLE_MESSAGE =
+  "合规核查建议暂不可用，请勿将当前状态视为无需核查。";
 
 function ChecklistRow({
   item,
@@ -115,6 +119,7 @@ export function CaseComplianceChecklistPanel({
   canWrite = false,
   pendingSuggestionKey = null,
   onAddSuggestion,
+  resolutionStatus = "SUCCESS",
 }: {
   view: CaseComplianceChecklistView;
   /** 已在 Case Checklist 中的 suggestionKey 集合 */
@@ -122,12 +127,15 @@ export function CaseComplianceChecklistPanel({
   canWrite?: boolean;
   pendingSuggestionKey?: string | null;
   onAddSuggestion?: (item: CaseComplianceChecklistItem) => void;
+  /** 默认 SUCCESS：保持既有调用方/测试不受影响 */
+  resolutionStatus?: ComplianceResolutionStatus;
 }) {
+  const unavailable = resolutionStatus === "RESOLUTION_UNAVAILABLE";
   return (
     <Panel
       title="建议核查事项"
       extra={
-        !view.empty ? (
+        !unavailable && !view.empty ? (
           <span className="text-xs text-neutral-500">{view.totalCount} 项</span>
         ) : undefined
       }
@@ -136,7 +144,11 @@ export function CaseComplianceChecklistPanel({
         {CASE_COMPLIANCE_CHECKLIST_DISCLAIMER}
       </p>
 
-      {view.empty ? (
+      {unavailable ? (
+        <p className="text-sm text-amber-700">
+          {CASE_COMPLIANCE_CHECKLIST_UNAVAILABLE_MESSAGE}
+        </p>
+      ) : view.empty ? (
         <p className="text-sm text-neutral-500">当前暂无额外合规核查事项</p>
       ) : (
         <div className="space-y-4">

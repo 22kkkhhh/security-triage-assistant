@@ -53,7 +53,10 @@ import {
   type CaseActivityPanelHandle,
 } from "./CaseActivityPanel";
 import { CaseComplianceChecklistPanel } from "./CaseComplianceChecklistPanel";
-import { CaseCompliancePanel } from "./CaseCompliancePanel";
+import {
+  CaseCompliancePanel,
+  type ComplianceResolutionStatus,
+} from "./CaseCompliancePanel";
 import { CaseHeader } from "./CaseHeader";
 import { InvestigationProgressPanel } from "./InvestigationProgressPanel";
 import {
@@ -83,6 +86,7 @@ export function PersistedCaseWorkbench({
   capabilities,
   compliancePanel,
   complianceChecklist,
+  complianceResolutionStatus,
   investigationProgress,
 }: {
   initial: RestoredWorkbenchView;
@@ -98,6 +102,11 @@ export function PersistedCaseWorkbench({
   compliancePanel: CaseCompliancePanelView;
   /** 服务端聚合的建议核查事项；只读，不写回 ChecklistItem */
   complianceChecklist: CaseComplianceChecklistView;
+  /**
+   * SUCCESS = resolver 正常 resolve（含真实零 findings）；
+   * RESOLUTION_UNAVAILABLE = resolver 失败，UI 不得展示与「真实零 findings」相同文案。
+   */
+  complianceResolutionStatus: ComplianceResolutionStatus;
   /** 服务端 Investigation Progress 投影；Client 不自行 resolve */
   investigationProgress: InvestigationProgressViewDto;
 }) {
@@ -678,7 +687,10 @@ export function PersistedCaseWorkbench({
 
       <DimensionPanels securityCase={analyzed} />
 
-      <CaseCompliancePanel view={compliancePanel} />
+      <CaseCompliancePanel
+        view={compliancePanel}
+        resolutionStatus={complianceResolutionStatus}
+      />
 
       <div id={INVESTIGATION_SECTION_IDS.complianceChecklist}>
         <CaseComplianceChecklistPanel
@@ -687,6 +699,7 @@ export function PersistedCaseWorkbench({
           canWrite={capabilities.canWriteChecklist}
           pendingSuggestionKey={pendingSuggestionKey}
           onAddSuggestion={handleAddComplianceSuggestion}
+          resolutionStatus={complianceResolutionStatus}
         />
       </div>
 

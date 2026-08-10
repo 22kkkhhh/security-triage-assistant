@@ -57,6 +57,7 @@ export default async function CaseDetailPage({
       capabilities={capabilities}
       compliancePanel={runtimeViews.compliance.panel}
       complianceChecklist={runtimeViews.compliance.checklist}
+      complianceResolutionStatus={runtimeViews.complianceResolutionStatus}
       investigationProgress={runtimeViews.investigationProgress}
       initialAudit={{
         items: auditPage.items,
