@@ -83,7 +83,10 @@ export function toSecurityCaseDraft(
     alert: state.caseData.alert,
     dataContext: state.caseData.dataContext,
     networkContext: state.caseData.networkContext,
-    identityContext: state.caseData.identityContext,
+    identityContext: {
+      ...state.caseData.identityContext,
+      successfulLogin: state.caseData.identityContext.successfulLogin ?? null,
+    },
     businessContext: state.businessContext,
     humanReview: state.humanReview,
     timeline: state.timeline,

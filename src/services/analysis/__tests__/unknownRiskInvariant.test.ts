@@ -59,6 +59,7 @@ describe("Domain Invariant：UNKNOWN ≠ LOW", () => {
         identityStatus: "UNKNOWN",
         loginFromUnseenSource: "UNKNOWN",
         failedLoginAttempts: null,
+        successfulLogin: null,
         accessedSystems: [],
       },
       businessContext: {
@@ -160,7 +161,7 @@ describe("Domain Invariant：UNKNOWN ≠ LOW", () => {
     expect(analyzedA.dataContext.accessStatus).toBe("ABNORMAL");
     expect(findHighData(analyzedA)).toBe(true);
     expect(analyzedA.businessContext.businessLegitimacy).toBe("AUTHORIZED");
-    expect(analyzedA.suggestedAssessment?.suggestedRiskLevel).toBe("LOW");
+    expect(analyzedA.suggestedAssessment?.suggestedRiskLevel).toBe("MEDIUM");
     expect(caseA.humanReview?.finalConclusion).toBe("NORMAL_BUSINESS");
   });
 

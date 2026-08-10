@@ -45,6 +45,7 @@ export const caseA: SecurityCaseDraft = {
     identityStatus: "NORMAL",
     accountName: "etl_svc_demo01",
     failedLoginAttempts: 0,
+    successfulLogin: true,
     loginFromUnseenSource: "NORMAL",
     loginSourceIp: "10.20.3.15",
     accessedSystems: ["CRM_PROD"],

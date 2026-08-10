@@ -108,8 +108,8 @@ describe("Case A：技术异常但业务授权", () => {
   it("系统建议降低风险并提示业务合法上下文", () => {
     const assessment = analyzedA.suggestedAssessment;
     expect(assessment).not.toBeNull();
-    expect(assessment?.suggestedRiskLevel).toBe("LOW");
-    expect(assessment?.summary).toMatch(/授权/);
+    expect(assessment?.suggestedRiskLevel).toBe("MEDIUM");
+    expect(assessment?.summary).toMatch(/授权|核实技术风险/);
   });
 
   it("业务上下文已确认不再自动完成 SECURITY_VERIFICATION 核查项", () => {

@@ -79,6 +79,7 @@ export function buildSecurityCaseDraft(
       identityStatus: "UNKNOWN",
       accountName: input.username,
       failedLoginAttempts: input.failedLoginAttempts,
+      successfulLogin: input.successfulLogin,
       loginFromUnseenSource: "UNKNOWN",
       loginSourceIp: input.sourceIp,
       accessedSystems: input.accessedSystems,

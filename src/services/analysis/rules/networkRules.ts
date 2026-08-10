@@ -2,7 +2,7 @@ import { unknownEvaluation } from "../ruleHelpers";
 import type { AnalysisRule } from "../types";
 import { EMPTY_VERIFICATION_ACTIONS, VA } from "../verificationActions";
 
-/** 出站流量超过该字节数（100MB）视为异常出站 */
+/** 出站流量超过该字节数（100MB）视为异常出站启发式阈值 */
 const OUTBOUND_BYTES_THRESHOLD = 100 * 1024 * 1024;
 
 export const networkRules: AnalysisRule[] = [
@@ -22,7 +22,7 @@ export const networkRules: AnalysisRule[] = [
         return {
           status: "ABNORMAL",
           riskLevel: "HIGH",
-          explanation: `检测到向 ${n.externalDestination ?? "未知外部地址"} 的持续公网通信，暂无法排除数据外传风险，建议进一步核查通信内容。`,
+          explanation: `当前证据显示检测到向 ${n.externalDestination ?? "未知外部地址"} 的持续公网通信，暂无法排除数据外传风险，建议进一步核查通信内容。`,
           verificationActions: [
             VA.fetchEgressNetworkLog,
             VA.verifyExternalCommunicationContent,
@@ -32,7 +32,7 @@ export const networkRules: AnalysisRule[] = [
               sourceType: "NETWORK_LOG",
               timestamp: securityCase.alert.occurredAt,
               title: "出口网关流量日志（脱敏摘录）",
-              summary: `检测到自内网向 ${n.externalDestination ?? "未知外部地址"} 的持续公网连接，与常规业务外联基线不符。`,
+              summary: `检测到自内网向 ${n.externalDestination ?? "未知外部地址"} 的持续公网连接，存在异常公网通信特征。`,
             },
           ],
         };
@@ -40,7 +40,7 @@ export const networkRules: AnalysisRule[] = [
       return {
         status: "NORMAL",
         riskLevel: "LOW",
-        explanation: "未发现异常公网通信。",
+        explanation: "当前证据未见异常公网通信。",
         verificationActions: EMPTY_VERIFICATION_ACTIONS,
         evidences: [],
       };
@@ -63,14 +63,14 @@ export const networkRules: AnalysisRule[] = [
         return {
           status: "ABNORMAL",
           riskLevel: "HIGH",
-          explanation: `告警时间窗内出站流量约 ${mb}MB，明显超出常规业务出站基线，暂无法排除数据外传风险。`,
+          explanation: `当前证据显示告警时间窗内出站流量约 ${mb}MB，超过系统固定告警阈值（100MB），存在大量出站传输特征，暂无法排除数据外传风险，建议进一步核查。`,
           verificationActions: [VA.verifyOutboundTrafficDetails],
           evidences: [
             {
               sourceType: "NETWORK_LOG",
               timestamp: securityCase.alert.occurredAt,
               title: "出口流量统计（脱敏摘录）",
-              summary: `告警时间窗内累计出站流量约 ${mb}MB，明显超出常规业务出站基线。`,
+              summary: `告警时间窗内累计出站流量约 ${mb}MB，超过固定告警阈值。`,
             },
           ],
         };

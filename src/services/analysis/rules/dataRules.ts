@@ -19,6 +19,12 @@ export const dataRules: AnalysisRule[] = [
           [VA.supplementDbAuditLog],
         );
       }
+      if (d.sensitiveFieldTypes.length === 0) {
+        return unknownEvaluation(
+          "已有访问记录数，但缺少涉及敏感字段类型信息，无法判断是否构成大批量敏感数据访问。",
+          [VA.supplementDbAuditLog],
+        );
+      }
       const isLarge =
         d.accessedRecordCount >= LARGE_QUERY_THRESHOLD &&
         d.sensitiveFieldTypes.length > 0;
@@ -26,7 +32,7 @@ export const dataRules: AnalysisRule[] = [
         return {
           status: "NORMAL",
           riskLevel: "LOW",
-          explanation: `查询返回 ${d.accessedRecordCount} 行，未达大批量阈值，未见大批量敏感数据访问。`,
+          explanation: `查询返回 ${d.accessedRecordCount} 行，未达大批量阈值，当前证据未见大批量敏感数据访问。`,
           verificationActions: EMPTY_VERIFICATION_ACTIONS,
           evidences: [],
         };
@@ -34,7 +40,7 @@ export const dataRules: AnalysisRule[] = [
       return {
         status: "ABNORMAL",
         riskLevel: "HIGH",
-        explanation: `单次查询返回 ${d.accessedRecordCount.toLocaleString()} 行，涉及敏感字段（${d.sensitiveFieldTypes.join("、")}），明显超出常规业务查询量级，存在批量敏感数据暴露风险。`,
+        explanation: `当前证据显示单次查询返回 ${d.accessedRecordCount.toLocaleString()} 行，涉及敏感字段（${d.sensitiveFieldTypes.join("、")}），明显超出常规业务查询量级，存在批量敏感数据暴露风险，建议进一步核查。`,
         verificationActions: [
           VA.verifyPlannedTask,
           VA.verifyChangeTicket,
@@ -90,7 +96,7 @@ export const dataRules: AnalysisRule[] = [
         return {
           status: "ABNORMAL",
           riskLevel: "HIGH",
-          explanation: `${baseEvidence.summary} 偏离幅度达到高风险阈值，存在批量敏感数据暴露风险。`,
+          explanation: `${baseEvidence.summary} 偏离幅度达到高风险阈值，存在批量敏感数据暴露风险，建议进一步核查。`,
           verificationActions: [
             VA.verifyPlannedTask,
             VA.verifyChangeTicket,
@@ -130,14 +136,13 @@ export const dataRules: AnalysisRule[] = [
         );
       }
       if (d.outsideBusinessHours === "ABNORMAL") {
-        // timestamp 字段仍存 ISO；嵌入用户可见文案时格式化为可读时间
         const timeText = securityCase.alert.occurredAt
           ? formatDateTimeForDisplay(securityCase.alert.occurredAt)
           : "（时间未知）";
         return {
           status: "ABNORMAL",
           riskLevel: "MEDIUM",
-          explanation: `敏感数据访问发生在非工作时间（${timeText}），与常规业务操作时间不符。`,
+          explanation: `当前证据显示敏感数据访问发生在非工作时间（${timeText}），与常规业务操作时间不符，建议进一步核查。`,
           verificationActions: [VA.verifyOffHoursPlannedTask],
           evidences: [
             {

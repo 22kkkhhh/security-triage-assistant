@@ -47,6 +47,7 @@ export const caseB: SecurityCaseDraft = {
     identityStatus: "ABNORMAL",
     accountName: "demo_user_07",
     failedLoginAttempts: 16,
+    successfulLogin: true,
     loginFromUnseenSource: "ABNORMAL",
     loginSourceIp: "172.16.8.23",
     accessedSystems: ["HR 系统", "ERP 系统", "CRM_PROD"],

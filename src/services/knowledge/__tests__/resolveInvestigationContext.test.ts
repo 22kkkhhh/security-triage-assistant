@@ -56,6 +56,7 @@ function emptyDraft(): SecurityCaseDraft {
       identityStatus: "UNKNOWN",
       accountName: null,
       failedLoginAttempts: null,
+      successfulLogin: null,
       loginFromUnseenSource: "UNKNOWN",
       loginSourceIp: null,
       accessedSystems: [],

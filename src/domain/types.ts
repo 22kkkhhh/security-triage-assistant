@@ -121,6 +121,11 @@ export interface IdentityContext {
   accountName: string | null;
   /** 连续失败认证次数，未获得认证日志为 null */
   failedLoginAttempts: number | null;
+  /**
+   * 告警时间窗内是否出现成功登录（null = 认证日志未提供该事实）。
+   * 用于区分“连续失败后成功登录”与“仅有失败记录”。
+   */
+  successfulLogin: boolean | null;
   /** 是否来自陌生来源登录（UNKNOWN = 无历史基线可比对） */
   loginFromUnseenSource: ObservationStatus;
   /** 登录来源地址（内网/测试地址） */

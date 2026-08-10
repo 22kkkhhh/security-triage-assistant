@@ -22,7 +22,7 @@ export const identityRules: AnalysisRule[] = [
         return {
           status: "ABNORMAL",
           riskLevel: "MEDIUM",
-          explanation: `登录来源 ${i.loginSourceIp ?? "未知地址"} 此前从未在该账号的登录记录中出现，属于非常用来源。`,
+          explanation: `当前证据显示登录来源 ${i.loginSourceIp ?? "未知地址"} 此前从未在该账号的登录记录中出现，属于非常用来源，建议进一步核查。`,
           verificationActions: [
             VA.verifySourceIpOwnership,
             VA.confirmAccountUser,
@@ -67,11 +67,39 @@ export const identityRules: AnalysisRule[] = [
           evidences: [],
         };
       }
+      if (i.successfulLogin === null) {
+        return unknownEvaluation(
+          "已有失败认证次数，但缺少是否出现成功登录的事实，无法判断失败后是否成功登录。",
+          [VA.supplementAuthLogFailureCount],
+        );
+      }
+      if (i.successfulLogin === false) {
+        return {
+          status: "ABNORMAL",
+          riskLevel:
+            i.failedLoginAttempts >= FAILED_LOGIN_HIGH_THRESHOLD
+              ? "HIGH"
+              : "MEDIUM",
+          explanation: `账号连续失败认证 ${i.failedLoginAttempts} 次，当前证据未显示随后成功登录，存在异常认证活动，建议进一步核查。`,
+          verificationActions: [
+            VA.contactAccountUser,
+            VA.verifyFailedAuthSourceDistribution,
+          ],
+          evidences: [
+            {
+              sourceType: "AUTH_LOG",
+              timestamp: securityCase.alert.occurredAt,
+              title: "认证日志（脱敏摘录）",
+              summary: `账号 ${i.accountName ?? "未知账号"} 连续失败认证 ${i.failedLoginAttempts} 次，当前证据未显示成功登录。`,
+            },
+          ],
+        };
+      }
       const high = i.failedLoginAttempts >= FAILED_LOGIN_HIGH_THRESHOLD;
       return {
         status: "ABNORMAL",
         riskLevel: high ? "HIGH" : "MEDIUM",
-        explanation: `账号在成功登录前连续失败认证 ${i.failedLoginAttempts} 次，随后登录成功，疑似凭据被猜测或泄露，建议进一步核查。`,
+        explanation: `账号在成功登录前连续失败认证 ${i.failedLoginAttempts} 次，随后出现成功登录，存在异常认证特征，疑似凭据被猜测或泄露，建议进一步核查。`,
         verificationActions: [
           VA.contactAccountUser,
           VA.verifyFailedAuthSourceDistribution,
@@ -103,14 +131,14 @@ export const identityRules: AnalysisRule[] = [
         return {
           status: "ABNORMAL",
           riskLevel: "MEDIUM",
-          explanation: `同一账号在告警时间窗内先后访问 ${i.accessedSystems.length} 个业务系统（${i.accessedSystems.join("、")}），与该账号历史行为模式不符。`,
+          explanation: `当前证据显示同一账号在告警时间窗内先后访问 ${i.accessedSystems.length} 个业务系统（${i.accessedSystems.join("、")}），跨系统访问范围较广，建议核查是否符合账号职责。`,
           verificationActions: [VA.verifyCrossSystemAccessLogs],
           evidences: [
             {
               sourceType: "BUSINESS_SYSTEM_LOG",
               timestamp: securityCase.alert.occurredAt,
               title: "业务系统访问日志（脱敏摘录）",
-              summary: `账号 ${i.accountName ?? "未知账号"} 在短时间内先后访问 ${i.accessedSystems.join("、")}，跨系统访问范围超出其历史行为模式。`,
+              summary: `账号 ${i.accountName ?? "未知账号"} 在短时间内先后访问 ${i.accessedSystems.join("、")}，涉及多个业务系统。`,
             },
           ],
         };
@@ -118,7 +146,7 @@ export const identityRules: AnalysisRule[] = [
       return {
         status: "NORMAL",
         riskLevel: "LOW",
-        explanation: `访问涉及 ${i.accessedSystems.length} 个业务系统，未见异常跨系统访问。`,
+        explanation: `访问涉及 ${i.accessedSystems.length} 个业务系统，当前证据未见异常跨系统访问。`,
         verificationActions: EMPTY_VERIFICATION_ACTIONS,
         evidences: [],
       };
