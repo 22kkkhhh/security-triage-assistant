@@ -10,6 +10,7 @@ import {
 } from "@/services/intake/parseJsonAlert";
 
 const MAX_DEPTH_FIXTURE = 12;
+const MAX_FIELD_COUNT = 200;
 
 describe("externalAlertId field aliases", () => {
   it("语义明确的 alias 可映射到 externalAlertId", () => {
@@ -134,5 +135,68 @@ describe("parseJsonAlert", () => {
       nested = { level: nested };
     }
     expect(() => parseJsonAlert(JSON.stringify(nested))).toThrow(JsonAlertParseError);
+  });
+
+  it("超过 200 个普通字段被拒绝", () => {
+    const obj: Record<string, string> = {};
+    for (let i = 0; i <= MAX_FIELD_COUNT; i += 1) {
+      obj[`field${i}`] = "value";
+    }
+    expect(() => parseJsonAlert(JSON.stringify(obj))).toThrow(JsonAlertParseError);
+    expect(() => parseJsonAlert(JSON.stringify(obj))).toThrow(/字段数量过多/);
+  });
+
+  it("超过 200 个 null 字段被拒绝（null 不能绕过 field limit）", () => {
+    const obj: Record<string, null> = {};
+    for (let i = 0; i <= MAX_FIELD_COUNT; i += 1) {
+      obj[`nullField${i}`] = null;
+    }
+    expect(() => parseJsonAlert(JSON.stringify(obj))).toThrow(JsonAlertParseError);
+    expect(() => parseJsonAlert(JSON.stringify(obj))).toThrow(/字段数量过多/);
+  });
+
+  it("object array 不生成 mapped pair 且产生 unrecognized warning", () => {
+    const json = JSON.stringify({
+      title: "Object array",
+      events: [{ id: 1, name: "evt" }],
+    });
+    const { pairs, unrecognized } = parseJsonAlert(json);
+    expect(pairs.some((p) => p.rawKey === "events")).toBe(false);
+    expect(
+      unrecognized.some(
+        (item) =>
+          item.rawKey === "events" &&
+          item.reason.includes("复杂数组暂不支持自动映射"),
+      ),
+    ).toBe(true);
+  });
+
+  it("mixed complex array 产生 warning", () => {
+    const json = JSON.stringify({
+      title: "Mixed array",
+      mixed: [1, { nested: true }],
+    });
+    const { pairs, unrecognized } = parseJsonAlert(json);
+    expect(pairs.some((p) => p.rawKey === "mixed")).toBe(false);
+    expect(unrecognized.some((item) => item.rawKey === "mixed")).toBe(true);
+  });
+
+  it("normalizeJsonAlert 保留 parser warning 并与 normalize 未识别项合并", () => {
+    const json = JSON.stringify({
+      title: "Combined warnings",
+      events: [{ id: 1 }],
+      data: { vendor_only: "keep-me" },
+    });
+    const result = normalizeJsonAlert(json, "OTHER");
+    expect(
+      result.unrecognized.some(
+        (item) =>
+          item.rawKey === "events" &&
+          item.reason.includes("复杂数组暂不支持自动映射"),
+      ),
+    ).toBe(true);
+    expect(result.unrecognized.some((item) => item.rawKey === "data.vendor_only")).toBe(
+      true,
+    );
   });
 });
