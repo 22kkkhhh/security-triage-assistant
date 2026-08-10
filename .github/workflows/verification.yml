@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 15
     env:
       DATABASE_URL: file:./prisma/ci.db
+      BETTER_AUTH_SECRET: ci-test-only-not-a-production-secret-2026
+      BETTER_AUTH_URL: http://127.0.0.1:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
