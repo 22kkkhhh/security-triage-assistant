@@ -57,15 +57,18 @@ import {
   buildChecklistReopenCanonicalState,
   buildStatusCommandCanonicalState,
   buildTimelineAddCanonicalState,
-  extractLegacyBusinessContextPatch,
-  extractLegacyChecklistItemIntent,
-  extractLegacyTimelineEventIntent,
+  resolveBusinessContextPatch,
+  resolveChecklistAddItemIntent,
+  resolveTimelineEventIntent,
   STRUCTURED_BC_FIELDS,
+  type ChecklistAddSemanticIntent,
+  type TimelineEventSemanticIntent,
 } from "./semanticCommandCanonicalization";
 import {
   isCaseStatus,
   requireBaseUpdatedAt,
   staleCommandResult,
+  type BusinessContextSemanticPatch,
   type CommandResult,
   type NextCaseStateInput,
 } from "./types";
@@ -273,9 +276,12 @@ export async function changeCaseStatusCommand(input: {
   caseId: string;
   nextStatus: CaseStatus;
   operationId: string;
-  nextCaseState: NextCaseStateInput;
   baseUpdatedAt: string;
   actor: AuditActor;
+  /**
+   * @deprecated transitional — fully ignored; remove after Cursor caller migration
+   */
+  nextCaseState?: NextCaseStateInput;
 }): Promise<CommandResult> {
   const actor = requireActor(input.actor);
   if ("ok" in actor && actor.ok === false) return actor;
@@ -348,9 +354,14 @@ export async function applyChecklistCommand(input: {
   action: ChecklistCommandAction;
   itemId: string;
   operationId: string;
-  nextCaseState: NextCaseStateInput;
   baseUpdatedAt: string;
   actor: AuditActor;
+  /** Minimal add intent (add action only). */
+  itemIntent?: ChecklistAddSemanticIntent;
+  /**
+   * @deprecated transitional fallback — remove after Cursor caller migration
+   */
+  nextCaseState?: NextCaseStateInput;
 }): Promise<CommandResult> {
   const actor = requireActor(input.actor);
   if ("ok" in actor && actor.ok === false) return actor;
@@ -419,17 +430,18 @@ export async function applyChecklistCommand(input: {
     };
   } else if (input.action === "add") {
     const oldItems = existing.caseState.checklist;
-    const legacyIntent = extractLegacyChecklistItemIntent(
-      input.nextCaseState.checklist,
-      input.itemId,
-    );
-    if (!legacyIntent) {
+    const resolvedItem = resolveChecklistAddItemIntent({
+      itemId: input.itemId,
+      itemIntent: input.itemIntent,
+      nextCaseState: input.nextCaseState,
+    });
+    if (!resolvedItem) {
       return { ok: false, error: "新增核查事项的目标状态无效" };
     }
     if (oldItems.some((item) => item.id === input.itemId)) {
       return { ok: true, alreadyApplied: true, case: existing, audit: null };
     }
-    const canonical = buildChecklistAddCanonicalState(existing, legacyIntent);
+    const canonical = buildChecklistAddCanonicalState(existing, resolvedItem);
     canonicalNextState = canonical.nextState;
     const nextItem = canonical.normalizedItem;
     if (!nextItem || nextItem.origin !== "MANUAL") {
@@ -525,9 +537,13 @@ function collectStructuredBcDiff(
 export async function updateBusinessContextCommand(input: {
   caseId: string;
   operationId: string;
-  nextCaseState: NextCaseStateInput;
   baseUpdatedAt: string;
   actor: AuditActor;
+  businessContextPatch?: BusinessContextSemanticPatch;
+  /**
+   * @deprecated transitional fallback — remove after Cursor caller migration
+   */
+  nextCaseState?: NextCaseStateInput;
 }): Promise<CommandResult> {
   const actor = requireActor(input.actor);
   if ("ok" in actor && actor.ok === false) return actor;
@@ -547,9 +563,13 @@ export async function updateBusinessContextCommand(input: {
   const existing = await getCaseById(input.caseId);
   if (!existing) return { ok: false, error: "案件不存在" };
 
-  const patch = extractLegacyBusinessContextPatch(
-    input.nextCaseState.businessContext,
-  );
+  const patch = resolveBusinessContextPatch({
+    businessContextPatch: input.businessContextPatch,
+    nextCaseState: input.nextCaseState,
+  });
+  if (!patch) {
+    return { ok: false, error: "业务上下文变更缺少有效字段" };
+  }
   const canonicalNextState = buildBusinessContextCommandCanonicalState(
     existing,
     patch,
@@ -718,9 +738,13 @@ export async function addTimelineEventCommand(input: {
   caseId: string;
   operationId: string;
   eventId: string;
-  nextCaseState: NextCaseStateInput;
   baseUpdatedAt: string;
   actor: AuditActor;
+  eventIntent?: TimelineEventSemanticIntent;
+  /**
+   * @deprecated transitional fallback — remove after Cursor caller migration
+   */
+  nextCaseState?: NextCaseStateInput;
 }): Promise<CommandResult> {
   const actor = requireActor(input.actor);
   if ("ok" in actor && actor.ok === false) return actor;
@@ -750,15 +774,13 @@ export async function addTimelineEventCommand(input: {
     };
   }
 
-  const nextEvent = extractLegacyTimelineEventIntent(
-    input.nextCaseState.timeline,
-    input.eventId,
-  );
+  const nextEvent = resolveTimelineEventIntent({
+    eventId: input.eventId,
+    eventIntent: input.eventIntent,
+    nextCaseState: input.nextCaseState,
+  });
   if (!nextEvent) {
     return { ok: false, error: "目标时间线事件缺失" };
-  }
-  if (nextEvent.source !== "HUMAN") {
-    return { ok: false, error: "仅审计人工新增时间线事件" };
   }
 
   const canonicalNextState = buildTimelineAddCanonicalState(existing, nextEvent);

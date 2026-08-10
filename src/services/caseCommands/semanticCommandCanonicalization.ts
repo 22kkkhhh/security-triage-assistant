@@ -9,6 +9,8 @@ import type {
   BusinessContext,
   CaseStatus,
   ChecklistItem,
+  ChecklistSourceRef,
+  SecurityDomain,
   TimelineEvent,
 } from "@/domain/types";
 import type { PersistedCase, SaveCaseStateInput } from "@/services/persistence/types";
@@ -24,6 +26,137 @@ export type BusinessContextSemanticPatch = Pick<
   BusinessContext,
   (typeof STRUCTURED_BC_FIELDS)[number]
 >;
+
+/** Minimal checklist add intent — server owns completed/origin/relatedRuleId. */
+export type ChecklistAddSemanticIntent = {
+  id: string;
+  category: SecurityDomain;
+  label: string;
+  note?: string | null;
+  sourceKind?: "KNOWLEDGE_SUGGESTED";
+  sourceRef?: ChecklistSourceRef;
+};
+
+/** Minimal timeline append intent — server forces source=HUMAN. */
+export type TimelineEventSemanticIntent = {
+  id: string;
+  occurredAt: string;
+  eventType: string;
+  title: string;
+  description: string;
+  operator: string | null;
+};
+
+/** Build server-owned ChecklistItem from minimal add intent. */
+export function buildChecklistItemFromAddIntent(
+  intent: ChecklistAddSemanticIntent,
+): ChecklistItem {
+  const base: ChecklistItem = {
+    id: intent.id,
+    category: intent.category,
+    label: intent.label,
+    completed: false,
+    note: intent.note ?? null,
+    origin: "MANUAL",
+    relatedRuleId: null,
+  };
+  if (
+    intent.sourceKind === "KNOWLEDGE_SUGGESTED" &&
+    intent.sourceRef?.suggestionKey
+  ) {
+    return {
+      ...base,
+      sourceKind: "KNOWLEDGE_SUGGESTED",
+      sourceRef: intent.sourceRef,
+    };
+  }
+  return base;
+}
+
+/** Build HUMAN TimelineEvent from minimal intent. */
+export function buildTimelineEventFromIntent(
+  intent: TimelineEventSemanticIntent,
+): TimelineEvent {
+  return {
+    id: intent.id,
+    occurredAt: intent.occurredAt,
+    eventType: intent.eventType,
+    title: intent.title,
+    description: intent.description,
+    operator: intent.operator,
+    source: "HUMAN",
+  };
+}
+
+/**
+ * Resolve BusinessContext patch: minimal patch first, legacy fallback second.
+ * Returns null when neither source provides intent.
+ */
+export function resolveBusinessContextPatch(input: {
+  businessContextPatch?: BusinessContextSemanticPatch;
+  nextCaseState?: SaveCaseStateInput;
+}): BusinessContextSemanticPatch | null {
+  if (input.businessContextPatch) {
+    return input.businessContextPatch;
+  }
+  if (input.nextCaseState) {
+    return extractLegacyBusinessContextPatch(
+      input.nextCaseState.businessContext,
+    );
+  }
+  return null;
+}
+
+/**
+ * Resolve checklist add item intent: minimal itemIntent first, legacy fallback.
+ */
+export function resolveChecklistAddItemIntent(input: {
+  itemId: string;
+  itemIntent?: ChecklistAddSemanticIntent;
+  nextCaseState?: SaveCaseStateInput;
+}): ChecklistItem | null {
+  if (input.itemIntent) {
+    if (input.itemIntent.id !== input.itemId) {
+      return null;
+    }
+    return buildChecklistItemFromAddIntent(input.itemIntent);
+  }
+  if (input.nextCaseState) {
+    const legacy = extractLegacyChecklistItemIntent(
+      input.nextCaseState.checklist,
+      input.itemId,
+    );
+    return legacy ? normalizeChecklistAddIntent(legacy) : null;
+  }
+  return null;
+}
+
+/**
+ * Resolve timeline event intent: minimal eventIntent first, legacy fallback.
+ */
+export function resolveTimelineEventIntent(input: {
+  eventId: string;
+  eventIntent?: TimelineEventSemanticIntent;
+  nextCaseState?: SaveCaseStateInput;
+}): TimelineEvent | null {
+  if (input.eventIntent) {
+    if (input.eventIntent.id !== input.eventId) {
+      return null;
+    }
+    return buildTimelineEventFromIntent(input.eventIntent);
+  }
+  if (input.nextCaseState) {
+    const legacy = extractLegacyTimelineEventIntent(
+      input.nextCaseState.timeline,
+      input.eventId,
+    );
+    if (!legacy || legacy.source !== "HUMAN") {
+      return null;
+    }
+    return legacy;
+  }
+  return null;
+}
 
 /** Copy persisted case into SaveCaseStateInput without mutation. */
 export function copyPersistedCaseState(record: PersistedCase): SaveCaseStateInput {

@@ -27,7 +27,11 @@ export type CommandResult = CommandOk | CommandFail;
 export type NextCaseStateInput = SaveCaseStateInput;
 
 /** Canonical BusinessContext semantic patch (structured fields only). */
-export type { BusinessContextSemanticPatch } from "./semanticCommandCanonicalization";
+export type {
+  BusinessContextSemanticPatch,
+  ChecklistAddSemanticIntent,
+  TimelineEventSemanticIntent,
+} from "./semanticCommandCanonicalization";
 
 export const CASE_STATUSES: CaseStatus[] = [
   "NEW",

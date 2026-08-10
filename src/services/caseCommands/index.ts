@@ -28,11 +28,15 @@ export type {
   CommandResult,
   NextCaseStateInput,
   BusinessContextSemanticPatch,
+  ChecklistAddSemanticIntent,
+  TimelineEventSemanticIntent,
 } from "./types";
 export { isCaseStatus, CASE_STATUSES } from "./types";
 
 export {
   copyPersistedCaseState,
+  buildChecklistItemFromAddIntent,
+  buildTimelineEventFromIntent,
   extractLegacyBusinessContextPatch,
   extractLegacyChecklistItemIntent,
   extractLegacyTimelineEventIntent,
