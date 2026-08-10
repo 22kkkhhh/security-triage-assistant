@@ -186,7 +186,8 @@ export function PersistedCaseWorkbench({
     retrySave,
     cancelPendingSave,
     commitExternalSave,
-    getPersistedUpdatedAt,
+    beginSemanticCommand,
+    endSemanticCommand,
   } = useCaseAutosave({
     caseId: initial.caseId,
     initialSavedAt: initial.updatedAt,
@@ -217,12 +218,16 @@ export function PersistedCaseWorkbench({
     [capabilities.canSnapshotWrite, scheduleSaveRaw],
   );
 
-  type CommandActionResult = Awaited<
-    ReturnType<typeof changeCaseStatusAction>
-  >;
+  type CommandActionResult = Awaited<ReturnType<typeof changeCaseStatusAction>>;
+
+  /** Snapshot 未能落盘时不发送语义命令；用户输入保留，保存错误仍由顶栏展示 */
+  const SNAPSHOT_BLOCKED_MESSAGE =
+    "尚有未保存内容保存失败，已取消本次操作，请先重试保存。";
 
   /** STALE：恢复服务器 canonical，不回滚到本地点击前旧状态 */
-  const applyCommandStale = (result: Extract<CommandActionResult, { ok: false }>) => {
+  const applyCommandStale = (
+    result: Extract<CommandActionResult, { ok: false }>,
+  ) => {
     if (
       result.code !== "STALE" ||
       !result.updatedAt ||
@@ -283,16 +288,25 @@ export function PersistedCaseWorkbench({
     }
 
     const operationId = crypto.randomUUID();
-    const baseUpdatedAt = getPersistedUpdatedAt();
-    cancelPendingSave();
     setCommandError(null);
     setCommandPending(true);
     void (async () => {
+      const rollback = () => {
+        setBusinessContext(prevBc);
+        setChecklistBase(prevChecklistBase);
+      };
+      const lease = await beginSemanticCommand();
+      if (!lease.ok) {
+        rollback();
+        setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
+        setCommandPending(false);
+        return;
+      }
       try {
         const result = await updateBusinessContextAction(
           initial.caseId,
           operationId,
-          baseUpdatedAt,
+          lease.baseUpdatedAt,
           {
             plannedTaskStatus: next.plannedTaskStatus,
             changeTicketStatus: next.changeTicketStatus,
@@ -302,8 +316,7 @@ export function PersistedCaseWorkbench({
         );
         if (!result.ok) {
           if (applyCommandStale(result)) return;
-          setBusinessContext(prevBc);
-          setChecklistBase(prevChecklistBase);
+          rollback();
           setCommandError(
             actionErrorMessage(result, "业务核查信息更新失败，请重试。"),
           );
@@ -313,6 +326,7 @@ export function PersistedCaseWorkbench({
         mergeReturnedAudit(result.audit);
         refreshComplianceAfterContextPersist();
       } finally {
+        endSemanticCommand();
         setCommandPending(false);
       }
     })();
@@ -339,11 +353,16 @@ export function PersistedCaseWorkbench({
     }
 
     const operationId = crypto.randomUUID();
-    const baseUpdatedAt = getPersistedUpdatedAt();
-    cancelPendingSave();
     setCommandError(null);
     setCommandPending(true);
     void (async () => {
+      const lease = await beginSemanticCommand();
+      if (!lease.ok) {
+        setHumanReview(prev);
+        setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
+        setCommandPending(false);
+        return;
+      }
       try {
         const result = await updateHumanReviewAction(
           initial.caseId,
@@ -352,7 +371,7 @@ export function PersistedCaseWorkbench({
             finalConclusion: next.finalConclusion,
             humanRiskLevel: next.humanRiskLevel,
           },
-          baseUpdatedAt,
+          lease.baseUpdatedAt,
         );
         if (!result.ok) {
           if (applyCommandStale(result)) return;
@@ -368,6 +387,7 @@ export function PersistedCaseWorkbench({
         mergeReturnedAudit(result.audit);
         refreshComplianceAfterContextPersist();
       } finally {
+        endSemanticCommand();
         setCommandPending(false);
       }
     })();
@@ -378,29 +398,33 @@ export function PersistedCaseWorkbench({
     const prev = status;
     setStatus(next);
     const operationId = crypto.randomUUID();
-    const baseUpdatedAt = getPersistedUpdatedAt();
-    cancelPendingSave();
     setCommandError(null);
     setCommandPending(true);
     void (async () => {
+      const lease = await beginSemanticCommand();
+      if (!lease.ok) {
+        setStatus(prev);
+        setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
+        setCommandPending(false);
+        return;
+      }
       try {
         const result = await changeCaseStatusAction(
           initial.caseId,
           next,
           operationId,
-          baseUpdatedAt,
+          lease.baseUpdatedAt,
         );
         if (!result.ok) {
           if (applyCommandStale(result)) return;
           setStatus(prev);
-          setCommandError(
-            actionErrorMessage(result, "状态修改失败，请重试。"),
-          );
+          setCommandError(actionErrorMessage(result, "状态修改失败，请重试。"));
           return;
         }
         commitExternalSave(result.updatedAt);
         mergeReturnedAudit(result.audit);
       } finally {
+        endSemanticCommand();
         setCommandPending(false);
       }
     })();
@@ -436,18 +460,26 @@ export function PersistedCaseWorkbench({
       setPendingSuggestionKey(options.suggestionKey);
     }
     const operationId = crypto.randomUUID();
-    const baseUpdatedAt = getPersistedUpdatedAt();
-    cancelPendingSave();
     setCommandError(null);
     setCommandPending(true);
     void (async () => {
+      const lease = await beginSemanticCommand();
+      if (!lease.ok) {
+        setChecklistBase(prevChecklistBase);
+        if (options?.suggestionKey) {
+          setPendingSuggestionKey(null);
+        }
+        setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
+        setCommandPending(false);
+        return;
+      }
       try {
         const result = await applyChecklistCommandAction(
           initial.caseId,
           action,
           itemId,
           operationId,
-          baseUpdatedAt,
+          lease.baseUpdatedAt,
           action === "add" && options?.addItem
             ? toChecklistAddIntent(options.addItem)
             : undefined,
@@ -471,6 +503,7 @@ export function PersistedCaseWorkbench({
         mergeReturnedAudit(result.audit);
         refreshComplianceAfterContextPersist();
       } finally {
+        endSemanticCommand();
         setCommandPending(false);
       }
     })();
@@ -509,12 +542,8 @@ export function PersistedCaseWorkbench({
 
   const handleBack = async () => {
     setNavigationError(null);
-    if (
-      capabilities.canSnapshotWrite &&
-      (saveState.status === "DIRTY" ||
-        saveState.status === "SAVING" ||
-        saveState.status === "ERROR")
-    ) {
+    // 由 flushSave 判定是否仍有未落盘编辑，不依赖瞬时 UI 状态
+    if (capabilities.canSnapshotWrite) {
       const ok = await flushSave();
       if (!ok) {
         setNavigationError("保存失败，请重试后返回历史案件。");
@@ -529,12 +558,7 @@ export function PersistedCaseWorkbench({
   const goToReport = async () => {
     setNavigationError(null);
     setCommandError(null);
-    if (
-      capabilities.canSnapshotWrite &&
-      (saveState.status === "DIRTY" ||
-        saveState.status === "SAVING" ||
-        saveState.status === "ERROR")
-    ) {
+    if (capabilities.canSnapshotWrite) {
       const ok = await flushSave();
       if (!ok) {
         setNavigationError("保存失败，请重试后再进入报告。");
@@ -693,9 +717,7 @@ export function PersistedCaseWorkbench({
               if (!current) return;
               const prevBase = checklistBase;
               const next = checklist.map((item) =>
-                item.id === id
-                  ? { ...item, completed: !item.completed }
-                  : item,
+                item.id === id ? { ...item, completed: !item.completed } : item,
               );
               runChecklistCommand(
                 current.completed ? "reopen" : "complete",
@@ -754,17 +776,22 @@ export function PersistedCaseWorkbench({
           const next = [...timeline, event];
           setTimeline(next);
           const operationId = crypto.randomUUID();
-          const baseUpdatedAt = getPersistedUpdatedAt();
-          cancelPendingSave();
           setCommandError(null);
           setCommandPending(true);
           void (async () => {
+            const lease = await beginSemanticCommand();
+            if (!lease.ok) {
+              setTimeline(prev);
+              setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
+              setCommandPending(false);
+              return;
+            }
             try {
               const result = await addTimelineEventAction(
                 initial.caseId,
                 event.id,
                 operationId,
-                baseUpdatedAt,
+                lease.baseUpdatedAt,
                 {
                   id: event.id,
                   occurredAt: event.occurredAt,
@@ -785,6 +812,7 @@ export function PersistedCaseWorkbench({
               commitExternalSave(result.updatedAt);
               mergeReturnedAudit(result.audit);
             } finally {
+              endSemanticCommand();
               setCommandPending(false);
             }
           })();

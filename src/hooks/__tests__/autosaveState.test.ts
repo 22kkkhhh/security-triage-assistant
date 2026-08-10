@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   autosaveReducer,
+  hasUnsavedWork,
   initialAutosaveState,
   nextSaveSeq,
 } from "@/hooks/autosaveState";
@@ -78,9 +79,8 @@ describe("自动保存状态机", () => {
     expect(state.lastSavedAt).toBe("2026-08-08T12:00:00.000Z");
   });
 
-  it("EXTERNAL_SAVED：语义命令成功后标记已保存并提升 saveSeq", () => {
-    let state = autosaveReducer(initialAutosaveState, { type: "MARK_DIRTY" });
-    state = autosaveReducer(state, {
+  it("EXTERNAL_SAVED：无待保存编辑时标记已保存并提升 saveSeq", () => {
+    const state = autosaveReducer(initialAutosaveState, {
       type: "EXTERNAL_SAVED",
       savedAt: "2026-08-08T14:00:00.000Z",
       seq: 5,
@@ -89,6 +89,59 @@ describe("自动保存状态机", () => {
     expect(state.lastSavedAt).toBe("2026-08-08T14:00:00.000Z");
     expect(state.saveSeq).toBe(5);
     expect(state.completedSeq).toBe(5);
+    expect(hasUnsavedWork(state)).toBe(false);
+  });
+
+  it("B1：语义命令成功不得把待保存 Snapshot 显示成已保存", () => {
+    let state = autosaveReducer(initialAutosaveState, { type: "MARK_DIRTY" });
+    state = autosaveReducer(state, {
+      type: "EXTERNAL_SAVED",
+      savedAt: "2026-08-08T14:00:00.000Z",
+      seq: 5,
+    });
+    expect(state.status).toBe("DIRTY");
+    expect(hasUnsavedWork(state)).toBe(true);
+    expect(state.lastSavedAt).toBe("2026-08-08T14:00:00.000Z");
+  });
+
+  it("B1：请求在途期间的新编辑不会被旧请求成功确认", () => {
+    let state = autosaveReducer(initialAutosaveState, { type: "MARK_DIRTY" });
+    const claimedDirtySeq = state.dirtySeq;
+    state = autosaveReducer(state, { type: "SAVE_START", seq: 1 });
+    // 请求在途期间用户继续输入
+    state = autosaveReducer(state, { type: "MARK_DIRTY" });
+    state = autosaveReducer(state, {
+      type: "SAVE_SUCCESS",
+      seq: 1,
+      savedAt: "2026-08-08T15:00:00.000Z",
+      claimedDirtySeq,
+    });
+    expect(state.status).toBe("DIRTY");
+    expect(hasUnsavedWork(state)).toBe(true);
+
+    // 新批次保存成功后才真正 SAVED
+    const nextClaim = state.dirtySeq;
+    state = autosaveReducer(state, { type: "SAVE_START", seq: 2 });
+    state = autosaveReducer(state, {
+      type: "SAVE_SUCCESS",
+      seq: 2,
+      savedAt: "2026-08-08T15:00:02.000Z",
+      claimedDirtySeq: nextClaim,
+    });
+    expect(state.status).toBe("SAVED");
+    expect(hasUnsavedWork(state)).toBe(false);
+  });
+
+  it("CANCEL_PENDING（STALE canonical 恢复）明确丢弃本地待保存", () => {
+    let state = autosaveReducer(initialAutosaveState, { type: "MARK_DIRTY" });
+    state = autosaveReducer(state, { type: "CANCEL_PENDING" });
+    expect(hasUnsavedWork(state)).toBe(false);
+    state = autosaveReducer(state, {
+      type: "EXTERNAL_SAVED",
+      savedAt: "2026-08-08T16:00:00.000Z",
+      seq: 9,
+    });
+    expect(state.status).toBe("SAVED");
   });
 
   it("语义命令 EXTERNAL_SAVED 之后，旧 autosave SUCCESS 不得覆盖", () => {

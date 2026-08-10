@@ -141,8 +141,11 @@ describe("Server Action 边界不再回传 error.message", () => {
 });
 
 describe("Client 侧不展示内部异常细节", () => {
-  it("autosave hooks 未知异常只用稳定中文文案", () => {
-    for (const rel of ["hooks/useCaseAutosave.ts", "hooks/useReportAutosave.ts"]) {
+  it("autosave 保存管线未知异常只用稳定中文文案", () => {
+    for (const rel of [
+      "hooks/caseAutosaveEngine.ts",
+      "hooks/reportAutosaveEngine.ts",
+    ]) {
       const src = readSrc(rel);
       expect(src).not.toMatch(/error instanceof Error \? error\.message/);
       expect(src).toContain("暂未完成，请稍后重试。");

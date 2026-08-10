@@ -68,6 +68,8 @@ describe("BusinessContext save status label", () => {
     errorMessage: null,
     saveSeq: 0,
     completedSeq: 0,
+    dirtySeq: 0,
+    savedDirtySeq: 0,
   };
 
   it("saving / saved / failed 文案", () => {

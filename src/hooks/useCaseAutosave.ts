@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { saveCaseStateAction } from "@/app/(app)/cases/actions";
-import { actionErrorMessage } from "@/lib/actionErrorMessage";
-import type { CaseStatus } from "@/domain/types";
 import {
-  mergeCaseSnapshotPatches,
-  type CaseSnapshotPatch,
-} from "@/services/persistence/caseSnapshotPatch";
-import type { PersistedCaseState } from "@/services/persistence/types";
+  createCaseAutosaveEngine,
+  type CaseAutosaveEngine,
+  type CaseStalePayload,
+  type SemanticCommandLease,
+  type SnapshotPatchInput,
+} from "./caseAutosaveEngine";
 import {
   autosaveReducer,
   initialAutosaveState,
@@ -17,23 +17,15 @@ import {
 
 const DEFAULT_DEBOUNCE_MS = 1800;
 
-export type CaseStalePayload = {
-  updatedAt: string;
-  lastActivityAt: string;
-  status: CaseStatus;
-  caseState: PersistedCaseState;
-};
-
-type SnapshotPatchInput = Omit<CaseSnapshotPatch, "baseUpdatedAt">;
+export type { CaseStalePayload, SemanticCommandLease };
 
 /**
- * 案件 Snapshot 自动保存：
+ * 案件 Snapshot 自动保存（React 绑定层）。
+ * 竞态与队列语义由 createCaseAutosaveEngine 实现：
  * - 仅提交 CaseSnapshotPatch（allowlisted 非语义字段）
- * - 文本类变更 debounce；明确操作可 immediate flush
- * - 以 saveSeq 忽略过期响应，避免状态倒退
- * - 失败不清除调用方本地业务状态
- * - Semantic Command 可通过 cancelPendingSave / commitExternalSave 协调
- * - STALE：调用方恢复服务端 canonical state（不得用客户端时间冒充版本）
+ * - 请求在途期间的新编辑不会被旧请求的成功清掉
+ * - Semantic Command 经 beginSemanticCommand / endSemanticCommand 协调
+ * - STALE 恢复 server canonical 是唯一允许丢弃本地 pending 的路径
  */
 export function useCaseAutosave(options: {
   caseId: string;
@@ -56,12 +48,10 @@ export function useCaseAutosave(options: {
   });
   const onStaleRef = useRef(options.onStale);
   const onSavedRef = useRef(options.onSaved);
-  const seqRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stateRef = useRef(state);
-  const abortRef = useRef<AbortController | null>(null);
-  const generationRef = useRef(0);
-  const pendingPatchRef = useRef<SnapshotPatchInput | null>(null);
+  const caseIdRef = useRef(caseId);
+  const initialSavedAtRef = useRef(options.initialSavedAt ?? null);
+  const debounceMsRef = useRef(debounceMs);
+  const engineRef = useRef<CaseAutosaveEngine | null>(null);
 
   useEffect(() => {
     onStaleRef.current = options.onStale;
@@ -72,175 +62,88 @@ export function useCaseAutosave(options: {
   }, [options.onSaved]);
 
   useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+    caseIdRef.current = caseId;
+  }, [caseId]);
 
-  const clearTimer = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
+  useEffect(() => {
+    debounceMsRef.current = debounceMs;
+  }, [debounceMs]);
 
-  const cancelPendingSave = useCallback(() => {
-    clearTimer();
-    generationRef.current += 1;
-    pendingPatchRef.current = null;
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
-    dispatch({ type: "CANCEL_PENDING" });
+  /** 惰性创建：只在事件回调 / effect 中调用，不在 render 期间读取 ref */
+  const getEngine = useCallback((): CaseAutosaveEngine => {
+    if (engineRef.current) return engineRef.current;
+    const created = createCaseAutosaveEngine({
+      getCaseId: () => caseIdRef.current,
+      saveCase: saveCaseStateAction,
+      dispatch,
+      debounceMs: debounceMsRef.current,
+      initialSavedAt: initialSavedAtRef.current,
+      notifyStale: (payload) => onStaleRef.current?.(payload),
+      notifySaved: (patch) => onSavedRef.current?.(patch),
+    });
+    engineRef.current = created;
+    return created;
   }, []);
-
-  /** savedAt 必须来自服务端 CaseRecord.updatedAt */
-  const commitExternalSave = useCallback((savedAt: string) => {
-    clearTimer();
-    generationRef.current += 1;
-    pendingPatchRef.current = null;
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
-    const seq = ++seqRef.current;
-    dispatch({ type: "EXTERNAL_SAVED", savedAt, seq });
-  }, []);
-
-  const runSave = useCallback(async (): Promise<boolean> => {
-    clearTimer();
-    const patch = pendingPatchRef.current;
-    if (!patch) {
-      return true;
-    }
-
-    const generation = generationRef.current;
-    const seq = ++seqRef.current;
-    dispatch({ type: "SAVE_START", seq });
-
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      if (generation !== generationRef.current || controller.signal.aborted) {
-        return false;
-      }
-
-      const baseUpdatedAt = stateRef.current.lastSavedAt;
-      const result = await saveCaseStateAction(caseId, {
-        ...patch,
-        baseUpdatedAt,
-      });
-
-      if (controller.signal.aborted || generation !== generationRef.current) {
-        return false;
-      }
-
-      if (!result.ok) {
-        if (
-          result.code === "STALE" &&
-          result.updatedAt &&
-          result.caseState &&
-          result.status &&
-          result.lastActivityAt
-        ) {
-          cancelPendingSave();
-          onStaleRef.current?.({
-            updatedAt: result.updatedAt,
-            lastActivityAt: result.lastActivityAt,
-            status: result.status,
-            caseState: result.caseState,
-          });
-          const nextSeq = ++seqRef.current;
-          dispatch({
-            type: "EXTERNAL_SAVED",
-            savedAt: result.updatedAt,
-            seq: nextSeq,
-          });
-          return false;
-        }
-        dispatch({
-          type: "SAVE_ERROR",
-          seq,
-          message: actionErrorMessage(result, "保存失败，请重试"),
-        });
-        return false;
-      }
-      pendingPatchRef.current = null;
-      dispatch({
-        type: "SAVE_SUCCESS",
-        seq,
-        savedAt: result.updatedAt,
-      });
-      onSavedRef.current?.(patch);
-      return true;
-    } catch {
-      if (controller.signal.aborted || generation !== generationRef.current) {
-        return false;
-      }
-      // 未知异常：不展示 error.message / stack，只给稳定中文文案
-      dispatch({
-        type: "SAVE_ERROR",
-        seq,
-        message: "保存暂未完成，请稍后重试。",
-      });
-      return false;
-    } finally {
-      if (abortRef.current === controller) {
-        abortRef.current = null;
-      }
-    }
-  }, [caseId, cancelPendingSave]);
 
   const scheduleSave = useCallback(
-    (
-      mode: "debounce" | "immediate" = "debounce",
-      patch: SnapshotPatchInput,
-    ) => {
-      pendingPatchRef.current = pendingPatchRef.current
-        ? mergeCaseSnapshotPatches(pendingPatchRef.current, patch)
-        : patch;
-      dispatch({ type: "MARK_DIRTY" });
-      if (mode === "immediate") {
-        void runSave();
-        return;
-      }
-      clearTimer();
-      timerRef.current = setTimeout(() => {
-        void runSave();
-      }, debounceMs);
+    (mode: "debounce" | "immediate" = "debounce", patch: SnapshotPatchInput) => {
+      getEngine().scheduleSave(mode, patch);
     },
-    [debounceMs, runSave],
+    [getEngine],
   );
 
-  const flushSave = useCallback(async (): Promise<boolean> => {
-    clearTimer();
-    const current = stateRef.current;
-    if (current.status === "SAVED" || current.status === "IDLE") {
-      return true;
-    }
-    return runSave();
-  }, [runSave]);
+  const flushSave = useCallback(
+    (): Promise<boolean> => getEngine().flushSave(),
+    [getEngine],
+  );
 
-  useEffect(() => () => {
-    clearTimer();
-    abortRef.current?.abort();
-  }, []);
+  const retrySave = useCallback(
+    (): Promise<boolean> => getEngine().retrySave(),
+    [getEngine],
+  );
+
+  const cancelPendingSave = useCallback(() => {
+    getEngine().cancelPendingSave();
+  }, [getEngine]);
+
+  const commitExternalSave = useCallback(
+    (savedAt: string) => {
+      getEngine().commitExternalSave(savedAt);
+    },
+    [getEngine],
+  );
+
+  const beginSemanticCommand = useCallback(
+    (): Promise<SemanticCommandLease> => getEngine().beginSemanticCommand(),
+    [getEngine],
+  );
+
+  const endSemanticCommand = useCallback(() => {
+    getEngine().endSemanticCommand();
+  }, [getEngine]);
 
   /** 当前已持久化的 CaseRecord.updatedAt（供 Semantic Command 作 baseUpdatedAt） */
-  const getPersistedUpdatedAt = useCallback((): string | null => {
-    return stateRef.current.lastSavedAt;
-  }, []);
+  const getPersistedUpdatedAt = useCallback(
+    (): string | null => getEngine().getPersistedUpdatedAt(),
+    [getEngine],
+  );
+
+  useEffect(
+    () => () => {
+      engineRef.current?.dispose();
+    },
+    [],
+  );
 
   return {
     saveState: state as AutosaveState,
     scheduleSave,
     flushSave,
-    retrySave: runSave,
+    retrySave,
     cancelPendingSave,
     commitExternalSave,
+    beginSemanticCommand,
+    endSemanticCommand,
     getPersistedUpdatedAt,
   };
 }
