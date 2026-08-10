@@ -159,11 +159,13 @@ function OverviewShell({
   hasReport,
   canWriteReport,
   onGoToReport,
+  unavailable = false,
 }: {
   children: ReactNode;
   hasReport: boolean;
   canWriteReport: boolean;
   onGoToReport?: () => void;
+  unavailable?: boolean;
 }) {
   return (
     <section
@@ -174,15 +176,22 @@ function OverviewShell({
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2
-            id="investigation-overview-heading"
-            className="text-sm font-semibold text-neutral-900"
-          >
-            调查进度
-          </h2>
-          <p className="mt-0.5 text-xs text-neutral-500">
-            调查概览 · 非最终结论
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2
+              id="investigation-overview-heading"
+              className="text-sm font-semibold text-neutral-900"
+            >
+              调查进度
+            </h2>
+            {unavailable ? (
+              <span className="text-xs text-amber-700">当前不可用</span>
+            ) : null}
+          </div>
+          {!unavailable ? (
+            <p className="mt-0.5 text-xs text-neutral-500">
+              调查概览 · 非最终结论
+            </p>
+          ) : null}
         </div>
         {onGoToReport ? (
           <ReportShortcut
@@ -221,6 +230,7 @@ export function InvestigationProgressPanel({
         hasReport={hasReport}
         canWriteReport={canWriteReport}
         onGoToReport={onGoToReport}
+        unavailable
       >
         <p
           className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900"
