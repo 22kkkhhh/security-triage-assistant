@@ -19,8 +19,15 @@ export type CommandFail = {
 
 export type CommandResult = CommandOk | CommandFail;
 
-/** 客户端提交的完整下一状态（canonical） */
+/**
+ * transitional / remove after Cursor caller migration
+ * Legacy callers still pass full SaveCaseStateInput; semantic commands canonicalize
+ * server-side and must not persist this payload as source of truth.
+ */
 export type NextCaseStateInput = SaveCaseStateInput;
+
+/** Canonical BusinessContext semantic patch (structured fields only). */
+export type { BusinessContextSemanticPatch } from "./semanticCommandCanonicalization";
 
 export const CASE_STATUSES: CaseStatus[] = [
   "NEW",

@@ -50,19 +50,25 @@ import {
   resolveCommandErrorMessage,
 } from "./commandErrorBoundary";
 import {
+  buildBusinessContextCommandCanonicalState,
+  buildChecklistAddCanonicalState,
+  buildChecklistCompleteCanonicalState,
+  buildChecklistDeleteCanonicalState,
+  buildChecklistReopenCanonicalState,
+  buildStatusCommandCanonicalState,
+  buildTimelineAddCanonicalState,
+  extractLegacyBusinessContextPatch,
+  extractLegacyChecklistItemIntent,
+  extractLegacyTimelineEventIntent,
+  STRUCTURED_BC_FIELDS,
+} from "./semanticCommandCanonicalization";
+import {
   isCaseStatus,
   requireBaseUpdatedAt,
   staleCommandResult,
   type CommandResult,
   type NextCaseStateInput,
 } from "./types";
-
-const STRUCTURED_BC_FIELDS = [
-  "plannedTaskStatus",
-  "changeTicketStatus",
-  "ownerVerification",
-  "businessLegitimacy",
-] as const;
 
 async function resolveOperationId(input: {
   caseId: string;
@@ -305,10 +311,7 @@ export async function changeCaseStatusCommand(input: {
   return commitStateAndAudit({
     caseId: input.caseId,
     baseUpdatedAt: base,
-    nextCaseState: {
-      ...input.nextCaseState,
-      status: input.nextStatus,
-    },
+    nextCaseState: buildStatusCommandCanonicalState(existing, input.nextStatus),
     built: buildStatusChangedAudit({
       from: oldStatus,
       to: input.nextStatus,
@@ -367,16 +370,15 @@ export async function applyChecklistCommand(input: {
   const existing = await getCaseById(input.caseId);
   if (!existing) return { ok: false, error: "案件不存在" };
 
-  const oldItems = asPersistedState(existing).checklist;
-  const nextItems = input.nextCaseState.checklist;
-  const oldItem = oldItems.find((i) => i.id === input.itemId);
-  const nextItem = nextItems.find((i) => i.id === input.itemId);
-
   let built:
     | ReturnType<typeof buildChecklistCompletedAudit>
     | null = null;
+  let canonicalNextState: NextCaseStateInput;
 
   if (input.action === "complete") {
+    const canonical = buildChecklistCompleteCanonicalState(existing, input.itemId);
+    canonicalNextState = canonical.nextState;
+    const { oldItem, nextItem } = canonical;
     if (!oldItem) return { ok: false, error: "核查事项不存在" };
     if (oldItem.completed) {
       return { ok: true, alreadyApplied: true, case: existing, audit: null };
@@ -395,6 +397,9 @@ export async function applyChecklistCommand(input: {
       changes: { ...(built.changes ?? {}), origin: oldItem.origin },
     };
   } else if (input.action === "reopen") {
+    const canonical = buildChecklistReopenCanonicalState(existing, input.itemId);
+    canonicalNextState = canonical.nextState;
+    const { oldItem, nextItem } = canonical;
     if (!oldItem) return { ok: false, error: "核查事项不存在" };
     if (!oldItem.completed) {
       return { ok: true, alreadyApplied: true, case: existing, audit: null };
@@ -413,13 +418,23 @@ export async function applyChecklistCommand(input: {
       changes: { ...(built.changes ?? {}), origin: oldItem.origin },
     };
   } else if (input.action === "add") {
-    if (oldItem) {
+    const oldItems = existing.caseState.checklist;
+    const legacyIntent = extractLegacyChecklistItemIntent(
+      input.nextCaseState.checklist,
+      input.itemId,
+    );
+    if (!legacyIntent) {
+      return { ok: false, error: "新增核查事项的目标状态无效" };
+    }
+    if (oldItems.some((item) => item.id === input.itemId)) {
       return { ok: true, alreadyApplied: true, case: existing, audit: null };
     }
+    const canonical = buildChecklistAddCanonicalState(existing, legacyIntent);
+    canonicalNextState = canonical.nextState;
+    const nextItem = canonical.normalizedItem;
     if (!nextItem || nextItem.origin !== "MANUAL") {
       return { ok: false, error: "仅允许新增人工核查事项" };
     }
-    // 同一 Case + suggestionKey 幂等（不同 itemId / operationId 也不得重复加入）
     const suggestionKey = nextItem.sourceRef?.suggestionKey;
     if (
       nextItem.sourceKind === "KNOWLEDGE_SUGGESTED" &&
@@ -427,9 +442,9 @@ export async function applyChecklistCommand(input: {
       suggestionKey.length > 0
     ) {
       const dup = oldItems.find(
-        (i) =>
-          i.sourceKind === "KNOWLEDGE_SUGGESTED" &&
-          i.sourceRef?.suggestionKey === suggestionKey,
+        (item) =>
+          item.sourceKind === "KNOWLEDGE_SUGGESTED" &&
+          item.sourceRef?.suggestionKey === suggestionKey,
       );
       if (dup) {
         return { ok: true, alreadyApplied: true, case: existing, audit: null };
@@ -462,24 +477,24 @@ export async function applyChecklistCommand(input: {
           : built.metadata,
     };
   } else if (input.action === "delete") {
-    if (!oldItem) {
+    const canonical = buildChecklistDeleteCanonicalState(existing, input.itemId);
+    canonicalNextState = canonical.nextState;
+    const { oldItem, deleted } = canonical;
+    if (!deleted) {
       return { ok: true, alreadyApplied: true, case: existing, audit: null };
     }
-    if (oldItem.origin === "SYSTEM") {
+    if (oldItem!.origin === "SYSTEM") {
       return { ok: false, error: "系统生成的核查事项不能删除。" };
     }
-    if (nextItem) {
-      return { ok: false, error: "删除核查的目标状态仍包含该事项" };
-    }
     built = buildChecklistDeletedAudit({
-      itemId: oldItem.id,
-      label: oldItem.label,
+      itemId: oldItem!.id,
+      label: oldItem!.label,
       actor: trusted,
       operationId: input.operationId,
     });
     built = {
       ...built,
-      changes: { ...(built.changes ?? {}), origin: oldItem.origin },
+      changes: { ...(built.changes ?? {}), origin: oldItem!.origin },
     };
   } else {
     return { ok: false, error: "未知核查操作" };
@@ -488,7 +503,7 @@ export async function applyChecklistCommand(input: {
   return commitStateAndAudit({
     caseId: input.caseId,
     baseUpdatedAt: base,
-    nextCaseState: input.nextCaseState,
+    nextCaseState: canonicalNextState,
     built: built!,
   });
 }
@@ -532,8 +547,15 @@ export async function updateBusinessContextCommand(input: {
   const existing = await getCaseById(input.caseId);
   if (!existing) return { ok: false, error: "案件不存在" };
 
+  const patch = extractLegacyBusinessContextPatch(
+    input.nextCaseState.businessContext,
+  );
+  const canonicalNextState = buildBusinessContextCommandCanonicalState(
+    existing,
+    patch,
+  );
   const oldBc = asPersistedState(existing).businessContext;
-  const nextBc = input.nextCaseState.businessContext;
+  const nextBc = canonicalNextState.businessContext;
   const enumChanges = collectStructuredBcDiff(oldBc, nextBc);
 
   if (Object.keys(enumChanges).length === 0) {
@@ -564,7 +586,7 @@ export async function updateBusinessContextCommand(input: {
   return commitStateAndAudit({
     caseId: input.caseId,
     baseUpdatedAt: base,
-    nextCaseState: input.nextCaseState,
+    nextCaseState: canonicalNextState,
     built: {
       ...built,
       changes: fieldChanges,
@@ -728,8 +750,9 @@ export async function addTimelineEventCommand(input: {
     };
   }
 
-  const nextEvent = input.nextCaseState.timeline.find(
-    (e) => e.id === input.eventId,
+  const nextEvent = extractLegacyTimelineEventIntent(
+    input.nextCaseState.timeline,
+    input.eventId,
   );
   if (!nextEvent) {
     return { ok: false, error: "目标时间线事件缺失" };
@@ -737,6 +760,8 @@ export async function addTimelineEventCommand(input: {
   if (nextEvent.source !== "HUMAN") {
     return { ok: false, error: "仅审计人工新增时间线事件" };
   }
+
+  const canonicalNextState = buildTimelineAddCanonicalState(existing, nextEvent);
 
   const built = buildTimelineEventAddedAudit({
     eventId: nextEvent.id,
@@ -748,7 +773,7 @@ export async function addTimelineEventCommand(input: {
   return commitStateAndAudit({
     caseId: input.caseId,
     baseUpdatedAt: base,
-    nextCaseState: input.nextCaseState,
+    nextCaseState: canonicalNextState,
     built: {
       ...built,
       changes: {

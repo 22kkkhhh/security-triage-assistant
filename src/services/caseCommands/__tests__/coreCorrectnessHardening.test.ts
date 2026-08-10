@@ -236,31 +236,44 @@ describe("SF-4 BC / Security Evidence boundary", () => {
 
   it("BC 更新 → Context 可 RESOLVED，Security Evidence 不自动 RESOLVED", async () => {
     const created = await seedCase(caseB);
-    const nextBc = {
-      ...caseB.businessContext,
-      changeTicketId: "CHG-C1-001",
-      changeTicketStatus: "CONFIRMED" as const,
-      ownerVerification: "CONFIRMED" as const,
-      businessOwner: "张三",
-    };
-    const analyzedForSave = analyzeSecurityCase({
-      ...caseB,
-      businessContext: nextBc,
+    const { saveCaseState } = await import("@/services/persistence/caseRepository");
+    await saveCaseState(created.id, {
+      ...toNextState(created, {}),
+      businessContext: {
+        ...created.caseState.businessContext,
+        changeTicketId: "CHG-C1-001",
+        businessOwner: "张三",
+      },
     });
+    const withTicket = (await getCaseById(created.id))!;
+
     const updated = await updateBusinessContextCommand({
-      caseId: created.id,
+      caseId: withTicket.id,
       operationId: "op-bc-c1",
-      baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, {
-        businessContext: nextBc,
-        checklist: analyzedForSave.checklist,
-        suggestedRiskLevel:
-          analyzedForSave.suggestedAssessment?.suggestedRiskLevel ?? null,
+      baseUpdatedAt: withTicket.updatedAt,
+      nextCaseState: toNextState(withTicket, {
+        businessContext: {
+          ...withTicket.caseState.businessContext,
+          changeTicketStatus: "CONFIRMED",
+          ownerVerification: "CONFIRMED",
+          changeTicketId: "FORGED-SHOULD-NOT-APPLY",
+          businessJustification: "forged",
+        },
+        checklist: withTicket.caseState.checklist.map((item) => ({
+          ...item,
+          completed: true,
+        })),
       }),
       actor: systemActor(),
     });
     expect(updated.ok).toBe(true);
     if (!updated.ok) return;
+    expect(updated.case.caseState.businessContext.changeTicketId).toBe(
+      "CHG-C1-001",
+    );
+    expect(updated.case.caseState.businessContext.businessJustification).toBe(
+      withTicket.caseState.businessContext.businessJustification,
+    );
 
     const analyzed = analyzeSecurityCase({
       ...caseB,
