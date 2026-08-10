@@ -1,70 +1,76 @@
 "use client";
 
-import { Panel } from "@/components/common";
+import type { ReactNode } from "react";
+import { RiskBadge } from "@/components/common";
 import { resolveCaseNextStep } from "./caseNextStep";
+import type { InvestigationOverviewStats } from "./investigationOverviewStats";
 import type { InvestigationProgressPanelView } from "./investigationProgressSummary";
 import {
   INVESTIGATION_SECTION_IDS,
   scrollToInvestigationSection,
 } from "./investigationProgressSummary";
 
-function StatButton({
+function StatCell({
   label,
-  count,
-  targetId,
+  value,
+  onClick,
   emphasize,
 }: {
   label: string;
-  count: number;
-  targetId: string;
-  emphasize?: "pending" | "done";
+  value: ReactNode;
+  onClick?: () => void;
+  emphasize?: "warn" | "muted" | "neutral";
 }) {
-  const countClass =
-    emphasize === "done"
-      ? "text-slate-700"
-      : count > 0
-        ? "text-amber-800"
-        : "text-neutral-500";
+  const valueClass =
+    emphasize === "warn"
+      ? "text-amber-800"
+      : emphasize === "muted"
+        ? "text-neutral-500"
+        : "text-neutral-900";
+
+  const content = (
+    <>
+      <div className="text-xs text-neutral-500">{label}</div>
+      <div className={`mt-0.5 text-lg font-semibold tabular-nums ${valueClass}`}>
+        {value}
+      </div>
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <div className="rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-left">
+        {content}
+      </div>
+    );
+  }
 
   return (
     <button
       type="button"
       className="rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-left hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
-      onClick={() => scrollToInvestigationSection(targetId)}
+      onClick={onClick}
     >
-      <div className="text-xs text-neutral-500">{label}</div>
-      <div className={`mt-0.5 text-lg font-semibold tabular-nums ${countClass}`}>
-        {count}
-      </div>
+      {content}
     </button>
   );
 }
 
-const NAV_LINKS: ReadonlyArray<{ label: string; targetId: string }> = [
-  { label: "业务上下文", targetId: INVESTIGATION_SECTION_IDS.businessContext },
-  { label: "证据", targetId: INVESTIGATION_SECTION_IDS.evidence },
-  { label: "待核查事项", targetId: INVESTIGATION_SECTION_IDS.checklist },
-  { label: "人工研判", targetId: INVESTIGATION_SECTION_IDS.humanReview },
-  { label: "合规参考", targetId: INVESTIGATION_SECTION_IDS.compliance },
-];
-
-function InvestigationNav() {
+function RiskStat({ suggestedRiskLevel }: { suggestedRiskLevel: InvestigationOverviewStats["suggestedRiskLevel"] }) {
   return (
-    <nav
-      aria-label="调查导航"
-      className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-neutral-100 pt-3 text-xs"
-    >
-      {NAV_LINKS.map((link) => (
-        <button
-          key={link.targetId}
-          type="button"
-          className="text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
-          onClick={() => scrollToInvestigationSection(link.targetId)}
-        >
-          {link.label}
-        </button>
-      ))}
-    </nav>
+    <div className="rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-left">
+      <div className="text-xs text-neutral-500">系统建议风险</div>
+      <div className="mt-1">
+        {suggestedRiskLevel ? (
+          <RiskBadge level={suggestedRiskLevel} />
+        ) : (
+          <span className="text-lg font-semibold text-neutral-500">—</span>
+        )}
+      </div>
+      <p className="mt-1 text-[11px] text-neutral-400">
+        辅助参考 · 非最终结论
+      </p>
+    </div>
   );
 }
 
@@ -102,91 +108,245 @@ function NextStepBlock({ view }: { view: InvestigationProgressPanelView }) {
           data-testid="case-next-step-cta"
           onClick={() => scrollToInvestigationSection(step.targetId)}
         >
-          {step.ctaLabel}
+          {step.ctaLabel === "去处理" ? "立即处理" : step.ctaLabel}
         </button>
       </div>
     </div>
   );
 }
 
+function ReportShortcut({
+  hasReport,
+  canWriteReport,
+  onGoToReport,
+}: {
+  hasReport: boolean;
+  canWriteReport: boolean;
+  onGoToReport: () => void;
+}) {
+  if (hasReport) {
+    return (
+      <button
+        type="button"
+        className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 hover:bg-slate-50"
+        onClick={onGoToReport}
+      >
+        {canWriteReport ? "继续编辑报告" : "查看报告"}
+      </button>
+    );
+  }
+
+  if (canWriteReport) {
+    return (
+      <button
+        type="button"
+        className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 hover:bg-slate-50"
+        onClick={onGoToReport}
+      >
+        生成报告
+      </button>
+    );
+  }
+
+  return null;
+}
+
+function OverviewShell({
+  children,
+  hasReport,
+  canWriteReport,
+  onGoToReport,
+}: {
+  children: ReactNode;
+  hasReport: boolean;
+  canWriteReport: boolean;
+  onGoToReport?: () => void;
+}) {
+  return (
+    <section
+      id={INVESTIGATION_SECTION_IDS.progress}
+      className="scroll-mt-14 rounded-md border border-neutral-200 bg-white px-4 py-3"
+      aria-labelledby="investigation-overview-heading"
+      data-testid="investigation-overview"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2
+            id="investigation-overview-heading"
+            className="text-sm font-semibold text-neutral-900"
+          >
+            调查概览
+          </h2>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            调查进度 · 非最终结论
+          </p>
+        </div>
+        {onGoToReport ? (
+          <ReportShortcut
+            hasReport={hasReport}
+            canWriteReport={canWriteReport}
+            onGoToReport={onGoToReport}
+          />
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 /**
- * 调查进度：消费 Server Investigation Progress DTO 的展示模型。
+ * 调查概览：风险 / 异常 / UNKNOWN / 待办 / 下一步一眼可见。
+ * 消费 Server Investigation Progress DTO 的展示模型 + 前端派生计数。
  * 不运行 progress resolver；RESOLVED ≠ Human final conclusion。
  */
 export function InvestigationProgressPanel({
   view,
+  overviewStats,
+  hasReport = false,
+  canWriteReport = false,
+  onGoToReport,
 }: {
   view: InvestigationProgressPanelView;
+  overviewStats: InvestigationOverviewStats;
+  hasReport?: boolean;
+  canWriteReport?: boolean;
+  onGoToReport?: () => void;
 }) {
   if (view.resolutionStatus === "RESOLUTION_UNAVAILABLE") {
     return (
-      <div id={INVESTIGATION_SECTION_IDS.progress}>
-        <Panel
-          title="调查进度"
-          extra={<span className="text-xs text-amber-700">当前不可用</span>}
+      <OverviewShell
+        hasReport={hasReport}
+        canWriteReport={canWriteReport}
+        onGoToReport={onGoToReport}
+      >
+        <p
+          className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900"
+          role="status"
+          data-testid="investigation-progress-unavailable"
         >
-          <p
-            className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900"
-            role="status"
-            data-testid="investigation-progress-unavailable"
-          >
-            调查进度暂不可用。当前无法完成重新解析，请稍后刷新后继续核查；不得将当前状态视为已完成核查或全部已解决。
-          </p>
-          <NextStepBlock view={view} />
-          <InvestigationNav />
-        </Panel>
-      </div>
+          调查进度暂不可用。当前无法完成重新解析，请稍后刷新后继续核查；不得将当前状态视为已完成核查或全部已解决。
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <RiskStat suggestedRiskLevel={overviewStats.suggestedRiskLevel} />
+          <StatCell
+            label="技术异常"
+            value={overviewStats.abnormalCount}
+            onClick={() =>
+              scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.analysis)
+            }
+            emphasize={overviewStats.abnormalCount > 0 ? "warn" : "muted"}
+          />
+          <StatCell
+            label="信息不足"
+            value={overviewStats.unknownCount}
+            onClick={() =>
+              scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.analysis)
+            }
+            emphasize={overviewStats.unknownCount > 0 ? "warn" : "muted"}
+          />
+          <StatCell
+            label="待核查事项"
+            value={overviewStats.pendingChecklistCount}
+            onClick={() =>
+              scrollToInvestigationSection(
+                INVESTIGATION_SECTION_IDS.evidenceWorkspace,
+              )
+            }
+            emphasize={
+              overviewStats.pendingChecklistCount > 0 ? "warn" : "muted"
+            }
+          />
+        </div>
+        <NextStepBlock view={view} />
+      </OverviewShell>
     );
   }
 
   return (
-    <div id={INVESTIGATION_SECTION_IDS.progress}>
-      <Panel
-        title="调查进度"
-        extra={
-          <span className="text-xs text-neutral-500">
-            调查概览 · 非最终结论
-          </span>
-        }
+    <OverviewShell
+      hasReport={hasReport}
+      canWriteReport={canWriteReport}
+      onGoToReport={onGoToReport}
+    >
+      <p className="mt-2 text-xs leading-5 text-neutral-600">{view.disclaimer}</p>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <RiskStat suggestedRiskLevel={overviewStats.suggestedRiskLevel} />
+        <StatCell
+          label="技术异常"
+          value={overviewStats.abnormalCount}
+          onClick={() =>
+            scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.analysis)
+          }
+          emphasize={overviewStats.abnormalCount > 0 ? "warn" : "muted"}
+        />
+        <StatCell
+          label="信息不足"
+          value={overviewStats.unknownCount}
+          onClick={() =>
+            scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.analysis)
+          }
+          emphasize={overviewStats.unknownCount > 0 ? "warn" : "muted"}
+        />
+        <StatCell
+          label="待核查事项"
+          value={overviewStats.pendingChecklistCount}
+          onClick={() =>
+            scrollToInvestigationSection(
+              INVESTIGATION_SECTION_IDS.evidenceWorkspace,
+            )
+          }
+          emphasize={
+            overviewStats.pendingChecklistCount > 0 ? "warn" : "muted"
+          }
+        />
+      </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <StatCell
+          label="待补充上下文"
+          value={view.pendingContext}
+          onClick={() =>
+            scrollToInvestigationSection(
+              INVESTIGATION_SECTION_IDS.businessContext,
+            )
+          }
+          emphasize={view.pendingContext > 0 ? "warn" : "muted"}
+        />
+        <StatCell
+          label="待收集证据"
+          value={view.pendingEvidence}
+          onClick={() =>
+            scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.evidence)
+          }
+          emphasize={view.pendingEvidence > 0 ? "warn" : "muted"}
+        />
+        <StatCell
+          label="待完成核查"
+          value={view.pendingChecks}
+          onClick={() =>
+            scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.checklist)
+          }
+          emphasize={view.pendingChecks > 0 ? "warn" : "muted"}
+        />
+        <StatCell
+          label="已解决"
+          value={view.resolvedCount}
+          onClick={() =>
+            scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.checklist)
+          }
+          emphasize="neutral"
+        />
+      </div>
+
+      <p
+        className="mt-3 text-xs text-neutral-500"
+        data-testid="investigation-progress-human-review-fact"
       >
-        <p className="mb-3 text-xs leading-5 text-neutral-600">
-          {view.disclaimer}
-        </p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <StatButton
-            label="待补充上下文"
-            count={view.pendingContext}
-            targetId={INVESTIGATION_SECTION_IDS.businessContext}
-            emphasize="pending"
-          />
-          <StatButton
-            label="待收集证据"
-            count={view.pendingEvidence}
-            targetId={INVESTIGATION_SECTION_IDS.evidence}
-            emphasize="pending"
-          />
-          <StatButton
-            label="待完成核查"
-            count={view.pendingChecks}
-            targetId={INVESTIGATION_SECTION_IDS.checklist}
-            emphasize="pending"
-          />
-          <StatButton
-            label="已解决"
-            count={view.resolvedCount}
-            targetId={INVESTIGATION_SECTION_IDS.checklist}
-            emphasize="done"
-          />
-        </div>
-        <p
-          className="mt-3 text-xs text-neutral-500"
-          data-testid="investigation-progress-human-review-fact"
-        >
-          {view.humanReviewFactLabel}
-        </p>
-        <NextStepBlock view={view} />
-        <InvestigationNav />
-      </Panel>
-    </div>
+        {view.humanReviewFactLabel}
+      </p>
+
+      <NextStepBlock view={view} />
+    </OverviewShell>
   );
 }

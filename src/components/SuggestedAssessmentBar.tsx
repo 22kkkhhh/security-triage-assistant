@@ -15,7 +15,20 @@ export function SuggestedAssessmentBar({
   assessment: SuggestedAssessment;
 }) {
   return (
-    <div className="rounded-md border border-neutral-200 bg-white">
+    <div
+      className="rounded-md border border-dashed border-neutral-300 bg-neutral-50"
+      data-testid="suggested-assessment-bar"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-neutral-200 px-4 py-2.5">
+        <div>
+          <h3 className="text-sm font-semibold text-neutral-800">
+            系统研判建议
+          </h3>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            辅助参考 · 非最终结论
+          </p>
+        </div>
+      </div>
       <div className="grid grid-cols-2 divide-x divide-neutral-100 sm:grid-cols-3 lg:grid-cols-6">
         <div className="px-4 py-3">
           <div className="text-xs text-neutral-500">数据风险</div>

@@ -26,13 +26,20 @@ export type InvestigationProgressViewDto =
 
 /** 可滚动定位的工作台区域 id */
 export const INVESTIGATION_SECTION_IDS = {
+  /** 调查概览（原 progress 锚点，保持兼容） */
   progress: "investigation-progress",
   businessContext: "investigation-business-context",
+  /** 证据与核查工作区（桌面双栏容器） */
+  evidenceWorkspace: "investigation-evidence-workspace",
   compliance: "investigation-compliance",
   complianceChecklist: "investigation-compliance-checklist",
   evidence: "investigation-evidence",
   checklist: "investigation-checklist",
   humanReview: "investigation-human-review",
+  /** 系统分析与合规参考区 */
+  analysis: "investigation-analysis",
+  /** Timeline + Activity 调查记录区 */
+  records: "investigation-records",
 } as const;
 
 export type InvestigationProgressPanelView = {

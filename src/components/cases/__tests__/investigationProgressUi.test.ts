@@ -197,7 +197,10 @@ describe("Investigation Progress UI 接线契约", () => {
     expect(page).toContain("investigationProgress={runtimeViews.investigationProgress}");
     expect(workbench).toContain("investigationProgress:");
     expect(workbench).toContain("toInvestigationProgressPanelView");
-    expect(workbench).toContain("<InvestigationProgressPanel view={investigationProgressView}");
+    expect(workbench).toContain("<InvestigationProgressPanel");
+    expect(workbench).toContain("view={investigationProgressView}");
+    expect(workbench).toContain("overviewStats={overviewStats}");
+    expect(workbench).toContain("CaseInvestigationNav");
   });
 
   it("Client 不再独立 Progress 推导 / 不 import resolver", () => {
@@ -219,7 +222,12 @@ describe("Investigation Progress UI 接线契约", () => {
     expect(humanReview).toContain("当前无法确认核查状态");
   });
 
-  it("UI 文案：待补/证据/核查/已解决；非最终结论", () => {
+  it("UI 文案：概览风险/异常/UNKNOWN/待办 + 进度计数；非最终结论", () => {
+    expect(panel).toContain("调查概览");
+    expect(panel).toContain("系统建议风险");
+    expect(panel).toContain("技术异常");
+    expect(panel).toContain("信息不足");
+    expect(panel).toContain("待核查事项");
     expect(panel).toContain("待补充上下文");
     expect(panel).toContain("待收集证据");
     expect(panel).toContain("待完成核查");

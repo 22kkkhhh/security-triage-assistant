@@ -45,9 +45,9 @@ export function HumanReviewPanel({
     <Panel
       title="人工最终研判"
       extra={
-        <span className="text-xs text-neutral-400">
+        <span className="text-xs text-slate-600">
           {canWriteSemantic || canWriteNote
-            ? "系统建议不会自动修改本区域"
+            ? "最终结论须人工确认 · 系统建议不会自动写入"
             : "只读查看"}
         </span>
       }

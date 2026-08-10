@@ -18,7 +18,7 @@ test("建议下一步、基础信息与系统分析折叠、CTA 可导航", asyn
   await loginAsDemoUser(page, DEMO_USERS.analyst);
   await page.goto(`/cases/${CASE_B_ID}`);
 
-  const progress = sectionByHeading(page, "调查进度");
+  const progress = sectionByHeading(page, "调查概览");
   await expect(progress.getByText("建议下一步")).toBeVisible();
   await expect(progress.getByTestId("case-next-step-cta")).toBeVisible();
 
