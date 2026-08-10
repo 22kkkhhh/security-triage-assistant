@@ -125,11 +125,13 @@ describe("Case A：技术异常但业务授权", () => {
     ).toBe(false);
   });
 
-  it("Case A 不存在两条近义“获取出口网络日志”核查项", () => {
+  it("Case A 各规则独立生成出口网络日志核查项（同 label、不同 ruleId）", () => {
     const egressItems = analyzedA.checklist.filter((item) =>
       item.label.includes("出口网络日志"),
     );
-    expect(egressItems.length).toBe(1);
+    expect(egressItems.length).toBe(2);
+    const suggestionKeys = egressItems.map((item) => item.sourceRef?.suggestionKey);
+    expect(new Set(suggestionKeys).size).toBe(2);
   });
 
   it("修改业务上下文后 SuggestedAssessment 正确变化", () => {
@@ -211,10 +213,12 @@ describe("Evidence 关联", () => {
 });
 
 describe("Checklist", () => {
-  it("自动生成的核查清单不重复", () => {
+  it("自动生成的核查清单 suggestionKey 不重复", () => {
     for (const securityCase of [analyzedA, analyzedB]) {
-      const labels = securityCase.checklist.map((item) => item.label);
-      expect(new Set(labels).size).toBe(labels.length);
+      const keys = securityCase.checklist
+        .map((item) => item.sourceRef?.suggestionKey ?? item.id)
+        .filter(Boolean);
+      expect(new Set(keys).size).toBe(keys.length);
     }
   });
 

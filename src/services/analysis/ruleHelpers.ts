@@ -1,4 +1,5 @@
 import type { RuleEvaluation } from "./types";
+import type { VerificationAction } from "./verificationActions";
 
 /**
  * UNKNOWN 规则结果工厂：不可评级，riskLevel 必须为 null。
@@ -6,7 +7,7 @@ import type { RuleEvaluation } from "./types";
  */
 export function unknownEvaluation(
   explanation: string,
-  verificationActions: string[],
+  verificationActions: VerificationAction[],
 ): RuleEvaluation {
   return {
     status: "UNKNOWN",

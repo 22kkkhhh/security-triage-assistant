@@ -18,18 +18,19 @@ export function generateChecklist(results: AnalysisResult[]): ChecklistItem[] {
 
   for (const result of results) {
     if (result.status === "NORMAL") continue;
-    result.verificationActions.forEach((action, actionIndex) => {
-      const key = action.trim();
-      if (key.length === 0 || key === "无" || seen.has(key)) return;
-      seen.add(key);
+    for (const action of result.verificationActions) {
+      const label = action.label.trim();
+      if (label.length === 0 || label === "无") continue;
       const suggestionKey = buildSecurityVerificationSuggestionKey(
         result.ruleId,
-        actionIndex,
+        action.id,
       );
+      if (seen.has(suggestionKey)) continue;
+      seen.add(suggestionKey);
       items.push({
         id: `CL-${items.length + 1}`,
         category: result.category,
-        label: action,
+        label: action.label,
         completed: false,
         note: null,
         origin: "SYSTEM",
@@ -43,7 +44,7 @@ export function generateChecklist(results: AnalysisResult[]): ChecklistItem[] {
           relevance: "",
         },
       });
-    });
+    }
   }
 
   return items;

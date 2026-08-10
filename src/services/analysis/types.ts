@@ -5,6 +5,9 @@ import type {
   SecurityCaseDraft,
   SecurityDomain,
 } from "@/domain/types";
+import type { VerificationAction } from "./verificationActions";
+
+export type { VerificationAction } from "./verificationActions";
 
 /** 规则命中/UNKNOWN 时产出的证据草稿，证据 ID 由引擎统一分配 */
 export interface RuleEvidenceDraft {
@@ -23,7 +26,7 @@ export interface RuleEvaluation {
   /** 判断依据；UNKNOWN 时必须说明缺少什么信息、为什么无法判断 */
   explanation: string;
   /** 建议核查事项；UNKNOWN 时必须包含建议补充的数据 */
-  verificationActions: string[];
+  verificationActions: VerificationAction[];
   evidences: RuleEvidenceDraft[];
 }
 

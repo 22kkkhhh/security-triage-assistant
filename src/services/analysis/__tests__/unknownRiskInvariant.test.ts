@@ -6,6 +6,7 @@ import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
 import { allRules } from "@/services/analysis/runRules";
 import { unknownEvaluation } from "@/services/analysis/ruleHelpers";
 import { buildSuggestedAssessment } from "@/services/analysis/suggestedAssessment";
+import { verificationAction } from "@/services/analysis/verificationActions";
 import { buildReportData } from "@/services/reporting/reportBuilder";
 import { generateDocxBuffer } from "@/services/reporting/docxGenerator";
 
@@ -14,7 +15,9 @@ const analyzedB = analyzeSecurityCase(caseB);
 
 describe("Domain Invariant：UNKNOWN ≠ LOW", () => {
   it("unknownEvaluation 工厂输出 riskLevel null", () => {
-    const result = unknownEvaluation("缺少数据", ["补充日志"]);
+    const result = unknownEvaluation("缺少数据", [
+      verificationAction("supplement-log", "补充日志"),
+    ]);
     expect(result.status).toBe("UNKNOWN");
     expect(result.riskLevel).toBeNull();
   });
@@ -97,7 +100,9 @@ describe("Domain Invariant：UNKNOWN ≠ LOW", () => {
           title: "缺数据",
           explanation: "缺少审计",
           evidenceIds: [],
-          verificationActions: ["补充数据"],
+          verificationActions: [
+            { id: "supplement-data", label: "补充数据" },
+          ],
         },
         {
           ruleId: "X-2",
@@ -107,7 +112,9 @@ describe("Domain Invariant：UNKNOWN ≠ LOW", () => {
           title: "缺网络",
           explanation: "缺少网络日志",
           evidenceIds: [],
-          verificationActions: ["补充网络日志"],
+          verificationActions: [
+            { id: "supplement-network-log", label: "补充网络日志" },
+          ],
         },
         {
           ruleId: "X-3",
@@ -117,7 +124,9 @@ describe("Domain Invariant：UNKNOWN ≠ LOW", () => {
           title: "缺身份",
           explanation: "缺少认证日志",
           evidenceIds: [],
-          verificationActions: ["补充认证日志"],
+          verificationActions: [
+            { id: "supplement-auth-log", label: "补充认证日志" },
+          ],
         },
       ],
       businessContext: {

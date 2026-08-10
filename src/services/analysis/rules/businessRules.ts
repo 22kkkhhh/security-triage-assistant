@@ -1,6 +1,6 @@
 import { unknownEvaluation } from "../ruleHelpers";
 import type { AnalysisRule } from "../types";
-
+import { EMPTY_VERIFICATION_ACTIONS, VA } from "../verificationActions";
 
 export const businessRules: AnalysisRule[] = [
   {
@@ -12,7 +12,7 @@ export const businessRules: AnalysisRule[] = [
       if (b.changeTicketStatus === "UNKNOWN") {
         return unknownEvaluation(
           "尚未核查变更管理系统，无法判断是否存在对应变更工单。",
-          ["查询变更工单"],
+          [VA.verifyChangeTicket],
         );
       }
       if (b.changeTicketStatus === "NOT_FOUND") {
@@ -21,7 +21,7 @@ export const businessRules: AnalysisRule[] = [
           riskLevel: "MEDIUM",
           explanation:
             "在变更管理系统中未找到与本次操作对应的工单，暂无法排除未授权操作，建议核查业务合理性。",
-          verificationActions: ["核查计划任务", "联系业务负责人"],
+          verificationActions: [VA.verifyPlannedTask, VA.contactBusinessOwner],
           evidences: [],
         };
       }
@@ -29,7 +29,7 @@ export const businessRules: AnalysisRule[] = [
         status: "NORMAL",
         riskLevel: "LOW",
         explanation: `已找到对应变更工单 ${b.changeTicketId ?? "（编号缺失）"}，本次操作存在正式变更记录。`,
-        verificationActions: [],
+        verificationActions: EMPTY_VERIFICATION_ACTIONS,
         evidences: [
           {
             sourceType: "CHANGE_TICKET",
@@ -50,7 +50,7 @@ export const businessRules: AnalysisRule[] = [
       if (b.ownerVerification === "UNKNOWN") {
         return unknownEvaluation(
           "尚未获取业务负责人确认，无法判断本次操作是否获得授权。",
-          ["联系业务负责人"],
+          [VA.contactBusinessOwner],
         );
       }
       if (b.ownerVerification === "NOT_CONFIRMED") {
@@ -59,7 +59,10 @@ export const businessRules: AnalysisRule[] = [
           riskLevel: "MEDIUM",
           explanation:
             "业务负责人明确未确认本次操作为授权行为，暂无法排除未授权操作。",
-          verificationActions: ["核实操作发起人身份", "评估是否需要升级安全事件"],
+          verificationActions: [
+            VA.verifyOperationInitiator,
+            VA.assessSecurityIncidentEscalation,
+          ],
           evidences: [],
         };
       }
@@ -67,7 +70,7 @@ export const businessRules: AnalysisRule[] = [
         status: "NORMAL",
         riskLevel: "LOW",
         explanation: `业务负责人 ${b.businessOwner ?? "（姓名缺失）"} 已确认本次操作属于授权行为。`,
-        verificationActions: [],
+        verificationActions: EMPTY_VERIFICATION_ACTIONS,
         evidences: [
           {
             sourceType: "MANUAL_INPUT",
@@ -88,7 +91,7 @@ export const businessRules: AnalysisRule[] = [
       if (b.businessLegitimacy === "UNKNOWN") {
         return unknownEvaluation(
           "缺少工单与负责人确认等关键信息，暂无法判断业务合理性。",
-          ["核查计划任务", "查询变更工单", "联系业务负责人"],
+          [VA.verifyPlannedTask, VA.verifyChangeTicket, VA.contactBusinessOwner],
         );
       }
       if (b.businessLegitimacy === "UNAUTHORIZED") {
@@ -97,7 +100,10 @@ export const businessRules: AnalysisRule[] = [
           riskLevel: "HIGH",
           explanation:
             "经核查本次操作未获得业务授权，存在风险，建议升级为安全事件进一步调查。",
-          verificationActions: ["记录未授权操作细节", "评估影响范围并启动处置流程"],
+          verificationActions: [
+            VA.recordUnauthorizedOperation,
+            VA.assessImpactAndStartRemediation,
+          ],
           evidences: [],
         };
       }
@@ -107,7 +113,7 @@ export const businessRules: AnalysisRule[] = [
         explanation: `经核查，本次操作存在有效变更工单，且业务负责人已确认属于授权数据迁移任务。结合现有业务证据，本次技术异常行为可由已授权业务活动合理解释。${
           b.businessJustification ? `\n业务说明：${b.businessJustification}` : ""
         }`,
-        verificationActions: [],
+        verificationActions: EMPTY_VERIFICATION_ACTIONS,
         evidences: [],
       };
     },

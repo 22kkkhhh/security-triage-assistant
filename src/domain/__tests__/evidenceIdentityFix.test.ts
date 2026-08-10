@@ -6,7 +6,7 @@ import { caseA, caseB } from "@/domain/demo";
 import { resolveInvestigationProgress } from "@/domain/investigationProgress";
 import {
   buildSecurityVerificationSuggestionKey,
-  SECURITY_EVIDENCE_IDENTITY_GAP,
+  LEGACY_SECURITY_EVIDENCE_INDEX_PROVENANCE,
 } from "@/domain/securityEvidenceIdentity";
 import type { ChecklistItem, SecurityCaseDraft } from "@/domain/types";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
@@ -198,7 +198,7 @@ describe("Evidence identity fix — Security", () => {
     const analyzed = analyzeSecurityCase(caseB);
     const actionLabel =
       analyzed.analysisResults.find((r) => r.verificationActions.length > 0)
-        ?.verificationActions[0] ?? "";
+        ?.verificationActions[0]?.label ?? "";
     expect(actionLabel.length).toBeGreaterThan(0);
 
     const legacyCompleted: ChecklistItem = {
@@ -223,7 +223,7 @@ describe("Evidence identity fix — Security", () => {
       i.relatedRuleIds.includes(legacyCompleted.relatedRuleId!),
     );
     expect(securityEvidence.some((i) => i.status === "RESOLVED")).toBe(false);
-    expect(SECURITY_EVIDENCE_IDENTITY_GAP).toBeTruthy();
+    expect(LEGACY_SECURITY_EVIDENCE_INDEX_PROVENANCE).toBeTruthy();
   });
 
   it("正确 stable identity → RESOLVED", () => {
@@ -233,10 +233,10 @@ describe("Evidence identity fix — Security", () => {
     );
     expect(targetResult).toBeDefined();
 
-    const actionIndex = 0;
+    const actionId = targetResult!.verificationActions[0]!.id;
     const suggestionKey = buildSecurityVerificationSuggestionKey(
       targetResult!.ruleId,
-      actionIndex,
+      actionId,
     );
     const systemItem = analyzed.checklist.find(
       (i) => i.sourceRef?.suggestionKey === suggestionKey,
@@ -253,7 +253,7 @@ describe("Evidence identity fix — Security", () => {
     const progress = resolveInvestigationProgress({
       securityCase: withCompleted,
     });
-    const evidenceKey = `evidence:security:${targetResult!.ruleId}:${actionIndex}`;
+    const evidenceKey = `evidence:security:${targetResult!.ruleId}:${actionId}`;
     expect(
       progress.evidenceItems.find((i) => i.key === evidenceKey)?.status,
     ).toBe("RESOLVED");
@@ -266,11 +266,11 @@ describe("Evidence identity fix — Security", () => {
     );
     expect(targetResult).toBeDefined();
 
-    const wrongKey = buildSecurityVerificationSuggestionKey("WRONG-RULE", 0);
+    const wrongKey = buildSecurityVerificationSuggestionKey("WRONG-RULE", "wrong-action");
     const wrongItem: ChecklistItem = {
       id: "CL-wrong",
       category: "DATA",
-      label: targetResult!.verificationActions[0]!,
+      label: targetResult!.verificationActions[0]!.label,
       completed: true,
       note: null,
       origin: "SYSTEM",
@@ -291,7 +291,8 @@ describe("Evidence identity fix — Security", () => {
     };
 
     const progress = resolveInvestigationProgress({ securityCase: withWrong });
-    const evidenceKey = `evidence:security:${targetResult!.ruleId}:0`;
+    const actionId = targetResult!.verificationActions[0]!.id;
+    const evidenceKey = `evidence:security:${targetResult!.ruleId}:${actionId}`;
     expect(
       progress.evidenceItems.find((i) => i.key === evidenceKey)?.status,
     ).toBe("OPEN");

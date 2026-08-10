@@ -1,6 +1,7 @@
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import { unknownEvaluation } from "../ruleHelpers";
 import type { AnalysisRule } from "../types";
+import { EMPTY_VERIFICATION_ACTIONS, VA } from "../verificationActions";
 
 /** 单次查询超过该记录数且涉及敏感字段，视为大批量敏感数据访问 */
 const LARGE_QUERY_THRESHOLD = 100_000;
@@ -15,7 +16,7 @@ export const dataRules: AnalysisRule[] = [
       if (d.accessedRecordCount === null) {
         return unknownEvaluation(
           "缺少数据库审计返回行数，无法判断是否存在大批量敏感数据访问。",
-          ["补充对应时间段的数据库审计日志（含返回行数与涉及字段）"],
+          [VA.supplementDbAuditLog],
         );
       }
       const isLarge =
@@ -26,7 +27,7 @@ export const dataRules: AnalysisRule[] = [
           status: "NORMAL",
           riskLevel: "LOW",
           explanation: `查询返回 ${d.accessedRecordCount} 行，未达大批量阈值，未见大批量敏感数据访问。`,
-          verificationActions: [],
+          verificationActions: EMPTY_VERIFICATION_ACTIONS,
           evidences: [],
         };
       }
@@ -35,10 +36,10 @@ export const dataRules: AnalysisRule[] = [
         riskLevel: "HIGH",
         explanation: `单次查询返回 ${d.accessedRecordCount.toLocaleString()} 行，涉及敏感字段（${d.sensitiveFieldTypes.join("、")}），明显超出常规业务查询量级，存在批量敏感数据暴露风险。`,
         verificationActions: [
-          "核查计划任务",
-          "查询变更工单",
-          "联系业务负责人",
-          "确认数据是否被导出及去向",
+          VA.verifyPlannedTask,
+          VA.verifyChangeTicket,
+          VA.contactBusinessOwner,
+          VA.confirmDataExportDestination,
         ],
         evidences: [
           {
@@ -66,7 +67,7 @@ export const dataRules: AnalysisRule[] = [
       ) {
         return unknownEvaluation(
           "缺少历史访问基线数据（平均访问量）或本次访问记录数，无法判断是否偏离基线。",
-          ["补充该账号及来源地址的历史访问基线数据后重新评估"],
+          [VA.supplementAccessBaseline],
         );
       }
       const ratio = d.accessedRecordCount / baseline.averageRecordCount;
@@ -90,7 +91,11 @@ export const dataRules: AnalysisRule[] = [
           status: "ABNORMAL",
           riskLevel: "HIGH",
           explanation: `${baseEvidence.summary} 偏离幅度达到高风险阈值，存在批量敏感数据暴露风险。`,
-          verificationActions: ["核查计划任务", "查询变更工单", "联系业务负责人"],
+          verificationActions: [
+            VA.verifyPlannedTask,
+            VA.verifyChangeTicket,
+            VA.contactBusinessOwner,
+          ],
           evidences: [baseEvidence],
         };
       }
@@ -99,7 +104,7 @@ export const dataRules: AnalysisRule[] = [
           status: "ABNORMAL",
           riskLevel: "MEDIUM",
           explanation: `${baseEvidence.summary} 偏离幅度超出常规波动范围，建议核查业务背景。`,
-          verificationActions: ["核查计划任务", "联系业务负责人"],
+          verificationActions: [VA.verifyPlannedTask, VA.contactBusinessOwner],
           evidences: [baseEvidence],
         };
       }
@@ -107,7 +112,7 @@ export const dataRules: AnalysisRule[] = [
         status: "NORMAL",
         riskLevel: "LOW",
         explanation: `${baseEvidence.summary} 处于常规波动范围内。`,
-        verificationActions: [],
+        verificationActions: EMPTY_VERIFICATION_ACTIONS,
         evidences: [],
       };
     },
@@ -121,7 +126,7 @@ export const dataRules: AnalysisRule[] = [
       if (d.outsideBusinessHours === "UNKNOWN") {
         return unknownEvaluation(
           "缺少工作时间基准或审计时间戳，无法判断是否发生在非工作时间。",
-          ["确认企业工作时间口径，并补充审计日志时间戳"],
+          [VA.supplementBusinessHoursAudit],
         );
       }
       if (d.outsideBusinessHours === "ABNORMAL") {
@@ -133,7 +138,7 @@ export const dataRules: AnalysisRule[] = [
           status: "ABNORMAL",
           riskLevel: "MEDIUM",
           explanation: `敏感数据访问发生在非工作时间（${timeText}），与常规业务操作时间不符。`,
-          verificationActions: ["核查是否存在夜间计划任务或值班操作安排"],
+          verificationActions: [VA.verifyOffHoursPlannedTask],
           evidences: [
             {
               sourceType: "DATABASE_AUDIT",
@@ -148,7 +153,7 @@ export const dataRules: AnalysisRule[] = [
         status: "NORMAL",
         riskLevel: "LOW",
         explanation: "敏感数据访问发生在工作时间内。",
-        verificationActions: [],
+        verificationActions: EMPTY_VERIFICATION_ACTIONS,
         evidences: [],
       };
     },

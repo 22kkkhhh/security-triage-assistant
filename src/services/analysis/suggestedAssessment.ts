@@ -128,7 +128,7 @@ export function buildSuggestedAssessment(input: {
     ...new Set(
       results
         .filter((r) => r.status !== "NORMAL")
-        .flatMap((r) => r.verificationActions),
+        .flatMap((r) => r.verificationActions.map((a) => a.label)),
     ),
   ];
 

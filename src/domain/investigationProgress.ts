@@ -137,12 +137,12 @@ function isComplianceEvidenceSuggestionResolved(
 
 function isSecurityVerificationEvidenceResolved(
   ruleId: string,
-  actionIndex: number,
+  actionId: string,
   checklist: readonly ChecklistItem[],
 ): boolean {
   const suggestionKey = buildSecurityVerificationSuggestionKey(
     ruleId,
-    actionIndex,
+    actionId,
   );
   return checklist.some(
     (item) =>
@@ -161,19 +161,19 @@ function collectSecurityEvidenceItems(
 
   for (const result of results) {
     if (result.status === "NORMAL") continue;
-    result.verificationActions.forEach((action, actionIndex) => {
-      const label = action.trim();
-      if (label.length === 0 || label === "无") return;
+    for (const action of result.verificationActions) {
+      const label = action.label.trim();
+      if (label.length === 0 || label === "无") continue;
       const sourceKey = buildSecurityEvidenceProgressSourceKey(
         result.ruleId,
-        actionIndex,
+        action.id,
       );
       const key = evidenceProgressKey(sourceKey);
-      if (byKey.has(key)) return;
+      if (byKey.has(key)) continue;
 
       const resolved = isSecurityVerificationEvidenceResolved(
         result.ruleId,
-        actionIndex,
+        action.id,
         checklist,
       );
       byKey.set(key, {
@@ -185,7 +185,7 @@ function collectSecurityEvidenceItems(
           {
             ref: buildSecurityVerificationSuggestionKey(
               result.ruleId,
-              actionIndex,
+              action.id,
             ),
             label: result.title,
           },
@@ -193,7 +193,7 @@ function collectSecurityEvidenceItems(
         relatedRuleIds: [result.ruleId],
         relatedControlCodes: [],
       });
-    });
+    }
   }
 
   return sortProgressItems([...byKey.values()]);

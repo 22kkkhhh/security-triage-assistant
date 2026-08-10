@@ -1,5 +1,6 @@
 import { unknownEvaluation } from "../ruleHelpers";
 import type { AnalysisRule } from "../types";
+import { EMPTY_VERIFICATION_ACTIONS, VA } from "../verificationActions";
 
 /** 连续失败认证达到该次数，视为高风险 */
 const FAILED_LOGIN_HIGH_THRESHOLD = 10;
@@ -14,7 +15,7 @@ export const identityRules: AnalysisRule[] = [
       if (i.loginFromUnseenSource === "UNKNOWN") {
         return unknownEvaluation(
           "缺少该账号的历史登录来源记录，无法判断登录来源是否陌生。",
-          ["补充该账号历史登录来源清单后重新评估"],
+          [VA.supplementLoginSourceHistory],
         );
       }
       if (i.loginFromUnseenSource === "ABNORMAL") {
@@ -22,7 +23,10 @@ export const identityRules: AnalysisRule[] = [
           status: "ABNORMAL",
           riskLevel: "MEDIUM",
           explanation: `登录来源 ${i.loginSourceIp ?? "未知地址"} 此前从未在该账号的登录记录中出现，属于非常用来源。`,
-          verificationActions: ["核实源 IP 资产归属", "确认账号实际使用人"],
+          verificationActions: [
+            VA.verifySourceIpOwnership,
+            VA.confirmAccountUser,
+          ],
           evidences: [
             {
               sourceType: "AUTH_LOG",
@@ -37,7 +41,7 @@ export const identityRules: AnalysisRule[] = [
         status: "NORMAL",
         riskLevel: "LOW",
         explanation: "登录来源与该账号历史登录记录一致。",
-        verificationActions: [],
+        verificationActions: EMPTY_VERIFICATION_ACTIONS,
         evidences: [],
       };
     },
@@ -51,7 +55,7 @@ export const identityRules: AnalysisRule[] = [
       if (i.failedLoginAttempts === null) {
         return unknownEvaluation(
           "缺少认证日志中的失败次数记录，无法判断是否存在连续失败认证。",
-          ["补充统一认证系统日志（含失败次数与时间分布）"],
+          [VA.supplementAuthLogFailureCount],
         );
       }
       if (i.failedLoginAttempts === 0) {
@@ -59,7 +63,7 @@ export const identityRules: AnalysisRule[] = [
           status: "NORMAL",
           riskLevel: "LOW",
           explanation: "登录前无失败认证记录。",
-          verificationActions: [],
+          verificationActions: EMPTY_VERIFICATION_ACTIONS,
           evidences: [],
         };
       }
@@ -69,8 +73,8 @@ export const identityRules: AnalysisRule[] = [
         riskLevel: high ? "HIGH" : "MEDIUM",
         explanation: `账号在成功登录前连续失败认证 ${i.failedLoginAttempts} 次，随后登录成功，疑似凭据被猜测或泄露，建议进一步核查。`,
         verificationActions: [
-          "联系账号使用人确认是否本人操作",
-          "核查失败认证的来源地址分布",
+          VA.contactAccountUser,
+          VA.verifyFailedAuthSourceDistribution,
         ],
         evidences: [
           {
@@ -92,7 +96,7 @@ export const identityRules: AnalysisRule[] = [
       if (i.accessedSystems.length === 0) {
         return unknownEvaluation(
           "缺少业务系统访问日志，无法判断是否存在跨系统访问行为。",
-          ["补充各业务系统的访问日志"],
+          [VA.supplementBusinessSystemAccessLogs],
         );
       }
       if (i.accessedSystems.length >= 3) {
@@ -100,7 +104,7 @@ export const identityRules: AnalysisRule[] = [
           status: "ABNORMAL",
           riskLevel: "MEDIUM",
           explanation: `同一账号在告警时间窗内先后访问 ${i.accessedSystems.length} 个业务系统（${i.accessedSystems.join("、")}），与该账号历史行为模式不符。`,
-          verificationActions: ["核对各系统访问日志与业务操作记录"],
+          verificationActions: [VA.verifyCrossSystemAccessLogs],
           evidences: [
             {
               sourceType: "BUSINESS_SYSTEM_LOG",
@@ -115,7 +119,7 @@ export const identityRules: AnalysisRule[] = [
         status: "NORMAL",
         riskLevel: "LOW",
         explanation: `访问涉及 ${i.accessedSystems.length} 个业务系统，未见异常跨系统访问。`,
-        verificationActions: [],
+        verificationActions: EMPTY_VERIFICATION_ACTIONS,
         evidences: [],
       };
     },

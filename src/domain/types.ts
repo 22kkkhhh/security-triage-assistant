@@ -9,6 +9,7 @@
  */
 
 import type { ComplianceReferenceSnapshot } from "./knowledge";
+import type { VerificationAction } from "@/services/analysis/verificationActions";
 
 /** 三态判断：未见异常 / 异常或可疑 / 数据不足无法判断 */
 export type ObservationStatus = "NORMAL" | "ABNORMAL" | "UNKNOWN";
@@ -161,8 +162,8 @@ export interface AnalysisResult {
   explanation: string;
   /** 关联 Evidence.evidenceId */
   evidenceIds: string[];
-  /** 建议核查事项 */
-  verificationActions: string[];
+  /** 建议核查事项（含稳定 actionId + 展示 label） */
+  verificationActions: VerificationAction[];
 }
 
 /** 可进入报告的证据条目 */
