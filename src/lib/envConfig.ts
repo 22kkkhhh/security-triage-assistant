@@ -45,7 +45,11 @@ export function resolveDatabaseUrl(options?: {
   fallbackUrl?: string;
 }): string {
   const nodeEnv = options?.nodeEnv ?? process.env.NODE_ENV;
-  const raw = (options?.databaseUrl ?? process.env.DATABASE_URL)?.trim();
+  const raw = (
+    options && "databaseUrl" in options
+      ? options.databaseUrl
+      : process.env.DATABASE_URL
+  )?.trim();
 
   if (isProductionNodeEnv(nodeEnv)) {
     if (!raw) {
