@@ -23,6 +23,9 @@ import {
   type KnowledgeResolutionGraph,
   type ResolveCaseComplianceResult,
 } from "@/services/knowledge/resolveCaseCompliance";
+import {
+  COMPLIANCE_RUNTIME_UNAVAILABLE_MESSAGE,
+} from "@/services/caseCommands/commandErrorBoundary";
 import { toSecurityCaseDraft } from "@/services/persistence/caseMapper";
 import type { PersistedCase } from "@/services/persistence/types";
 
@@ -112,15 +115,12 @@ function toRuntimeResult(
 
 function unavailableRuntimeResult(
   capturedAt: string,
-  error: unknown,
 ): RefreshCaseComplianceRuntimeResult {
-  const message =
-    error instanceof Error ? error.message : "Compliance runtime unavailable";
   return {
     resolutionStatus: "RESOLUTION_UNAVAILABLE",
     views: emptyCaseComplianceWorkbenchViews(),
     meta: emptyRuntimeMeta(capturedAt),
-    resolutionError: message,
+    resolutionError: COMPLIANCE_RUNTIME_UNAVAILABLE_MESSAGE,
   };
 }
 
@@ -150,8 +150,8 @@ export function refreshCaseComplianceRuntimeFromGraph(
       graph,
     );
     return toRuntimeResult(resolved, capturedAt);
-  } catch (error) {
-    return unavailableRuntimeResult(capturedAt, error);
+  } catch {
+    return unavailableRuntimeResult(capturedAt);
   }
 }
 
@@ -178,7 +178,7 @@ export async function refreshCaseComplianceRuntimeViews(
       now: options?.now,
     });
     return toRuntimeResult(resolved, capturedAt);
-  } catch (error) {
-    return unavailableRuntimeResult(capturedAt, error);
+  } catch {
+    return unavailableRuntimeResult(capturedAt);
   }
 }

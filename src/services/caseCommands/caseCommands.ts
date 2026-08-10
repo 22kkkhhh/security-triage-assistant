@@ -46,6 +46,10 @@ import type {
   PersistedCaseState,
 } from "@/services/persistence/types";
 import {
+  COMMAND_ERROR_MESSAGES,
+  resolveCommandErrorMessage,
+} from "./commandErrorBoundary";
+import {
   isCaseStatus,
   requireBaseUpdatedAt,
   staleCommandResult,
@@ -134,9 +138,13 @@ async function commitStateAndAudit(input: {
         error.currentCase ?? (await getCaseById(input.caseId));
       return staleCommandResult(current, error.message);
     }
-    const message =
-      error instanceof Error ? error.message : "案件更新失败";
-    return { ok: false, error: message };
+    return {
+      ok: false,
+      error: resolveCommandErrorMessage(
+        error,
+        COMMAND_ERROR_MESSAGES.caseUpdate,
+      ),
+    };
   }
 }
 
@@ -146,7 +154,10 @@ function requireActor(actor: AuditActor): TrustedCommandActor | CommandResult {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Actor 无效",
+      error: resolveCommandErrorMessage(
+        error,
+        COMMAND_ERROR_MESSAGES.actorInvalid,
+      ),
     };
   }
 }
@@ -241,8 +252,13 @@ export async function createCaseWithAudit(
         }
       }
     }
-    const message = error instanceof Error ? error.message : "案件创建失败";
-    return { ok: false, error: message };
+    return {
+      ok: false,
+      error: resolveCommandErrorMessage(
+        error,
+        COMMAND_ERROR_MESSAGES.caseCreate,
+      ),
+    };
   }
 }
 
