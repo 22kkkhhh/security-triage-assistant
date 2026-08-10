@@ -52,7 +52,9 @@ test("Wazuh JSON 导入可 preview、确认并创建 Case", async ({ page }) => 
   await expect(basic.getByText("告警来源")).toBeVisible();
   await expect(basic.getByText("Wazuh", { exact: true })).toBeVisible();
 
-  // 缺上下文不得伪装为整体 NORMAL；身份维度仍为 UNKNOWN（非编造失败次数）
+  // 缺上下文不得伪装为 NORMAL；UI 以中文三态展示 UNKNOWN
   await page.getByTestId("system-analysis-details").locator("summary").click();
-  await expect(page.getByText("UNKNOWN").first()).toBeVisible();
+  await expect(
+    page.getByText("数据不足，暂无法判断").first(),
+  ).toBeVisible();
 });
