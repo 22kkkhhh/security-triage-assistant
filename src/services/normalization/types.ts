@@ -32,6 +32,7 @@ export const importSourceTypeLabels: Record<ImportSourceType, string> = {
 export interface NormalizedSecurityInput {
   sourceType: ImportSourceType;
   // 基础信息
+  externalAlertId: string | null;
   alertName: string | null;
   alertTime: string | null;
   alertSource: string | null;
@@ -65,6 +66,7 @@ export function emptyNormalizedInput(
 ): NormalizedSecurityInput {
   return {
     sourceType,
+    externalAlertId: null,
     alertName: null,
     alertTime: null,
     alertSource: null,

@@ -48,7 +48,7 @@ export function buildSecurityCaseDraft(
       severity: null,
       occurredAt: input.alertTime,
       description: input.description ?? "",
-      originalAlertId: null,
+      originalAlertId: input.externalAlertId,
     },
     dataContext: {
       accessStatus: "UNKNOWN",

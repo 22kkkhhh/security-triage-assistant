@@ -25,6 +25,20 @@ export interface FieldDef {
 export const fieldDefs: FieldDef[] = [
   // 基本告警
   {
+    key: "externalAlertId",
+    label: "外部告警 ID",
+    group: "基本告警",
+    type: "string",
+    aliases: [
+      "external_alert_id",
+      "original_alert_id",
+      "alert_id",
+      "event_id",
+      "外部告警id",
+      "原始告警id",
+    ],
+  },
+  {
     key: "alertName",
     label: "告警名称",
     group: "基本告警",
