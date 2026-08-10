@@ -300,7 +300,7 @@ describe("SF-6 compliance runtime failure contract", () => {
 
     const runtime = await loadCaseComplianceWorkbenchRuntime(created);
     expect(runtime.resolutionStatus).toBe("RESOLUTION_UNAVAILABLE");
-    expect(runtime.resolutionError).toMatch(/Knowledge DB unavailable/);
+    expect(runtime.resolutionError).toBe("合规运行时暂不可用，请稍后重试。");
     expect(runtime.views.panel.groups).toEqual([]);
     expect(runtime.views.checklist.groups).toEqual([]);
     expect(runtime.views.panel.empty).toBe(true);

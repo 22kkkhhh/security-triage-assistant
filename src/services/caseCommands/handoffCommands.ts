@@ -17,6 +17,10 @@ import {
   runInTransaction,
 } from "@/services/persistence/auditRepository";
 import { getCaseById } from "@/services/persistence/caseRepository";
+import {
+  COMMAND_ERROR_MESSAGES,
+  resolveCommandErrorMessage,
+} from "./commandErrorBoundary";
 import type { CommandResult } from "./types";
 
 /** 添加交接记录（HANDOFF_NOTE_ADDED） */
@@ -32,7 +36,10 @@ export async function addHandoffNoteCommand(input: {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Actor 无效",
+      error: resolveCommandErrorMessage(
+        error,
+        COMMAND_ERROR_MESSAGES.actorInvalid,
+      ),
     };
   }
 
@@ -77,8 +84,10 @@ export async function addHandoffNoteCommand(input: {
       operationId,
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "交接说明无效";
+    const message = resolveCommandErrorMessage(
+      error,
+      COMMAND_ERROR_MESSAGES.handoffValidation,
+    );
     return { ok: false, error: message };
   }
 
@@ -121,8 +130,12 @@ export async function addHandoffNoteCommand(input: {
         }
       }
     }
-    const message =
-      error instanceof Error ? error.message : "交接记录添加失败";
-    return { ok: false, error: message };
+    return {
+      ok: false,
+      error: resolveCommandErrorMessage(
+        error,
+        COMMAND_ERROR_MESSAGES.handoffAdd,
+      ),
+    };
   }
 }

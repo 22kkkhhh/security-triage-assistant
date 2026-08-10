@@ -38,6 +38,10 @@ import {
   generateDocxBuffer,
   suggestDocxFileName,
 } from "@/services/reporting/docxGenerator";
+import {
+  COMMAND_ERROR_MESSAGES,
+  resolveCommandErrorMessage,
+} from "./commandErrorBoundary";
 import type { CommandResult } from "./types";
 import type { AuditActionType } from "@/domain/audit";
 
@@ -47,7 +51,10 @@ function requireActor(actor: AuditActor): TrustedCommandActor | CommandResult {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Actor 无效",
+      error: resolveCommandErrorMessage(
+        error,
+        COMMAND_ERROR_MESSAGES.actorInvalid,
+      ),
     };
   }
 }
@@ -153,8 +160,7 @@ export async function createReportDraftCommand(input: {
       audit,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "报告初稿生成失败";
-    if (message === "REPORT_ALREADY_EXISTS") {
+    if (error instanceof Error && error.message === "REPORT_ALREADY_EXISTS") {
       const current = await getCaseById(input.caseId);
       if (current) {
         return {
@@ -174,7 +180,10 @@ export async function createReportDraftCommand(input: {
     if (raced) return raced;
     return {
       ok: false,
-      error: message === "REPORT_ALREADY_EXISTS" ? "报告已存在" : message,
+      error: resolveCommandErrorMessage(
+        error,
+        COMMAND_ERROR_MESSAGES.reportCreate,
+      ),
     };
   }
 }
@@ -267,7 +276,10 @@ export async function saveReportDraftCommand(input: {
     if (error instanceof StaleReportDraftError) {
       return { ok: false, error: error.message };
     }
-    const message = error instanceof Error ? error.message : "报告保存失败";
+    const message = resolveCommandErrorMessage(
+      error,
+      COMMAND_ERROR_MESSAGES.reportSave,
+    );
     return { ok: false, error: message };
   }
 }
@@ -380,9 +392,13 @@ export async function exportReportCommand(input: {
   } catch (error) {
     const raced = await findAuditByOperationId(input.operationId);
     if (!raced) {
-      const message =
-        error instanceof Error ? error.message : "导出审计写入失败";
-      return { ok: false, error: message };
+      return {
+        ok: false,
+        error: resolveCommandErrorMessage(
+          error,
+          COMMAND_ERROR_MESSAGES.reportExportAudit,
+        ),
+      };
     }
     const ownership = validateOperationOwnership({
       existing: raced,
