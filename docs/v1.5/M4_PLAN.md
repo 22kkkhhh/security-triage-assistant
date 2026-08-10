@@ -1,36 +1,39 @@
 # M4 Release Hardening 计划
 
-本计划只列出当前待办，不授权在同一分支顺带实现全部项目。每项应在独立 `agent/codex-*` 分支完成并经审查后集成。
+本计划只记录当前 M4 状态与下一项，不授权在同一分支顺带实现全部项目。v1.5
+采用“双开发 Agent + Codex 总控”：Cursor 与 Hermes 在各自 `agent/*` 分支完成
+已分配 workstream，Codex 负责共享边界审查、整合顺序与 Acceptance；共享文件同一轮
+只能有一个明确 owner。
 
-## RELEASE_BLOCKER
+## COMPLETE
 
-### 数据库与生产环境硬化
+### M4-D2：运行时失败 fail-closed UI — COMPLETE
 
-- 审计 `BETTER_AUTH_SECRET` 的占位配置，生产环境必须显式提供强密钥。
-- 生产环境必须显式提供 `DATABASE_URL`。
-- 为 `db:reset-demo` 添加生产环境防护。
-- 编写生产部署运行手册。
-- 清除面向用户的原始内部 `error.message` 暴露。
+- `RESOLUTION_UNAVAILABLE` 从 runtime DTO 传递到 Investigation Progress UI。
+- resolver 不可用时显式提示，绝不伪装为全零成功进度或“全部已解决”。
+- clean Ubuntu Verification 已覆盖该 regression。
 
-约束：不得提交真实密钥，不更换数据库技术，不擅自修改 schema 或 migrations。
+### Production Environment Hardening（P1 / P1-E）— COMPLETE
 
-## HIGH
+- 拒绝 `.env.example` 的 `BETTER_AUTH_SECRET` 占位值；生产环境要求显式强密钥。
+- production 缺失或空白 `DATABASE_URL` 时 fail-closed；development/test fallback 保留。
+- `db:reset-demo` 在 destructive 操作前拒绝 production 环境执行。
+- 未修改 Prisma schema 或 migrations；生产部署边界记录于
+  `docs/v1.5/PRODUCTION_RUNBOOK.md`。
 
-### M4-D2：运行时失败 fail-closed UI
+### User-facing Error Sanitization（P2）— COMPLETE
 
-后端已提供 `SUCCESS` 与 `RESOLUTION_UNAVAILABLE`。需要核对并连接：
+- 未知 Prisma、SQL、文件系统与内部异常不会进入 browser-visible ActionResult。
+- 已知 STALE、STALE_REPORT、FORBIDDEN、validation 与 idempotency 语义及 code 保留。
+- Server Action sanitizer 与 UI Error Boundary 共同提供两层防线。
 
-```text
-loadCaseWorkbenchRuntime → page DTO → PersistedCaseWorkbench → Investigation Progress UI
-```
+## NEXT
 
-当 resolver 不可用时，必须显式提示“调查进度暂不可用”或“当前无法完成重新解析”；不得显示“0 个待补充”“0 个待核查”或“全部已解决”。UNKNOWN/error 不能视作成功。
+### Semantic Command Canonicalization
 
-## SHOULD_FIX
-
-### 语义命令规范化
-
-审计 `nextCaseState` 是否仍接受客户端完整状态。目标是服务端只接收该命令合法修改的最小 payload，并基于当前持久化状态构建 canonical next state，以防 cross-field smuggling、审计遗漏和未授权语义修改。
+审计 `nextCaseState` 是否仍接收客户端完整状态。目标是服务器只接收该命令合法修改所需的
+最小 payload，并基于当前持久化状态构建 canonical next state，以防 cross-field smuggling、
+审计遗漏和未授权语义修改。
 
 约束：不进行大型 command 架构重写。
 
@@ -43,6 +46,6 @@ loadCaseWorkbenchRuntime → page DTO → PersistedCaseWorkbench → Investigati
 - CONTEXT_MODEL_GAPS 持久化扩展。
 - `destinationRegion` 新 schema 字段。
 - PostgreSQL 迁移。
-- Node 22 LTS 是否应作为生产环境推荐/支持运行时（当前 Node 24.16.0 + Prisma 7.9.1 已通过测试，不在本轮调整工具链）。
+- Node 22 LTS 是否应作为生产推荐/支持运行时；当前不在本轮调整工具链。
 
 未获明确批准前不得实现上述延后项。
