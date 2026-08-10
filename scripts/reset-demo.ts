@@ -1,45 +1,29 @@
 /**
  * 本地 Demo 数据库复位（开发使用）。
- * 清空 prisma/dev.db → migrate deploy → seed Case A/B。
+ * 删除 resolveDatabaseUrl() 指向的 SQLite 文件 → migrate deploy → seed Case A/B。
  * 禁止在生产环境使用；Web UI 不提供此能力。
  *
  * Windows 上若 next dev 占用 db 文件导致 unlink EBUSY：
  * 回退为 truncate 表数据 + seed（语义等价于复位 Demo）。
  */
 import { execSync } from "node:child_process";
-import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertResetDemoAllowed } from "../src/lib/envConfig";
+import {
+  assertResetDemoAllowed,
+  removeSqliteDatabaseFiles,
+  resolveSqliteDatabaseFilePaths,
+} from "../src/lib/envConfig";
 
 assertResetDemoAllowed();
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dbFile = path.join(root, "prisma", "dev.db");
+const { databaseUrl, sidecarPaths } = resolveSqliteDatabaseFilePaths({
+  projectRoot: root,
+});
 
-function removeDb(): boolean {
-  for (const suffix of ["", "-journal", "-wal", "-shm"]) {
-    const file = `${dbFile}${suffix}`;
-    if (!existsSync(file)) continue;
-    try {
-      unlinkSync(file);
-      console.log("已删除", path.relative(root, file));
-    } catch (error) {
-      const code =
-        error && typeof error === "object" && "code" in error
-          ? String((error as { code?: string }).code)
-          : "";
-      if (code === "EBUSY" || code === "EPERM") {
-        console.warn(
-          `无法删除 ${path.relative(root, file)}（${code}，可能被 next dev 占用）。将改为清空表数据后重新 seed。`,
-        );
-        return false;
-      }
-      throw error;
-    }
-  }
-  return true;
-}
+// Ensure migrate/seed/truncate all use the same resolved URL as file deletion.
+process.env.DATABASE_URL = databaseUrl;
 
 async function truncateDemoTables() {
   const { prisma } = await import("../src/lib/prisma");
@@ -62,8 +46,27 @@ async function truncateDemoTables() {
 
 console.log("=== 本地 Demo 数据库复位 ===");
 console.log("警告：将清空本地 Demo 数据并重新 seed Case A / Case B。");
+console.log("目标 DATABASE_URL:", databaseUrl);
 
-const fileRemoved = removeDb();
+const { existsSync, unlinkSync } = await import("node:fs");
+const removeResult = removeSqliteDatabaseFiles(sidecarPaths, {
+  existsSync,
+  unlinkSync,
+});
+
+if (removeResult.deletedPaths.length > 0) {
+  for (const file of removeResult.deletedPaths) {
+    console.log("已删除", path.relative(root, file));
+  }
+}
+
+if (!removeResult.removed && removeResult.busyPaths.length > 0) {
+  console.warn(
+    `无法删除 ${path.relative(root, removeResult.busyPaths[0]!)}（可能被 next dev 占用）。将改为清空表数据后重新 seed。`,
+  );
+}
+
+const fileRemoved = removeResult.removed;
 
 if (fileRemoved) {
   execSync("npx prisma migrate deploy", {
