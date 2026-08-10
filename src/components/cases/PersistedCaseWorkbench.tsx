@@ -661,8 +661,16 @@ export function PersistedCaseWorkbench({
         </div>
       )}
 
-      <section className="rounded-md border border-neutral-200 bg-white px-4 py-3">
-        <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2 lg:grid-cols-4">
+      <InvestigationProgressPanel view={investigationProgressView} />
+
+      <details
+        className="rounded-md border border-neutral-200 bg-white px-4 py-2"
+        data-testid="case-basic-info"
+      >
+        <summary className="cursor-pointer text-sm font-medium text-neutral-800">
+          案件基础信息
+        </summary>
+        <div className="mt-2 grid grid-cols-1 gap-x-6 border-t border-neutral-100 pt-2 md:grid-cols-2 lg:grid-cols-4">
           <Field label="案件编号" value={initial.caseNumber} />
           <Field label="告警来源" value={draftBase.alert.source} />
           <Field
@@ -671,38 +679,13 @@ export function PersistedCaseWorkbench({
           />
           <Field label="告警标题" value={draftBase.alert.title} />
         </div>
-      </section>
+      </details>
 
       <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
         系统分析仅用于辅助研判，最终结论以安全人员人工确认结果为准。
       </div>
 
-      <InvestigationProgressPanel view={investigationProgressView} />
-
-      {analyzed.suggestedAssessment && (
-        <SuggestedAssessmentBar assessment={analyzed.suggestedAssessment} />
-      )}
-
-      <FindingsSummary results={analyzed.analysisResults} />
-
-      <DimensionPanels securityCase={analyzed} />
-
-      <CaseCompliancePanel
-        view={compliancePanel}
-        resolutionStatus={complianceResolutionStatus}
-      />
-
-      <div id={INVESTIGATION_SECTION_IDS.complianceChecklist}>
-        <CaseComplianceChecklistPanel
-          view={complianceChecklist}
-          addedSuggestionKeys={addedSuggestionKeys}
-          canWrite={capabilities.canWriteChecklist}
-          pendingSuggestionKey={pendingSuggestionKey}
-          onAddSuggestion={handleAddComplianceSuggestion}
-          resolutionStatus={complianceResolutionStatus}
-        />
-      </div>
-
+      {/* ===== 核心人工调查区 ===== */}
       <div id={INVESTIGATION_SECTION_IDS.businessContext}>
         <BusinessContextPanel
           businessContext={businessContext}
@@ -777,6 +760,42 @@ export function PersistedCaseWorkbench({
           investigationProgressUnavailable={
             investigationProgressView.isResolutionUnavailable
           }
+        />
+      </div>
+
+      {/* ===== 系统分析与参考 ===== */}
+      {analyzed.suggestedAssessment && (
+        <SuggestedAssessmentBar assessment={analyzed.suggestedAssessment} />
+      )}
+
+      <details
+        className="rounded-md border border-neutral-200 bg-white"
+        data-testid="system-analysis-details"
+      >
+        <summary className="cursor-pointer px-4 py-2.5 text-sm font-semibold text-neutral-900">
+          系统分析详情
+        </summary>
+        <div className="space-y-4 border-t border-neutral-200 px-4 py-3">
+          <FindingsSummary results={analyzed.analysisResults} />
+          <DimensionPanels securityCase={analyzed} />
+        </div>
+      </details>
+
+      <div id={INVESTIGATION_SECTION_IDS.compliance}>
+        <CaseCompliancePanel
+          view={compliancePanel}
+          resolutionStatus={complianceResolutionStatus}
+        />
+      </div>
+
+      <div id={INVESTIGATION_SECTION_IDS.complianceChecklist}>
+        <CaseComplianceChecklistPanel
+          view={complianceChecklist}
+          addedSuggestionKeys={addedSuggestionKeys}
+          canWrite={capabilities.canWriteChecklist}
+          pendingSuggestionKey={pendingSuggestionKey}
+          onAddSuggestion={handleAddComplianceSuggestion}
+          resolutionStatus={complianceResolutionStatus}
         />
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Panel } from "@/components/common";
+import { resolveCaseNextStep } from "./caseNextStep";
 import type { InvestigationProgressPanelView } from "./investigationProgressSummary";
 import {
   INVESTIGATION_SECTION_IDS,
@@ -39,6 +40,75 @@ function StatButton({
   );
 }
 
+const NAV_LINKS: ReadonlyArray<{ label: string; targetId: string }> = [
+  { label: "业务上下文", targetId: INVESTIGATION_SECTION_IDS.businessContext },
+  { label: "证据", targetId: INVESTIGATION_SECTION_IDS.evidence },
+  { label: "待核查事项", targetId: INVESTIGATION_SECTION_IDS.checklist },
+  { label: "人工研判", targetId: INVESTIGATION_SECTION_IDS.humanReview },
+  { label: "合规参考", targetId: INVESTIGATION_SECTION_IDS.compliance },
+];
+
+function InvestigationNav() {
+  return (
+    <nav
+      aria-label="调查导航"
+      className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-neutral-100 pt-3 text-xs"
+    >
+      {NAV_LINKS.map((link) => (
+        <button
+          key={link.targetId}
+          type="button"
+          className="text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+          onClick={() => scrollToInvestigationSection(link.targetId)}
+        >
+          {link.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function NextStepBlock({ view }: { view: InvestigationProgressPanelView }) {
+  const step = resolveCaseNextStep(view);
+
+  return (
+    <div
+      className={
+        step.isUnavailable
+          ? "mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2.5"
+          : "mt-3 rounded border border-slate-200 bg-slate-50 px-3 py-2.5"
+      }
+      data-testid="case-next-step"
+    >
+      <p className="text-xs font-medium text-neutral-600">建议下一步</p>
+      <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p
+            className={
+              step.isUnavailable
+                ? "text-sm font-medium text-amber-900"
+                : "text-sm font-medium text-neutral-900"
+            }
+          >
+            {step.title}
+          </p>
+          {!step.isUnavailable && (
+            <p className="mt-0.5 text-xs text-neutral-600">{step.detail}</p>
+          )}
+        </div>
+        <button
+          type="button"
+          className="shrink-0 rounded bg-slate-800 px-3 py-1.5 text-xs text-white hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+          data-testid="case-next-step-cta"
+          onClick={() => scrollToInvestigationSection(step.targetId)}
+        >
+          {step.ctaLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * 调查进度：消费 Server Investigation Progress DTO 的展示模型。
  * 不运行 progress resolver；RESOLVED ≠ Human final conclusion。
@@ -62,6 +132,8 @@ export function InvestigationProgressPanel({
           >
             调查进度暂不可用。当前无法完成重新解析，请稍后刷新后继续核查；不得将当前状态视为已完成核查或全部已解决。
           </p>
+          <NextStepBlock view={view} />
+          <InvestigationNav />
         </Panel>
       </div>
     );
@@ -112,6 +184,8 @@ export function InvestigationProgressPanel({
         >
           {view.humanReviewFactLabel}
         </p>
+        <NextStepBlock view={view} />
+        <InvestigationNav />
       </Panel>
     </div>
   );

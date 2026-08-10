@@ -28,6 +28,7 @@ export type InvestigationProgressViewDto =
 export const INVESTIGATION_SECTION_IDS = {
   progress: "investigation-progress",
   businessContext: "investigation-business-context",
+  compliance: "investigation-compliance",
   complianceChecklist: "investigation-compliance-checklist",
   evidence: "investigation-evidence",
   checklist: "investigation-checklist",
