@@ -40,7 +40,8 @@ export function ImportFlow({
   confirming?: boolean;
 }) {
   const [method, setMethod] = useState<InputMethod | null>(null);
-  const [sourceType, setSourceType] = useState<ImportSourceType>("MANUAL");
+  /** 非手工导入的 provenance 默认 OTHER；MANUAL 仍由 effectiveSourceType 覆盖 */
+  const [sourceType, setSourceType] = useState<ImportSourceType>("OTHER");
   const [pending, setPending] = useState<{
     pairs: RawKeyValue[];
     unrecognized: UnrecognizedItem[];
