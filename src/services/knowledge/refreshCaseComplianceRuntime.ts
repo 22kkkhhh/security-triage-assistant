@@ -46,9 +46,17 @@ export type CaseComplianceRuntimeMeta = {
   skippedUnknownRuleIds: string[];
 };
 
+export type ComplianceRuntimeResolutionStatus =
+  | "SUCCESS"
+  | "RESOLUTION_UNAVAILABLE";
+
 export type RefreshCaseComplianceRuntimeResult = {
+  /** SUCCESS = 正常 resolve；RESOLUTION_UNAVAILABLE = resolver 失败，非「零 findings」 */
+  resolutionStatus: ComplianceRuntimeResolutionStatus;
   views: CaseComplianceWorkbenchViews;
   meta: CaseComplianceRuntimeMeta;
+  /** resolver 失败时的可读原因（不含 secrets） */
+  resolutionError?: string;
 };
 
 export function emptyCaseComplianceWorkbenchViews(): CaseComplianceWorkbenchViews {
@@ -90,6 +98,7 @@ function toRuntimeResult(
   capturedAt: string,
 ): RefreshCaseComplianceRuntimeResult {
   return {
+    resolutionStatus: "SUCCESS",
     views: buildComplianceWorkbenchViewsFromResolved(resolved),
     meta: {
       capturedAt,
@@ -98,6 +107,20 @@ function toRuntimeResult(
       hitRuleIds: resolved.hitRuleIds,
       skippedUnknownRuleIds: resolved.skippedUnknownRuleIds,
     },
+  };
+}
+
+function unavailableRuntimeResult(
+  capturedAt: string,
+  error: unknown,
+): RefreshCaseComplianceRuntimeResult {
+  const message =
+    error instanceof Error ? error.message : "Compliance runtime unavailable";
+  return {
+    resolutionStatus: "RESOLUTION_UNAVAILABLE",
+    views: emptyCaseComplianceWorkbenchViews(),
+    meta: emptyRuntimeMeta(capturedAt),
+    resolutionError: message,
   };
 }
 
@@ -127,11 +150,8 @@ export function refreshCaseComplianceRuntimeFromGraph(
       graph,
     );
     return toRuntimeResult(resolved, capturedAt);
-  } catch {
-    return {
-      views: emptyCaseComplianceWorkbenchViews(),
-      meta: emptyRuntimeMeta(capturedAt),
-    };
+  } catch (error) {
+    return unavailableRuntimeResult(capturedAt, error);
   }
 }
 
@@ -158,10 +178,7 @@ export async function refreshCaseComplianceRuntimeViews(
       now: options?.now,
     });
     return toRuntimeResult(resolved, capturedAt);
-  } catch {
-    return {
-      views: emptyCaseComplianceWorkbenchViews(),
-      meta: emptyRuntimeMeta(capturedAt),
-    };
+  } catch (error) {
+    return unavailableRuntimeResult(capturedAt, error);
   }
 }

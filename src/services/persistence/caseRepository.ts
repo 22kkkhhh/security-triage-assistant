@@ -356,27 +356,38 @@ export async function saveReportDraft(
   const existing = await client.caseRecord.findUnique({ where: { id } });
   if (!existing) throw new Error(`案件不存在：${id}`);
 
-  if (options?.baseReportUpdatedAt) {
-    const baseMs = new Date(options.baseReportUpdatedAt).getTime();
-    const currentMs = existing.reportUpdatedAt?.getTime() ?? 0;
-    if (
-      existing.reportUpdatedAt &&
-      Number.isFinite(baseMs) &&
-      Number.isFinite(currentMs) &&
-      currentMs > baseMs
-    ) {
+  const data = {
+    reportDraft: toJsonValue(reportDraft),
+    hasReport: true,
+    reportUpdatedAt: new Date(),
+  };
+
+  if (options?.baseReportUpdatedAt != null && options.baseReportUpdatedAt !== "") {
+    const expected = new Date(options.baseReportUpdatedAt);
+    if (!Number.isFinite(expected.getTime())) {
+      throw new Error("baseReportUpdatedAt 无效");
+    }
+
+    const result = await client.caseRecord.updateMany({
+      where: {
+        id,
+        reportUpdatedAt: expected,
+      },
+      data,
+    });
+
+    if (result.count !== 1) {
       throw new StaleReportDraftError();
     }
+  } else {
+    await client.caseRecord.update({
+      where: { id },
+      data,
+    });
   }
 
-  const row = await client.caseRecord.update({
-    where: { id },
-    data: {
-      reportDraft: toJsonValue(reportDraft),
-      hasReport: true,
-      reportUpdatedAt: new Date(),
-    },
-  });
+  const row = await client.caseRecord.findUnique({ where: { id } });
+  if (!row) throw new Error(`案件不存在：${id}`);
   return rowToPersistedCase(row);
 }
 

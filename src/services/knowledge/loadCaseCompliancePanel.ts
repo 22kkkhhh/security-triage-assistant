@@ -5,12 +5,14 @@
 import {
   refreshCaseComplianceRuntimeViews,
   type CaseComplianceWorkbenchViews,
+  type RefreshCaseComplianceRuntimeResult,
 } from "@/services/knowledge/refreshCaseComplianceRuntime";
 import type { CaseCompliancePanelView } from "@/services/knowledge/caseCompliancePanel";
 import type { PersistedCase } from "@/services/persistence/types";
 
 export type {
   CaseComplianceWorkbenchViews,
+  ComplianceRuntimeResolutionStatus,
   RefreshCaseComplianceRuntimeOptions,
   RefreshCaseComplianceRuntimeResult,
 } from "@/services/knowledge/refreshCaseComplianceRuntime";
@@ -31,7 +33,8 @@ export type LoadCaseComplianceWorkbenchOptions = {
 
 /**
  * 服务端解析一次（topN 走 selectTopFindingsByRelevance），
- * 同时构建参考面板与建议核查清单；失败时双空视图。
+ * 同时构建参考面板与建议核查清单。
+ * @deprecated 需要 resolutionStatus 时请用 refreshCaseComplianceRuntimeViews
  */
 export async function loadCaseComplianceWorkbenchViews(
   record: PersistedCase,
@@ -39,6 +42,14 @@ export async function loadCaseComplianceWorkbenchViews(
 ): Promise<CaseComplianceWorkbenchViews> {
   const result = await refreshCaseComplianceRuntimeViews(record, options);
   return result.views;
+}
+
+/** 含 resolutionStatus 的完整 runtime contract（fail-closed） */
+export async function loadCaseComplianceWorkbenchRuntime(
+  record: PersistedCase,
+  options?: LoadCaseComplianceWorkbenchOptions,
+): Promise<RefreshCaseComplianceRuntimeResult> {
+  return refreshCaseComplianceRuntimeViews(record, options);
 }
 
 /** @deprecated 使用 loadCaseComplianceWorkbenchViews */

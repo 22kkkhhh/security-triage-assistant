@@ -216,10 +216,11 @@ export const INVESTIGATION_CONTEXT_CATALOG: readonly InvestigationContextDescrip
       key: "destinationRegion",
       label: "数据去向/目的地区域",
       source: "NETWORK",
-      sourceField: "networkContext.externalDestination",
+      sourceField: "networkContext.destinationRegion",
       runtimeConsumers: ["COMPLIANCE", "SECURITY"],
-      isPresent: (d) => Boolean(d.networkContext.externalDestination),
-      summarizeValue: (d) => d.networkContext.externalDestination,
+      // 无独立 region 字段；externalDestination 不能代表 region（fail closed）
+      isPresent: () => false,
+      summarizeValue: () => null,
     },
     {
       key: "internalSourceIp",
@@ -328,6 +329,15 @@ export const CONTEXT_MODEL_GAPS: readonly ContextModelGap[] = [
       "humanReview.reviewer 表示最终研判责任人快照，不是调查阶段 incident owner；且无 Case 级 assignment 字段供 Compliance runtime 引用。",
     affectedRuntimes: ["SECURITY"],
     suggestedDomainField: "caseAssignment.incidentOwnerUserId",
+    requiresPersistence: true,
+  },
+  {
+    gapId: "destination-region",
+    label: "目的地区域（destinationRegion）",
+    reason:
+      "networkContext.externalDestination 仅表示通信对端（IP/域名），不能推断 geographic region；Compliance ContextRequirement 需要独立 region 事实来源。",
+    affectedRuntimes: ["COMPLIANCE", "SECURITY"],
+    suggestedDomainField: "networkContext.destinationRegion",
     requiresPersistence: true,
   },
 ];
