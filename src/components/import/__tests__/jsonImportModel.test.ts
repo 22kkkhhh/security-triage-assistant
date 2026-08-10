@@ -80,6 +80,26 @@ describe("prepareJsonAlertImport", () => {
       /JSON 格式无效/,
     );
   });
+
+  it("sourceType=WAZUH 走 Wazuh adapter：data.srcip 可映射", () => {
+    const pending = prepareJsonAlertImport(
+      JSON.stringify({
+        id: "w-1",
+        rule: { description: "Wazuh demo", level: 5 },
+        data: { srcip: "198.51.100.10", srcuser: "demo" },
+      }),
+      "WAZUH",
+    );
+    expect(pending.pairs).toEqual(
+      expect.arrayContaining([
+        { rawKey: "externalAlertId", rawValue: "w-1" },
+        { rawKey: "sourceIp", rawValue: "198.51.100.10" },
+        { rawKey: "username", rawValue: "demo" },
+        { rawKey: "alertSeverity", rawValue: "MEDIUM" },
+        { rawKey: "alertSource", rawValue: "Wazuh" },
+      ]),
+    );
+  });
 });
 
 describe("assertJsonAlertFileSize / error messages", () => {

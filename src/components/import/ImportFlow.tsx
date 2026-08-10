@@ -27,6 +27,17 @@ const methodOptions: { key: InputMethod; title: string; description: string }[] 
   { key: "TEXT", title: "文本粘贴", description: "粘贴“键:值”格式的告警文本" },
 ];
 
+function sourceOptionsForMethod(
+  method: InputMethod,
+): Array<[string, string]> {
+  return Object.entries(importSourceTypeLabels).filter(([key]) => {
+    if (key === "MANUAL") return false;
+    // WAZUH 仅作为 JSON adapter 可选；CSV/TEXT 不得暗示支持
+    if (key === "WAZUH" && method !== "JSON") return false;
+    return true;
+  });
+}
+
 /**
  * 新建研判导入向导：
  * 选择输入方式 → 录入/上传/粘贴 → （CSV 含字段映射）→ 导入确认 → 进入研判。
@@ -50,6 +61,14 @@ export function ImportFlow({
   const effectiveSourceType: ImportSourceType =
     method === "MANUAL" ? "MANUAL" : sourceType;
 
+  const selectMethod = (next: InputMethod) => {
+    setMethod(next);
+    // 离开 JSON 时不得残留隐藏的 sourceType=WAZUH
+    if (next !== "JSON" && sourceType === "WAZUH") {
+      setSourceType("OTHER");
+    }
+  };
+
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
@@ -70,7 +89,7 @@ export function ImportFlow({
                 type="button"
                 role="tab"
                 aria-selected={method === option.key}
-                onClick={() => setMethod(option.key)}
+                onClick={() => selectMethod(option.key)}
                 className={`-mb-px border-b-2 px-4 py-2.5 text-sm ${
                   method === option.key
                     ? "border-slate-800 font-medium text-slate-900"
@@ -93,17 +112,27 @@ export function ImportFlow({
               <select
                 className="mt-1 w-full rounded border border-neutral-300 px-2 py-1 text-sm"
                 value={sourceType}
-                onChange={(e) => setSourceType(e.target.value as ImportSourceType)}
+                onChange={(e) =>
+                  setSourceType(e.target.value as ImportSourceType)
+                }
+                data-testid="import-source-type"
               >
-                {Object.entries(importSourceTypeLabels)
-                  .filter(([key]) => key !== "MANUAL")
-                  .map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
+                {sourceOptionsForMethod(method).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </label>
+          )}
+
+          {method === "JSON" && sourceType === "WAZUH" && (
+            <p
+              className="mt-3 text-xs text-neutral-600"
+              data-testid="wazuh-import-hint"
+            >
+              将按 Wazuh JSON 字段结构进行确定性映射，未识别字段仍会保留供人工核查。
+            </p>
           )}
         </section>
       )}

@@ -105,6 +105,7 @@ const SOURCE_TYPES = [
   "BASTION_HOST",
   "DLP",
   "API_SECURITY",
+  "WAZUH",
   "MANUAL",
   "OTHER",
 ] as const;

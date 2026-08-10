@@ -5,7 +5,8 @@ export type NormalizedFieldType =
   | "number"
   | "list"
   | "boolean"
-  | "status";
+  | "status"
+  | "riskLevel";
 
 export type FieldGroup = "基本告警" | "身份" | "数据" | "历史基线" | "网络";
 
@@ -65,6 +66,19 @@ export const fieldDefs: FieldDef[] = [
     group: "基本告警",
     type: "string",
     aliases: ["description", "desc", "detail", "告警描述", "描述"],
+  },
+  {
+    key: "alertSeverity",
+    label: "原始告警级别",
+    group: "基本告警",
+    type: "riskLevel",
+    // 仅接受明确 RiskLevel 字面量；禁止把通用 level 加成全局 alias
+    aliases: [
+      "alert_severity",
+      "alertseverity",
+      "原始告警级别",
+      "告警级别",
+    ],
   },
   // 身份
   {

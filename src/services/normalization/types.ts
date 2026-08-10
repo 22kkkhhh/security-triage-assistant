@@ -1,4 +1,4 @@
-import type { ObservationStatus } from "@/domain/types";
+import type { ObservationStatus, RiskLevel } from "@/domain/types";
 
 /** 导入数据来源类型 */
 export type ImportSourceType =
@@ -9,6 +9,7 @@ export type ImportSourceType =
   | "BASTION_HOST"
   | "DLP"
   | "API_SECURITY"
+  | "WAZUH"
   | "MANUAL"
   | "OTHER";
 
@@ -20,6 +21,7 @@ export const importSourceTypeLabels: Record<ImportSourceType, string> = {
   BASTION_HOST: "堡垒机",
   DLP: "DLP",
   API_SECURITY: "API 安全",
+  WAZUH: "Wazuh",
   MANUAL: "手工录入",
   OTHER: "其他",
 };
@@ -37,6 +39,8 @@ export interface NormalizedSecurityInput {
   alertTime: string | null;
   alertSource: string | null;
   description: string | null;
+  /** 原始告警级别；缺失或无法映射时为 null，不得伪造 */
+  alertSeverity: RiskLevel | null;
   // 身份
   username: string | null;
   sourceIp: string | null;
@@ -71,6 +75,7 @@ export function emptyNormalizedInput(
     alertTime: null,
     alertSource: null,
     description: null,
+    alertSeverity: null,
     username: null,
     sourceIp: null,
     failedLoginAttempts: null,

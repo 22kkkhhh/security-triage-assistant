@@ -1,10 +1,28 @@
-import type { ObservationStatus } from "@/domain/types";
+import type { ObservationStatus, RiskLevel } from "@/domain/types";
 import { matchFieldByHeader, type FieldDef } from "./fields";
 import {
   emptyNormalizedInput,
   type NormalizeResult,
   type RawImportData,
 } from "./types";
+
+const RISK_LEVELS = new Set<RiskLevel>([
+  "LOW",
+  "MEDIUM",
+  "HIGH",
+  "CRITICAL",
+]);
+
+/**
+ * 原始告警级别：仅接受明确 RiskLevel（大小写不敏感）。
+ * 非法值返回 undefined，由调用方记入 unrecognized，字段保持 null。
+ */
+export function parseRiskLevelValue(raw: string): RiskLevel | null | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const upper = trimmed.toUpperCase() as RiskLevel;
+  return RISK_LEVELS.has(upper) ? upper : undefined;
+}
 
 const LIST_SPLITTER = /[,，、;；\s]+/;
 
@@ -111,6 +129,19 @@ export function normalizeRecord(data: RawImportData): NormalizeResult {
             rawKey,
             rawValue,
             reason: `无法将“${rawValue}”解析为状态值，字段 ${field.label} 保持为空`,
+          });
+        } else {
+          assign(value);
+        }
+        break;
+      }
+      case "riskLevel": {
+        const value = parseRiskLevelValue(rawValue);
+        if (value === undefined) {
+          unrecognized.push({
+            rawKey,
+            rawValue,
+            reason: `无法将“${rawValue}”解析为告警级别（LOW/MEDIUM/HIGH/CRITICAL），字段 ${field.label} 保持为空`,
           });
         } else {
           assign(value);

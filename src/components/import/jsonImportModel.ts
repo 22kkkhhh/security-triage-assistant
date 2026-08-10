@@ -1,12 +1,13 @@
 /**
  * JSON 告警上传的纯 UI 适配层。
- * 只调用现有 normalizeJsonAlert，不复制 flatten / fieldDefs / alias。
+ * Generic JSON → normalizeJsonAlert；WAZUH → normalizeWazuhAlert。
  */
 
 import {
   JsonAlertParseError,
   normalizeJsonAlert,
 } from "@/services/intake/parseJsonAlert";
+import { normalizeWazuhAlert } from "@/services/intake/wazuhAlertAdapter";
 import type {
   ImportSourceType,
   RawKeyValue,
@@ -30,14 +31,17 @@ export type JsonAlertPendingImport = {
 };
 
 /**
- * 将 JSON 文本经 normalizeJsonAlert 转为 ImportFlow pending 结构。
+ * 将 JSON 文本转为 ImportFlow pending 结构。
  * matched → ConfirmationPanel 已识别字段；unrecognized 保留 parser + normalize warnings。
  */
 export function prepareJsonAlertImport(
   text: string,
   sourceType: ImportSourceType,
 ): JsonAlertPendingImport {
-  const result = normalizeJsonAlert(text, sourceType);
+  const result =
+    sourceType === "WAZUH"
+      ? normalizeWazuhAlert(text)
+      : normalizeJsonAlert(text, sourceType);
   return {
     pairs: result.matched.map((item) => ({
       rawKey: item.fieldKey,

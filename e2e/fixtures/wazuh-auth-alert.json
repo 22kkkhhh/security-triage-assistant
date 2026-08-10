@@ -1,0 +1,28 @@
+{
+  "id": "wazuh-e2e-1712345678.424242",
+  "timestamp": "2026-08-10T04:22:11.000Z",
+  "rule": {
+    "id": "5712",
+    "level": 10,
+    "description": "sshd: authentication failed from example network"
+  },
+  "agent": {
+    "id": "007",
+    "name": "demo-bastion-lab"
+  },
+  "manager": {
+    "name": "demo-wazuh-manager"
+  },
+  "decoder": {
+    "name": "sshd"
+  },
+  "location": "/var/log/secure",
+  "full_log": "Aug 10 04:22:11 demo-bastion-lab sshd[9001]: Failed password for demo_lab_user from 198.51.100.77 port 49812 ssh2",
+  "data": {
+    "srcip": "198.51.100.77",
+    "srcuser": "demo_lab_user",
+    "dstip": "10.0.0.42",
+    "dstport": "22",
+    "protocol": "tcp"
+  }
+}

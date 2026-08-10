@@ -45,7 +45,7 @@ export function buildSecurityCaseDraft(
       title: input.alertName ?? "未命名告警",
       source:
         input.alertSource ?? `${importSourceTypeLabels[input.sourceType]}（导入）`,
-      severity: null,
+      severity: input.alertSeverity,
       occurredAt: input.alertTime,
       description: input.description ?? "",
       originalAlertId: input.externalAlertId,
