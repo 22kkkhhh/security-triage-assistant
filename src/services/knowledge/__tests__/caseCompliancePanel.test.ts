@@ -355,14 +355,13 @@ describe("CaseCompliancePanel UI 契约（源码）", () => {
     expect(panel).not.toMatch(/已违法|违反XX法|法律责任成立/);
   });
 
-  it("工作台只读接入服务端 view；页面调用 loadCaseCompliancePanelView", () => {
+  it("工作台只读接入服务端 view；页面调用 loadCaseWorkbenchRuntimeViews", () => {
     expect(workbench).toContain("CaseCompliancePanel");
     expect(workbench).toContain("compliancePanel");
     expect(workbench).not.toContain("resolveCaseCompliance");
     expect(workbench).not.toContain("curatedPackToResolutionGraph");
-    expect(page).toContain("loadCaseComplianceWorkbenchViews");
-    expect(page).toContain("loadCaseCompliancePanel");
-    expect(page).toContain("compliancePanel={complianceViews.panel}");
+    expect(page).toContain("loadCaseWorkbenchRuntimeViews");
+    expect(page).toContain("compliancePanel={runtimeViews.compliance.panel}");
   });
 
 

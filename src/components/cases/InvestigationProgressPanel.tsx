@@ -1,7 +1,7 @@
 "use client";
 
 import { Panel } from "@/components/common";
-import type { InvestigationProgressCounts } from "./investigationProgressSummary";
+import type { InvestigationProgressPanelView } from "./investigationProgressSummary";
 import {
   INVESTIGATION_SECTION_IDS,
   scrollToInvestigationSection,
@@ -40,13 +40,13 @@ function StatButton({
 }
 
 /**
- * 轻量「调查进度」汇总：区分待补上下文 / 证据 / 核查 / 已完成勾选。
- * 不自动给出 Case 最终结论；点击仅滚动到既有区域。
+ * 调查进度：消费 Server Investigation Progress DTO 的展示模型。
+ * 不运行 progress resolver；RESOLVED ≠ Human final conclusion。
  */
 export function InvestigationProgressPanel({
-  counts,
+  view,
 }: {
-  counts: InvestigationProgressCounts;
+  view: InvestigationProgressPanelView;
 }) {
   return (
     <div id={INVESTIGATION_SECTION_IDS.progress}>
@@ -54,39 +54,45 @@ export function InvestigationProgressPanel({
         title="调查进度"
         extra={
           <span className="text-xs text-neutral-500">
-            汇总当前待办，非最终结论
+            服务端投影 · 非最终结论
           </span>
         }
       >
         <p className="mb-3 text-xs leading-5 text-neutral-600">
-          基于业务上下文、建议核查列表与案件核查清单的当前可见数据；不替代人工研判，也不自动关闭案件。
+          {view.disclaimer}
         </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <StatButton
             label="待补充上下文"
-            count={counts.pendingContext}
+            count={view.pendingContext}
             targetId={INVESTIGATION_SECTION_IDS.businessContext}
             emphasize="pending"
           />
           <StatButton
             label="待收集证据"
-            count={counts.pendingEvidence}
+            count={view.pendingEvidence}
             targetId={INVESTIGATION_SECTION_IDS.evidence}
             emphasize="pending"
           />
           <StatButton
             label="待完成核查"
-            count={counts.pendingChecks}
+            count={view.pendingChecks}
             targetId={INVESTIGATION_SECTION_IDS.checklist}
             emphasize="pending"
           />
           <StatButton
-            label="已完成"
-            count={counts.completedChecks}
+            label="已解决"
+            count={view.resolvedCount}
             targetId={INVESTIGATION_SECTION_IDS.checklist}
             emphasize="done"
           />
         </div>
+        <p
+          className="mt-3 text-xs text-neutral-500"
+          data-testid="investigation-progress-human-review-fact"
+        >
+          {view.humanReviewFactLabel}
+        </p>
       </Panel>
     </div>
   );

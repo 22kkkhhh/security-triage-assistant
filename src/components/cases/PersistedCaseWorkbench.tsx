@@ -59,7 +59,8 @@ import { CaseHeader } from "./CaseHeader";
 import { InvestigationProgressPanel } from "./InvestigationProgressPanel";
 import {
   INVESTIGATION_SECTION_IDS,
-  summarizeInvestigationProgress,
+  toInvestigationProgressPanelView,
+  type InvestigationProgressViewDto,
 } from "./investigationProgressSummary";
 
 const emptyHumanReview = (): HumanReview => ({
@@ -92,6 +93,7 @@ export function PersistedCaseWorkbench({
   capabilities,
   compliancePanel,
   complianceChecklist,
+  investigationProgress,
 }: {
   initial: RestoredWorkbenchView;
   hasReport?: boolean;
@@ -106,14 +108,16 @@ export function PersistedCaseWorkbench({
   compliancePanel: CaseCompliancePanelView;
   /** 服务端聚合的建议核查事项；只读，不写回 ChecklistItem */
   complianceChecklist: CaseComplianceChecklistView;
+  /** 服务端 Investigation Progress 投影；Client 不自行 resolve */
+  investigationProgress: InvestigationProgressViewDto;
 }) {
   const router = useRouter();
   const readOnly = isCaseWorkbenchReadOnly(capabilities);
 
   /**
    * Context 已成功持久化后：软刷新 Server Component，
-   * 由案件详情页服务端 loader 重算合规面板与建议清单。
-   * Client 不执行 compliance resolver；刷新完成前保留旧 props。
+   * 由案件详情页服务端 loader 重算合规面板、建议清单与 Investigation Progress。
+   * Client 不执行 compliance / progress resolver；刷新完成前保留旧 props。
    */
   const refreshComplianceAfterContextPersist = useCallback(() => {
     router.refresh();
@@ -545,15 +549,10 @@ export function PersistedCaseWorkbench({
     return keys;
   }, [checklist]);
 
-  /** M3：仅基于现有 Client 数据的进度汇总（非 Hermes progress resolver） */
-  const investigationProgress = useMemo(
-    () =>
-      summarizeInvestigationProgress({
-        businessContext,
-        checklist,
-        complianceChecklist,
-      }),
-    [businessContext, checklist, complianceChecklist],
+  /** M3C：Server Progress DTO → 展示模型（不做 Client 侧 OPEN/RESOLVED 推导） */
+  const investigationProgressView = useMemo(
+    () => toInvestigationProgressPanelView(investigationProgress),
+    [investigationProgress],
   );
 
   const handleAddComplianceSuggestion = (
@@ -705,7 +704,7 @@ export function PersistedCaseWorkbench({
         系统分析仅用于辅助研判，最终结论以安全人员人工确认结果为准。
       </div>
 
-      <InvestigationProgressPanel counts={investigationProgress} />
+      <InvestigationProgressPanel view={investigationProgressView} />
 
       {analyzed.suggestedAssessment && (
         <SuggestedAssessmentBar assessment={analyzed.suggestedAssessment} />
@@ -797,7 +796,7 @@ export function PersistedCaseWorkbench({
           onChange={handleHumanReviewChange}
           canWriteSemantic={capabilities.canWriteHumanReview}
           canWriteNote={capabilities.canSnapshotWrite}
-          outstandingWorkHint={investigationProgress.hasOutstandingWork}
+          outstandingWorkHint={investigationProgressView.hasOutstandingWork}
         />
       </div>
 
