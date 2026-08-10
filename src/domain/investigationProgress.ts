@@ -13,12 +13,17 @@ import {
   type InvestigationContextEntry,
   type InvestigationContextKey,
 } from "@/domain/investigationContext";
+import {
+  buildSecurityEvidenceProgressSourceKey,
+  buildSecurityVerificationSuggestionKey,
+} from "@/domain/securityEvidenceIdentity";
 import type {
   AnalysisResult,
   ChecklistItem,
   HumanReview,
   SecurityCase,
 } from "@/domain/types";
+import { isKnowledgeSuggestedChecklistItem } from "@/services/checklist/fromComplianceSuggestion";
 
 export type InvestigationProgressKind = "CONTEXT" | "EVIDENCE" | "CHECKLIST";
 
@@ -85,10 +90,6 @@ function checklistProgressKey(itemId: string): string {
   return `${CHECKLIST_KEY_PREFIX}${itemId}`;
 }
 
-function normalizeLabel(label: string): string {
-  return label.trim();
-}
-
 function sortProgressItems(
   items: InvestigationProgressItem[],
 ): InvestigationProgressItem[] {
@@ -121,26 +122,34 @@ function buildContextProgressItem(
   };
 }
 
-function isChecklistSuggestionResolved(
+function isComplianceEvidenceSuggestionResolved(
   suggestionKey: string,
-  label: string,
   checklist: readonly ChecklistItem[],
 ): boolean {
   return checklist.some(
     (item) =>
       item.completed &&
-      (item.sourceRef?.suggestionKey === suggestionKey ||
-        normalizeLabel(item.label) === normalizeLabel(label)),
+      isKnowledgeSuggestedChecklistItem(item) &&
+      item.sourceRef!.kind === "EVIDENCE" &&
+      item.sourceRef!.suggestionKey === suggestionKey,
   );
 }
 
-function isVerificationActionResolved(
-  actionLabel: string,
+function isSecurityVerificationEvidenceResolved(
+  ruleId: string,
+  actionIndex: number,
   checklist: readonly ChecklistItem[],
 ): boolean {
-  const normalized = normalizeLabel(actionLabel);
+  const suggestionKey = buildSecurityVerificationSuggestionKey(
+    ruleId,
+    actionIndex,
+  );
   return checklist.some(
-    (item) => item.completed && normalizeLabel(item.label) === normalized,
+    (item) =>
+      item.completed &&
+      item.sourceRef?.suggestionKey === suggestionKey &&
+      (item.sourceKind === "SECURITY_VERIFICATION" ||
+        item.relatedRuleId === ruleId),
   );
 }
 
@@ -152,14 +161,21 @@ function collectSecurityEvidenceItems(
 
   for (const result of results) {
     if (result.status === "NORMAL") continue;
-    for (const action of result.verificationActions) {
-      const label = normalizeLabel(action);
-      if (label.length === 0 || label === "无") continue;
-      const sourceKey = `rule:${result.ruleId}:${label}`;
+    result.verificationActions.forEach((action, actionIndex) => {
+      const label = action.trim();
+      if (label.length === 0 || label === "无") return;
+      const sourceKey = buildSecurityEvidenceProgressSourceKey(
+        result.ruleId,
+        actionIndex,
+      );
       const key = evidenceProgressKey(sourceKey);
-      if (byKey.has(key)) continue;
+      if (byKey.has(key)) return;
 
-      const resolved = isVerificationActionResolved(label, checklist);
+      const resolved = isSecurityVerificationEvidenceResolved(
+        result.ruleId,
+        actionIndex,
+        checklist,
+      );
       byKey.set(key, {
         key,
         kind: "EVIDENCE",
@@ -167,14 +183,17 @@ function collectSecurityEvidenceItems(
         label,
         sourceRefs: [
           {
-            ref: `analysis:${result.ruleId}`,
+            ref: buildSecurityVerificationSuggestionKey(
+              result.ruleId,
+              actionIndex,
+            ),
             label: result.title,
           },
         ],
         relatedRuleIds: [result.ruleId],
         relatedControlCodes: [],
       });
-    }
+    });
   }
 
   return sortProgressItems([...byKey.values()]);
@@ -204,9 +223,8 @@ function appendEvidenceSuggestion(
   const sourceKey = suggestion.key;
   const key = evidenceProgressKey(sourceKey);
   const suggestionKey = `EVIDENCE:${sourceKey}`;
-  const resolved = isChecklistSuggestionResolved(
+  const resolved = isComplianceEvidenceSuggestionResolved(
     suggestionKey,
-    suggestion.label,
     checklist,
   );
 

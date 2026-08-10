@@ -1,3 +1,4 @@
+import { buildSecurityVerificationSuggestionKey } from "@/domain/securityEvidenceIdentity";
 import type {
   AnalysisResult,
   BusinessContext,
@@ -17,10 +18,14 @@ export function generateChecklist(results: AnalysisResult[]): ChecklistItem[] {
 
   for (const result of results) {
     if (result.status === "NORMAL") continue;
-    for (const action of result.verificationActions) {
+    result.verificationActions.forEach((action, actionIndex) => {
       const key = action.trim();
-      if (key.length === 0 || key === "无" || seen.has(key)) continue;
+      if (key.length === 0 || key === "无" || seen.has(key)) return;
       seen.add(key);
+      const suggestionKey = buildSecurityVerificationSuggestionKey(
+        result.ruleId,
+        actionIndex,
+      );
       items.push({
         id: `CL-${items.length + 1}`,
         category: result.category,
@@ -29,8 +34,16 @@ export function generateChecklist(results: AnalysisResult[]): ChecklistItem[] {
         note: null,
         origin: "SYSTEM",
         relatedRuleId: result.ruleId,
+        sourceKind: "SECURITY_VERIFICATION",
+        sourceRef: {
+          suggestionKey,
+          kind: "EVIDENCE",
+          controlCodes: [],
+          clauseRefs: [],
+          relevance: "",
+        },
       });
-    }
+    });
   }
 
   return items;

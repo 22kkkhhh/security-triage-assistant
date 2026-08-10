@@ -181,8 +181,10 @@ export interface Evidence {
   includedInReport: boolean;
 }
 
-/** 合规建议写入 Checklist 时的来源（可选；存在 caseState JSON，无 Prisma 表变更） */
-export type ChecklistSourceKind = "KNOWLEDGE_SUGGESTED";
+/** Checklist 来源标记（可选；存在 caseState JSON，无 Prisma 表变更） */
+export type ChecklistSourceKind =
+  | "KNOWLEDGE_SUGGESTED"
+  | "SECURITY_VERIFICATION";
 
 export type ChecklistSourceRef = {
   /** CaseComplianceChecklistItem.key，如 CONTEXT:destinationRegion */
