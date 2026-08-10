@@ -355,6 +355,39 @@ v1.5 起，Cursor / Hermes 等开发编码 Agent 并行时须遵守：
 
 详细 ownership、Git 工作流、验证与 v1.5 产品方向见：`docs/v1.5/DUAL_AGENT.md`。
 
+## 15. Codex 分支工作流
+
+Codex 接手后的开发工作同样遵循分支隔离，`integration/*` 仅作为集成基线，禁止直接开发。
+
+每个任务开始前必须执行：
+
+```text
+git fetch origin --tags
+git status
+git branch --show-current
+git rev-parse HEAD
+```
+
+分支决策规则：
+
+```text
+是否继续尚未完成的 Codex 任务？
+  是：继续该任务既有的 agent/codex-* 分支。
+  否：
+    是否为新任务？
+      是：从最新 origin/integration/<current-version> 创建新的 agent/codex-* 分支。
+      否：停止并向用户说明当前分支状态。
+```
+
+硬性约束：
+
+- 禁止直接在 `integration/*` 上实现功能。
+- 禁止在 milestone tag 上开发。
+- 不得进入 `agent/cursor-*` 或 `agent/hermes-*` 分支开发；仅在明确的接管、审查或整合任务中只读审计其历史。
+- 已合并或已完成的旧任务分支不能作为新任务的开发起点。
+- `integration/<current-version>` 是版本线变量；版本升级后必须更新基线，不得把 `v1.5` 硬编码为永久规则。
+- 无法判断应继续哪个 `agent/codex-*` 分支时，停止修改并先向用户报告。
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
