@@ -1,3 +1,4 @@
+import { businessContextSemanticPatch, checklistAddSemanticIntent, timelineEventSemanticIntent } from "@/test-utils/semanticCommandIntents";
 /**
  * v1.3 Step 5：Trusted USER Actor + operationId ownership。
  */
@@ -48,7 +49,6 @@ import {
 } from "@/services/auth/testAuthContext";
 import { listCaseAuditLogs } from "@/services/persistence/auditRepository";
 import { getCaseById } from "@/services/persistence/caseRepository";
-import type { SaveCaseStateInput } from "@/services/persistence/types";
 import { requirePermission } from "@/services/auth/requirePermission";
 
 const TEST_DB_FILE = path.resolve("prisma/test-trusted-actor.db");
@@ -116,21 +116,6 @@ async function seedCase(operationId: string) {
   return created.case;
 }
 
-function toNextState(
-  record: NonNullable<Awaited<ReturnType<typeof getCaseById>>>,
-  patch: Partial<SaveCaseStateInput> = {},
-): SaveCaseStateInput {
-  return {
-    caseData: record.caseState.caseData,
-    businessContext: record.caseState.businessContext,
-    humanReview: record.caseState.humanReview,
-    checklist: record.caseState.checklist,
-    timeline: record.caseState.timeline,
-    suggestedRiskLevel: record.suggestedRiskLevel,
-    status: record.status,
-    ...patch,
-  };
-}
 
 async function fingerprint(caseId: string) {
   const record = await getCaseById(caseId);
@@ -213,7 +198,7 @@ describe("Command USER Actor 覆盖", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: randomUUID(),
       baseUpdatedAt: latest.updatedAt,
-      nextCaseState: toNextState(latest, { status: "PENDING_VERIFICATION" }),
+
       actor: userActor(USER_A),
     });
     expect(status.ok && status.audit?.actorType).toBe("USER");
@@ -230,11 +215,7 @@ describe("Command USER Actor 覆盖", () => {
       itemId: item.id,
       operationId: randomUUID(),
       baseUpdatedAt: latest.updatedAt,
-      nextCaseState: toNextState(latest, {
-        checklist: latest.caseState.checklist.map((c) =>
-          c.id === item.id ? { ...c, completed: true } : c,
-        ),
-      }),
+
       actor: userActor(USER_A),
     });
     expect(complete.ok).toBe(true);
@@ -248,11 +229,7 @@ describe("Command USER Actor 覆盖", () => {
       itemId: item.id,
       operationId: randomUUID(),
       baseUpdatedAt: latest.updatedAt,
-      nextCaseState: toNextState(latest, {
-        checklist: latest.caseState.checklist.map((c) =>
-          c.id === item.id ? { ...c, completed: false } : c,
-        ),
-      }),
+
       actor: userActor(USER_A),
     });
     expect(reopen.ok && reopen.audit?.actorType).toBe("USER");
@@ -265,8 +242,7 @@ describe("Command USER Actor 覆盖", () => {
       itemId: manualId,
       operationId: randomUUID(),
       baseUpdatedAt: latest.updatedAt,
-      nextCaseState: toNextState(latest, {
-        checklist: [
+      itemIntent: checklistAddSemanticIntent([
           ...latest.caseState.checklist,
           {
             id: manualId,
@@ -277,8 +253,7 @@ describe("Command USER Actor 覆盖", () => {
             origin: "MANUAL",
             relatedRuleId: null,
           },
-        ],
-      }),
+        ], manualId),
       actor: userActor(USER_A),
     });
     expect(add.ok && add.audit?.actorType).toBe("USER");
@@ -290,9 +265,7 @@ describe("Command USER Actor 覆盖", () => {
       itemId: manualId,
       operationId: randomUUID(),
       baseUpdatedAt: latest.updatedAt,
-      nextCaseState: toNextState(latest, {
-        checklist: latest.caseState.checklist.filter((c) => c.id !== manualId),
-      }),
+
       actor: userActor(USER_A),
     });
     expect(del.ok && del.audit?.actorType).toBe("USER");
@@ -306,13 +279,11 @@ describe("Command USER Actor 覆盖", () => {
       caseId: latest.id,
       operationId: randomUUID(),
       baseUpdatedAt: latest.updatedAt,
-      nextCaseState: toNextState(latest, {
-        businessContext: {
+      businessContextPatch: businessContextSemanticPatch({
           ...latest.caseState.businessContext,
           businessLegitimacy: nextLegitimacy,
           businessOwner: "管理员",
-        },
-      }),
+        }),
       actor: userActor(USER_A),
     });
     expect(bc.ok).toBe(true);
@@ -349,8 +320,7 @@ describe("Command USER Actor 覆盖", () => {
       eventId,
       operationId: randomUUID(),
       baseUpdatedAt: latest.updatedAt,
-      nextCaseState: toNextState(latest, {
-        timeline: [
+      eventIntent: timelineEventSemanticIntent([
           ...latest.caseState.timeline,
           {
             id: eventId,
@@ -361,8 +331,7 @@ describe("Command USER Actor 覆盖", () => {
             source: "HUMAN",
             eventType: "其他",
           },
-        ],
-      }),
+        ], eventId),
       actor: userActor(USER_A),
     });
     expect(tl.ok && tl.audit?.actorType).toBe("USER");
@@ -433,7 +402,7 @@ describe("actorName snapshot", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: op1,
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }),
+
       actor: userActor(USER_A),
     });
     expect(first.ok && first.audit?.actorName).toBe("张三");
@@ -453,7 +422,7 @@ describe("actorName snapshot", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: op1,
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }),
+
       actor: userActor(renamed),
     });
     expect(retry.ok && retry.alreadyApplied).toBe(true);
@@ -465,7 +434,7 @@ describe("actorName snapshot", () => {
       nextStatus: "RESPONDING",
       operationId: randomUUID(),
       baseUpdatedAt: latest!.updatedAt,
-      nextCaseState: toNextState(latest!, { status: "RESPONDING" }),
+
       actor: userActor(renamed),
     });
     expect(second.ok && second.audit?.actorName).toBe("张三（安全运营）");
@@ -482,7 +451,7 @@ describe("operationId ownership", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: op,
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }),
+
       actor: userActor(USER_A),
     });
     expect(first.ok && first.alreadyApplied).toBe(false);
@@ -493,7 +462,7 @@ describe("operationId ownership", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: op,
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }),
+
       actor: userActor(USER_A),
     });
     expect(retry.ok && retry.alreadyApplied).toBe(true);
@@ -508,7 +477,7 @@ describe("operationId ownership", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: op,
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }),
+
       actor: userActor(USER_A),
     });
     expect(first.ok).toBe(true);
@@ -519,7 +488,7 @@ describe("operationId ownership", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: op,
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }),
+
       actor: userActor(USER_B),
     });
     expect(cross.ok).toBe(false);
@@ -536,7 +505,7 @@ describe("operationId ownership", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: op,
       baseUpdatedAt: a.updatedAt,
-      nextCaseState: toNextState(a, { status: "PENDING_VERIFICATION" }),
+
       actor: userActor(USER_A),
     });
 
@@ -545,7 +514,7 @@ describe("operationId ownership", () => {
       nextStatus: "RESPONDING",
       operationId: op,
       baseUpdatedAt: b.updatedAt,
-      nextCaseState: toNextState(b, { status: "RESPONDING" }),
+
       actor: userActor(USER_A),
     });
     expect(wrongCase.ok).toBe(false);
@@ -556,16 +525,14 @@ describe("operationId ownership", () => {
       caseId: a.id,
       operationId: op,
       baseUpdatedAt: aLatest!.updatedAt,
-      nextCaseState: toNextState(aLatest!, {
-        businessContext: {
+      businessContextPatch: businessContextSemanticPatch({
           ...aLatest!.caseState.businessContext,
           businessLegitimacy:
             aLatest!.caseState.businessContext.businessLegitimacy ===
             "AUTHORIZED"
               ? "UNAUTHORIZED"
               : "AUTHORIZED",
-        },
-      }),
+        }),
       actor: userActor(USER_A),
     });
     expect(wrongAction.ok).toBe(false);
@@ -695,7 +662,7 @@ describe("operationId ownership", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: op,
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }),
+
       actor: userActor(user),
     });
     expect(first.ok).toBe(true);
@@ -825,7 +792,7 @@ describe("USER FK Restrict", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: randomUUID(),
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }),
+
       actor: userActor(USER_A),
     });
     const { prisma } = await import("@/lib/prisma");

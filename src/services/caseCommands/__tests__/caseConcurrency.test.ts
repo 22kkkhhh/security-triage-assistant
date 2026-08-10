@@ -1,5 +1,6 @@
+import { businessContextSemanticPatch, timelineEventSemanticIntent } from "@/test-utils/semanticCommandIntents";
 /**
- * Case Semantic Command 乐观并发：防止旧 Tab 完整 nextCaseState lost update。
+ * Case Semantic Command 乐观并发：防止旧 Tab 覆盖服务端构造的规范状态。
  */
 import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { systemActor } from "@/services/audit/auditEventBuilder";
@@ -90,7 +91,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-status-a",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(a.ok).toBe(true);
     if (!a.ok) return;
@@ -107,13 +108,10 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       caseId: v1.id,
       operationId: "cc-bc-stale",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, {
-        status: "INVESTIGATING",
-        businessContext: {
+      businessContextPatch: businessContextSemanticPatch({
           ...v1.caseState.businessContext,
           businessLegitimacy: staleTarget,
-        },
-      }), actor: systemActor()
+        }), actor: systemActor()
 });
     expect(staleBc.ok).toBe(false);
     if (staleBc.ok) return;
@@ -145,12 +143,10 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       caseId: v1.id,
       operationId: "cc-bc-a",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, {
-        businessContext: {
+      businessContextPatch: businessContextSemanticPatch({
           ...v1.caseState.businessContext,
           businessLegitimacy: "UNAUTHORIZED",
-        },
-      }), actor: systemActor()
+        }), actor: systemActor()
 });
     expect(a.ok).toBe(true);
     if (!a.ok) return;
@@ -160,10 +156,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "CLOSED",
       operationId: "cc-status-stale",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, {
-        status: "CLOSED",
-        businessContext: v1.caseState.businessContext,
-      }), actor: systemActor()
+       actor: systemActor()
 });
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
@@ -181,12 +174,10 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       caseId: v1.id,
       operationId: "cc-bc-b",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, {
-        businessContext: {
+      businessContextPatch: businessContextSemanticPatch({
           ...v1.caseState.businessContext,
           businessLegitimacy: "UNAUTHORIZED",
-        },
-      }), actor: systemActor()
+        }), actor: systemActor()
 });
     expect(a.ok).toBe(true);
     if (!a.ok) return;
@@ -198,12 +189,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       itemId: item.id,
       operationId: "cc-cl-stale",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, {
-        checklist: v1.caseState.checklist.map((x) =>
-          x.id === item.id ? { ...x, completed: true } : x,
-        ),
-        businessContext: v1.caseState.businessContext,
-      }), actor: systemActor()
+       actor: systemActor()
 });
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
@@ -226,11 +212,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       itemId: item.id,
       operationId: "cc-cl-a",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, {
-        checklist: v1.caseState.checklist.map((x) =>
-          x.id === item.id ? { ...x, completed: true } : x,
-        ),
-      }), actor: systemActor()
+       actor: systemActor()
 });
     expect(a.ok).toBe(true);
     if (!a.ok) return;
@@ -271,9 +253,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       eventId: event.id,
       operationId: "cc-tl-a",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, {
-        timeline: [...v1.caseState.timeline, event],
-      }), actor: systemActor()
+      eventIntent: timelineEventSemanticIntent([...v1.caseState.timeline, event], event.id), actor: systemActor()
 });
     expect(a.ok).toBe(true);
     if (!a.ok) return;
@@ -282,13 +262,10 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       caseId: v1.id,
       operationId: "cc-bc-after-tl",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, {
-        businessContext: {
+      businessContextPatch: businessContextSemanticPatch({
           ...v1.caseState.businessContext,
           businessLegitimacy: "UNAUTHORIZED",
-        },
-        timeline: v1.caseState.timeline,
-      }), actor: systemActor()
+        }), actor: systemActor()
 });
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
@@ -304,7 +281,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-status-vs-a",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(a.ok).toBe(true);
     if (!a.ok) return;
@@ -314,7 +291,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "CLOSED",
       operationId: "cc-status-vs-b",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "CLOSED" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(b.ok).toBe(false);
     if (b.ok) return;
@@ -329,7 +306,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-retry-op",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
@@ -340,7 +317,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-retry-op",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(retry.ok).toBe(true);
     if (!retry.ok) return;
@@ -358,7 +335,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-chain-1",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(a.ok).toBe(true);
     if (!a.ok) return;
@@ -368,15 +345,13 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       caseId: v1.id,
       operationId: "cc-chain-2",
       baseUpdatedAt: a.case.updatedAt,
-      nextCaseState: toNextState(a.case, {
-        businessContext: {
+      businessContextPatch: businessContextSemanticPatch({
           ...a.case.caseState.businessContext,
           businessLegitimacy:
             a.case.caseState.businessContext.businessLegitimacy === "AUTHORIZED"
               ? "UNKNOWN"
               : "AUTHORIZED",
-        },
-      }), actor: systemActor()
+        }), actor: systemActor()
 });
     expect(b.ok).toBe(true);
   });
@@ -388,7 +363,7 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-autosave-race",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(a.ok).toBe(true);
     if (!a.ok) return;
@@ -418,18 +393,16 @@ describe("Case Semantic Command 并发（Release Blocker I）", () => {
       nextStatus: "RESPONDING",
       operationId: "cc-canon-a",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+       actor: systemActor()
 });
     const stale = await updateBusinessContextCommand({
       caseId: v1.id,
       operationId: "cc-canon-b",
       baseUpdatedAt: v1.updatedAt,
-      nextCaseState: toNextState(v1, {
-        businessContext: {
+      businessContextPatch: businessContextSemanticPatch({
           ...v1.caseState.businessContext,
           businessLegitimacy: "UNAUTHORIZED",
-        },
-      }), actor: systemActor()
+        }), actor: systemActor()
 });
     expect(stale.ok).toBe(false);
     if (stale.ok) return;

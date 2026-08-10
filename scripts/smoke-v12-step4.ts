@@ -46,15 +46,7 @@ async function main() {
     nextStatus: "PENDING_VERIFICATION",
     operationId: `smoke-status-${Date.now()}`,
     baseUpdatedAt: afterHandoff.updatedAt,
-    nextCaseState: {
-      caseData: created.caseState.caseData,
-      businessContext: created.caseState.businessContext,
-      checklist: created.caseState.checklist,
-      humanReview: created.caseState.humanReview,
-      timeline: created.caseState.timeline,
-      suggestedRiskLevel: created.suggestedRiskLevel,
-      status: "PENDING_VERIFICATION",
-    }, actor: systemActor()
+     actor: systemActor()
 });
   if (!statused.ok) throw new Error(statused.error);
 

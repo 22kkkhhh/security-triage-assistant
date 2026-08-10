@@ -1,3 +1,4 @@
+import { checklistAddSemanticIntent } from "@/test-utils/semanticCommandIntents";
 /**
  * v1.2 RC Fix smoke（自动化部分）。
  * 浏览器 A–J 人工点验不在此脚本声称通过。
@@ -13,37 +14,11 @@ import {
 import { createManualChecklistItem } from "../src/services/checklist/generateChecklist";
 import { prisma, resetPrismaClient } from "../src/lib/prisma";
 import { listCaseAuditLogs } from "../src/services/persistence/auditRepository";
-import type { SaveCaseStateInput } from "../src/services/persistence/types";
 
 function assert(cond: unknown, msg: string): asserts cond {
   if (!cond) throw new Error(msg);
 }
 
-function toNextState(
-  record: {
-    caseState: {
-      caseData: SaveCaseStateInput["caseData"];
-      businessContext: SaveCaseStateInput["businessContext"];
-      checklist: SaveCaseStateInput["checklist"];
-      humanReview: SaveCaseStateInput["humanReview"];
-      timeline: SaveCaseStateInput["timeline"];
-    };
-    suggestedRiskLevel: SaveCaseStateInput["suggestedRiskLevel"];
-    status: NonNullable<SaveCaseStateInput["status"]>;
-  },
-  patch: Partial<SaveCaseStateInput> = {},
-): SaveCaseStateInput {
-  return {
-    caseData: record.caseState.caseData,
-    businessContext: record.caseState.businessContext,
-    checklist: record.caseState.checklist,
-    humanReview: record.caseState.humanReview,
-    timeline: record.caseState.timeline,
-    suggestedRiskLevel: record.suggestedRiskLevel,
-    status: record.status,
-    ...patch,
-  };
-}
 
 async function main() {
   const url = process.env.DATABASE_URL;
@@ -105,11 +80,7 @@ async function main() {
     itemId: systemItem!.id,
     operationId: `smoke-rc-del-sys-${Date.now()}`,
     baseUpdatedAt: created.case.updatedAt,
-    nextCaseState: toNextState(created.case, {
-      checklist: created.case.caseState.checklist.filter(
-        (x) => x.id !== systemItem!.id,
-      ),
-    }), actor: systemActor()
+     actor: systemActor()
 });
   assert(!reject.ok, "SYSTEM 删除应失败");
   assert(
@@ -127,9 +98,7 @@ async function main() {
     itemId: manual.id,
     operationId: `smoke-rc-add-${Date.now()}`,
     baseUpdatedAt: created.case.updatedAt,
-    nextCaseState: toNextState(created.case, {
-      checklist: [...created.case.caseState.checklist, manual],
-    }), actor: systemActor()
+    itemIntent: checklistAddSemanticIntent([...created.case.caseState.checklist, manual], manual.id), actor: systemActor()
 });
   assert(added.ok, "MANUAL 新增失败");
   if (!added.ok) return;
@@ -139,9 +108,7 @@ async function main() {
     itemId: manual.id,
     operationId: `smoke-rc-del-man-${Date.now()}`,
     baseUpdatedAt: added.case.updatedAt,
-    nextCaseState: toNextState(added.case, {
-      checklist: added.case.caseState.checklist.filter((x) => x.id !== manual.id),
-    }), actor: systemActor()
+     actor: systemActor()
 });
   assert(delManual.ok, "MANUAL 删除应成功");
   if (delManual.ok) {

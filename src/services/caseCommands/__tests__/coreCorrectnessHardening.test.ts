@@ -1,3 +1,4 @@
+import { businessContextSemanticPatch } from "@/test-utils/semanticCommandIntents";
 /**
  * v1.5 M4 Workstream C1 — Core Correctness Hardening regression。
  */
@@ -251,19 +252,13 @@ describe("SF-4 BC / Security Evidence boundary", () => {
       caseId: withTicket.id,
       operationId: "op-bc-c1",
       baseUpdatedAt: withTicket.updatedAt,
-      nextCaseState: toNextState(withTicket, {
-        businessContext: {
+      businessContextPatch: businessContextSemanticPatch({
           ...withTicket.caseState.businessContext,
           changeTicketStatus: "CONFIRMED",
           ownerVerification: "CONFIRMED",
           changeTicketId: "FORGED-SHOULD-NOT-APPLY",
           businessJustification: "forged",
-        },
-        checklist: withTicket.caseState.checklist.map((item) => ({
-          ...item,
-          completed: true,
-        })),
-      }),
+        }),
       actor: systemActor(),
     });
     expect(updated.ok).toBe(true);

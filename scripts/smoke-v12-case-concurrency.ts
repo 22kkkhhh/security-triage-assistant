@@ -1,3 +1,4 @@
+import { businessContextSemanticPatch } from "@/test-utils/semanticCommandIntents";
 /**
  * Case 双 Tab lost-update 回归：
  * Tab A status → RESPONDING
@@ -15,37 +16,11 @@ import {
 } from "../src/services/caseCommands";
 import { prisma, resetPrismaClient } from "../src/lib/prisma";
 import { listCaseAuditLogs } from "../src/services/persistence/auditRepository";
-import type { SaveCaseStateInput } from "../src/services/persistence/types";
 
 function assert(cond: unknown, msg: string): asserts cond {
   if (!cond) throw new Error(msg);
 }
 
-function toNextState(
-  record: {
-    caseState: SaveCaseStateInput extends never ? never : {
-      caseData: SaveCaseStateInput["caseData"];
-      businessContext: SaveCaseStateInput["businessContext"];
-      checklist: SaveCaseStateInput["checklist"];
-      humanReview: SaveCaseStateInput["humanReview"];
-      timeline: SaveCaseStateInput["timeline"];
-    };
-    suggestedRiskLevel: SaveCaseStateInput["suggestedRiskLevel"];
-    status: NonNullable<SaveCaseStateInput["status"]>;
-  },
-  patch: Partial<SaveCaseStateInput> = {},
-): SaveCaseStateInput {
-  return {
-    caseData: record.caseState.caseData,
-    businessContext: record.caseState.businessContext,
-    checklist: record.caseState.checklist,
-    humanReview: record.caseState.humanReview,
-    timeline: record.caseState.timeline,
-    suggestedRiskLevel: record.suggestedRiskLevel,
-    status: record.status,
-    ...patch,
-  };
-}
 
 async function main() {
   const url = process.env.DATABASE_URL;
@@ -74,7 +49,7 @@ async function main() {
     nextStatus: "RESPONDING",
     operationId: `smoke-cc-status-${Date.now()}`,
     baseUpdatedAt: v1.updatedAt,
-    nextCaseState: toNextState(v1, { status: "RESPONDING" }), actor: systemActor()
+     actor: systemActor()
 });
   assert(tabA.ok, `Tab A 状态修改失败: ${!tabA.ok ? tabA.error : ""}`);
   if (!tabA.ok) return;
@@ -89,13 +64,10 @@ async function main() {
     caseId: v1.id,
     operationId: `smoke-cc-bc-${Date.now()}`,
     baseUpdatedAt: v1.updatedAt,
-    nextCaseState: toNextState(v1, {
-      status: "INVESTIGATING",
-      businessContext: {
+    businessContextPatch: businessContextSemanticPatch({
         ...v1.caseState.businessContext,
         businessLegitimacy: targetLegitimacy,
-      },
-    }), actor: systemActor()
+      }), actor: systemActor()
 });
   assert(!tabB.ok, "Tab B 应 STALE");
   assert(!tabB.ok && tabB.code === "STALE", "Tab B 应返回 STALE code");

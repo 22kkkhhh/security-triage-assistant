@@ -1,3 +1,4 @@
+import { checklistAddSemanticIntent, timelineEventSemanticIntent } from "@/test-utils/semanticCommandIntents";
 /**
  * v1.2 RC Fix：Timeline/Audit 分离、SYSTEM Checklist 删除限制、用户可见时间格式。
  */
@@ -18,7 +19,6 @@ import { formatDateTimesInDisplayText } from "@/lib/formatDateTimeForDisplay";
 import { resetPrismaClient } from "@/lib/prisma";
 import { listCaseAuditLogs } from "@/services/persistence/auditRepository";
 import { getCaseById } from "@/services/persistence/caseRepository";
-import type { SaveCaseStateInput } from "@/services/persistence/types";
 
 const TEST_DB_FILE = path.resolve("prisma/test-rc-fix.db");
 const TEST_DB_URL = `file:${TEST_DB_FILE.replace(/\\/g, "/")}`;
@@ -30,21 +30,6 @@ function cleanDbFiles() {
   }
 }
 
-function toNextState(
-  record: NonNullable<Awaited<ReturnType<typeof getCaseById>>>,
-  patch: Partial<SaveCaseStateInput> = {},
-): SaveCaseStateInput {
-  return {
-    caseData: record.caseState.caseData,
-    businessContext: record.caseState.businessContext,
-    checklist: record.caseState.checklist,
-    humanReview: record.caseState.humanReview,
-    timeline: record.caseState.timeline,
-    suggestedRiskLevel: record.suggestedRiskLevel,
-    status: record.status,
-    ...patch,
-  };
-}
 
 beforeAll(async () => {
   cleanDbFiles();
@@ -121,7 +106,7 @@ describe("RC Fix · Timeline / Audit", () => {
       eventId: event.id,
       operationId: "rc-tl-add",
       baseUpdatedAt: created.case.updatedAt,
-      nextCaseState: toNextState(created.case, { timeline: nextTimeline }), actor: systemActor()
+      eventIntent: timelineEventSemanticIntent(nextTimeline, event.id), actor: systemActor()
 });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -168,16 +153,13 @@ describe("RC Fix · SYSTEM Checklist 删除", () => {
     if (!systemItem) return;
 
     const before = await getCaseById(created.case.id);
-    const deleted = before!.caseState.checklist.filter(
-      (x) => x.id !== systemItem.id,
-    );
     const result = await applyChecklistCommand({
       caseId: created.case.id,
       action: "delete",
       itemId: systemItem.id,
       operationId: "rc-cl-del-system",
       baseUpdatedAt: before!.updatedAt,
-      nextCaseState: toNextState(before!, { checklist: deleted }), actor: systemActor()
+       actor: systemActor()
 });
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -220,20 +202,19 @@ describe("RC Fix · SYSTEM Checklist 删除", () => {
       itemId: manual.id,
       operationId: "rc-cl-add-manual",
       baseUpdatedAt: created.case.updatedAt,
-      nextCaseState: toNextState(created.case, { checklist: withManual }), actor: systemActor()
+      itemIntent: checklistAddSemanticIntent(withManual, manual.id), actor: systemActor()
 });
     expect(added.ok).toBe(true);
     if (!added.ok) return;
 
     const mid = await getCaseById(created.case.id);
-    const without = mid!.caseState.checklist.filter((x) => x.id !== manual.id);
     const deleted = await applyChecklistCommand({
       caseId: created.case.id,
       action: "delete",
       itemId: manual.id,
       operationId: "rc-cl-del-manual",
       baseUpdatedAt: mid!.updatedAt,
-      nextCaseState: toNextState(mid!, { checklist: without }), actor: systemActor()
+       actor: systemActor()
 });
     expect(deleted.ok).toBe(true);
     if (!deleted.ok) return;

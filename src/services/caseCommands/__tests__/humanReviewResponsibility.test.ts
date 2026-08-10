@@ -1,3 +1,4 @@
+import { businessContextSemanticPatch, timelineEventSemanticIntent } from "@/test-utils/semanticCommandIntents";
 /**
  * v1.3 Step 6：HumanReview Responsibility（Server-owned）。
  */
@@ -45,7 +46,6 @@ import {
   saveCaseSnapshot,
 } from "@/services/persistence/caseRepository";
 import { parseCaseSnapshotPatch } from "@/services/persistence/caseSnapshotPatch";
-import type { SaveCaseStateInput } from "@/services/persistence/types";
 
 const TEST_DB_FILE = path.resolve("prisma/test-hr-responsibility.db");
 const TEST_DB_URL = `file:${TEST_DB_FILE.replace(/\\/g, "/")}`;
@@ -111,21 +111,6 @@ async function seedCase(operationId: string) {
   return created.case;
 }
 
-function toNextState(
-  record: NonNullable<Awaited<ReturnType<typeof getCaseById>>>,
-  patch: Partial<SaveCaseStateInput> = {},
-): SaveCaseStateInput {
-  return {
-    caseData: record.caseState.caseData,
-    businessContext: record.caseState.businessContext,
-    humanReview: record.caseState.humanReview,
-    checklist: record.caseState.checklist,
-    timeline: record.caseState.timeline,
-    suggestedRiskLevel: record.suggestedRiskLevel,
-    status: record.status,
-    ...patch,
-  };
-}
 
 function responsibilityOf(hr: HumanReview | null | undefined) {
   return {
@@ -348,7 +333,7 @@ describe("Responsibility updates", () => {
       nextStatus: "RESPONDING",
       operationId: randomUUID(),
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, { status: "RESPONDING" }),
+
       actor: userActor(USER_B),
     });
     expect(status.ok).toBe(true);
@@ -360,16 +345,14 @@ describe("Responsibility updates", () => {
       caseId: current.id,
       operationId: randomUUID(),
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, {
-        businessContext: {
+      businessContextPatch: businessContextSemanticPatch({
           ...current.caseState.businessContext,
           businessLegitimacy:
             current.caseState.businessContext.businessLegitimacy ===
             "AUTHORIZED"
               ? "UNAUTHORIZED"
               : "AUTHORIZED",
-        },
-      }),
+        }),
       actor: userActor(USER_B),
     });
     expect(bc.ok).toBe(true);
@@ -385,11 +368,7 @@ describe("Responsibility updates", () => {
       itemId: item!.id,
       operationId: randomUUID(),
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, {
-        checklist: current.caseState.checklist.map((x) =>
-          x.id === item!.id ? { ...x, completed: true } : x,
-        ),
-      }),
+
       actor: userActor(USER_B),
     });
     expect(cl.ok).toBe(true);
@@ -403,8 +382,7 @@ describe("Responsibility updates", () => {
       eventId,
       operationId: randomUUID(),
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, {
-        timeline: [
+      eventIntent: timelineEventSemanticIntent([
           ...current.caseState.timeline,
           {
             id: eventId,
@@ -415,8 +393,7 @@ describe("Responsibility updates", () => {
             source: "HUMAN",
             eventType: "其他",
           },
-        ],
-      }),
+        ], eventId),
       actor: userActor(USER_B),
     });
     expect(tl.ok).toBe(true);

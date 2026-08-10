@@ -1,3 +1,4 @@
+import { businessContextSemanticPatch, checklistAddSemanticIntent, timelineEventSemanticIntent } from "@/test-utils/semanticCommandIntents";
 import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { systemActor, manualActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
@@ -188,13 +189,12 @@ describe("caseCommands（v1.2 Step 2）", () => {
 
   it("STATUS_CHANGED：from 取 DB 真实值；同 status 不重复 Audit", async () => {
     const created = await seedCaseA();
-    const next = toNextState(created, { status: "PENDING_VERIFICATION" });
     const r1 = await changeCaseStatusCommand({
       caseId: created.id,
       nextStatus: "PENDING_VERIFICATION",
       operationId: "op-status-1",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: next, actor: systemActor()
+       actor: systemActor()
 });
     expect(r1.ok).toBe(true);
     if (!r1.ok) return;
@@ -208,7 +208,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "op-status-2",
       baseUpdatedAt: r1.case.updatedAt,
-      nextCaseState: toNextState(r1.case, { status: "PENDING_VERIFICATION" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(r2.ok).toBe(true);
     if (!r2.ok) return;
@@ -228,7 +228,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "CLOSED",
       operationId: "op-close-1",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "CLOSED" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(closed.ok).toBe(true);
     if (!closed.ok) return;
@@ -239,7 +239,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "CLOSED",
       operationId: "op-close-1",
       baseUpdatedAt: closed.case.updatedAt,
-      nextCaseState: toNextState(closed.case, { status: "CLOSED" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(retry.ok).toBe(true);
     if (!retry.ok) return;
@@ -250,7 +250,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "INVESTIGATING",
       operationId: "op-reopen-1",
       baseUpdatedAt: closed.case.updatedAt,
-      nextCaseState: toNextState(closed.case, { status: "INVESTIGATING" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(reopened.ok).toBe(true);
     if (!reopened.ok) return;
@@ -272,7 +272,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: item.id,
       operationId: "op-cl-complete",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { checklist: completedList }), actor: systemActor()
+       actor: systemActor()
 });
     expect(c1.ok).toBe(true);
     if (!c1.ok) return;
@@ -284,7 +284,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: item.id,
       operationId: "op-cl-complete-2",
       baseUpdatedAt: c1.case.updatedAt,
-      nextCaseState: toNextState(c1.case, { checklist: completedList }), actor: systemActor()
+       actor: systemActor()
 });
     expect(c2.ok && c2.alreadyApplied).toBe(true);
 
@@ -297,7 +297,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: item.id,
       operationId: "op-cl-reopen",
       baseUpdatedAt: c1.case.updatedAt,
-      nextCaseState: toNextState(c1.case, { checklist: reopenedList }), actor: systemActor()
+       actor: systemActor()
 });
     expect(r1.ok).toBe(true);
     if (!r1.ok) return;
@@ -314,7 +314,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: manual.id,
       operationId: "op-cl-add",
       baseUpdatedAt: r1.case.updatedAt,
-      nextCaseState: toNextState(r1.case, { checklist: withManual }), actor: systemActor()
+      itemIntent: checklistAddSemanticIntent(withManual, manual.id), actor: systemActor()
 });
     expect(a1.ok).toBe(true);
     if (!a1.ok) return;
@@ -326,9 +326,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: manual.id,
       operationId: "op-cl-add",
       baseUpdatedAt: a1.case.updatedAt,
-      nextCaseState: toNextState(a1.case, {
-        checklist: [...withManual, { ...manual, id: "dup-should-not-apply" }],
-      }), actor: systemActor()
+      itemIntent: checklistAddSemanticIntent([...withManual, { ...manual, id: "dup-should-not-apply" }], manual.id), actor: systemActor()
 });
     expect(aRetry.ok && aRetry.alreadyApplied).toBe(true);
     expect(
@@ -336,14 +334,13 @@ describe("caseCommands（v1.2 Step 2）", () => {
         aRetry.case.caseState.checklist.filter((x) => x.id === manual.id),
     ).toHaveLength(1);
 
-    const deleted = withManual.filter((x) => x.id !== manual.id);
     const d1 = await applyChecklistCommand({
       caseId: created.id,
       action: "delete",
       itemId: manual.id,
       operationId: "op-cl-del",
       baseUpdatedAt: a1.case.updatedAt,
-      nextCaseState: toNextState(a1.case, { checklist: deleted }), actor: systemActor()
+       actor: systemActor()
 });
     expect(d1.ok).toBe(true);
     if (!d1.ok) return;
@@ -357,20 +354,11 @@ describe("caseCommands（v1.2 Step 2）", () => {
       ...created.caseState.businessContext,
       businessLegitimacy: "UNAUTHORIZED" as const,
     };
-    const analyzed = analyzeSecurityCase({
-      ...caseA,
-      businessContext: nextBc,
-    });
     const r = await updateBusinessContextCommand({
       caseId: created.id,
       operationId: "op-bc-1",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, {
-        businessContext: nextBc,
-        checklist: analyzed.checklist,
-        suggestedRiskLevel:
-          analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
-      }), actor: systemActor()
+      businessContextPatch: businessContextSemanticPatch(nextBc), actor: systemActor()
 });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -466,9 +454,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       eventId: event.id,
       operationId: "op-tl-1",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, {
-        timeline: [...created.caseState.timeline, event],
-      }), actor: systemActor()
+      eventIntent: timelineEventSemanticIntent([...created.caseState.timeline, event], event.id), actor: systemActor()
 });
     expect(r1.ok).toBe(true);
     if (!r1.ok) return;
@@ -479,12 +465,10 @@ describe("caseCommands（v1.2 Step 2）", () => {
       eventId: event.id,
       operationId: "op-tl-1",
       baseUpdatedAt: r1.case.updatedAt,
-      nextCaseState: toNextState(r1.case, {
-        timeline: [
+      eventIntent: timelineEventSemanticIntent([
           ...r1.case.caseState.timeline,
           { ...event, id: "should-not-add" },
-        ],
-      }), actor: systemActor()
+        ], event.id), actor: systemActor()
 });
     expect(r2.ok && r2.alreadyApplied).toBe(true);
     expect(
@@ -508,7 +492,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "op-act-1",
       baseUpdatedAt: a.updatedAt,
-      nextCaseState: toNextState(a, { status: "PENDING_VERIFICATION" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(statused.ok).toBe(true);
     if (!statused.ok) return;
@@ -568,7 +552,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: item.id,
       operationId: "op-ks-add-1",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { checklist: next }),
+      itemIntent: checklistAddSemanticIntent(next, item.id),
       actor: systemActor(),
     });
     expect(result.ok).toBe(true);
@@ -620,9 +604,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: itemA1.id,
       operationId: "op-ks-a1",
       baseUpdatedAt: a.updatedAt,
-      nextCaseState: toNextState(a, {
-        checklist: [...a.caseState.checklist, itemA1],
-      }),
+      itemIntent: checklistAddSemanticIntent([...a.caseState.checklist, itemA1], itemA1.id),
       actor: systemActor(),
     });
     expect(addA1.ok).toBe(true);
@@ -639,9 +621,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: itemA2.id,
       operationId: "op-ks-a2",
       baseUpdatedAt: addA1.case.updatedAt,
-      nextCaseState: toNextState(addA1.case, {
-        checklist: [...addA1.case.caseState.checklist, itemA2],
-      }),
+      itemIntent: checklistAddSemanticIntent([...addA1.case.caseState.checklist, itemA2], itemA2.id),
       actor: systemActor(),
     });
     expect(addA2.ok && addA2.alreadyApplied).toBe(true);
@@ -662,9 +642,7 @@ describe("caseCommands（v1.2 Step 2）", () => {
       itemId: itemB.id,
       operationId: "op-ks-b1",
       baseUpdatedAt: b.updatedAt,
-      nextCaseState: toNextState(b, {
-        checklist: [...b.caseState.checklist, itemB],
-      }),
+      itemIntent: checklistAddSemanticIntent([...b.caseState.checklist, itemB], itemB.id),
       actor: systemActor(),
     });
     expect(addB.ok).toBe(true);

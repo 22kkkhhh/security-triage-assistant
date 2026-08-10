@@ -27,15 +27,21 @@
 - 已知 STALE、STALE_REPORT、FORBIDDEN、validation 与 idempotency 语义及 code 保留。
 - Server Action sanitizer 与 UI Error Boundary 共同提供两层防线。
 
+### Semantic Command Canonicalization — COMPLETE
+
+- Semantic Command 现在只接收最小 intent；服务端基于当前持久化 Case 构建 canonical
+  persistence state。
+- Browser 不再为 Status、BusinessContext、Checklist、Timeline 或 HumanReview
+  semantic mutation 发送完整 Case state。
+- 已移除 legacy complete-state compatibility；cross-field smuggling regression 继续覆盖，
+  并保留 OCC、idempotency、authorization、audit、SYSTEM checklist protection 与
+  KNOWLEDGE_SUGGESTED provenance 的测试。
+
 ## NEXT
 
-### Semantic Command Canonicalization
+### M4 Release Acceptance
 
-审计 `nextCaseState` 是否仍接收客户端完整状态。目标是服务器只接收该命令合法修改所需的
-最小 payload，并基于当前持久化状态构建 canonical next state，以防 cross-field smuggling、
-审计遗漏和未授权语义修改。
-
-约束：不进行大型 command 架构重写。
+执行 release acceptance review 和完整 repository gates；本计划项不启动新的产品开发。
 
 ## DEFERRED / NON-BLOCKING
 

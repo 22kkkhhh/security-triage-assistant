@@ -1,3 +1,4 @@
+import { businessContextSemanticPatch, timelineEventSemanticIntent } from "@/test-utils/semanticCommandIntents";
 /**
  * v1.3 Step 0：Snapshot Autosave 写边界攻击回归 + 语义/审计回归。
  */
@@ -33,7 +34,6 @@ import {
 import {
   parseCaseSnapshotPatch,
 } from "@/services/persistence/caseSnapshotPatch";
-import type { SaveCaseStateInput } from "@/services/persistence/types";
 
 const TEST_DB_FILE = path.resolve("prisma/test-case-snapshot-boundary.db");
 const TEST_DB_URL = `file:${TEST_DB_FILE.replace(/\\/g, "/")}`;
@@ -49,21 +49,6 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function toNextState(
-  record: NonNullable<Awaited<ReturnType<typeof getCaseById>>>,
-  patch: Partial<SaveCaseStateInput> = {},
-): SaveCaseStateInput {
-  return {
-    caseData: record.caseState.caseData,
-    businessContext: record.caseState.businessContext,
-    checklist: record.caseState.checklist,
-    humanReview: record.caseState.humanReview,
-    timeline: record.caseState.timeline,
-    suggestedRiskLevel: record.suggestedRiskLevel,
-    status: record.status,
-    ...patch,
-  };
-}
 
 async function seedCase(
   draft: typeof caseA,
@@ -348,7 +333,7 @@ describe("saveCaseSnapshot / saveCaseStateAction 写边界", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "snap-stale-status",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, { status: "PENDING_VERIFICATION" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(status.ok).toBe(true);
     if (!status.ok) return;
@@ -445,7 +430,7 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "sem-status",
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, { status: "PENDING_VERIFICATION" }), actor: systemActor()
+       actor: systemActor()
 });
     expect(status.ok).toBe(true);
     if (!status.ok) return;
@@ -460,7 +445,7 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
       caseId: current.id,
       operationId: "sem-bc",
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, { businessContext: nextBc }), actor: systemActor()
+      businessContextPatch: businessContextSemanticPatch(nextBc), actor: systemActor()
 });
     expect(bc.ok).toBe(true);
     if (!bc.ok) return;
@@ -488,11 +473,7 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
       itemId: item!.id,
       operationId: "sem-cl",
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, {
-        checklist: current.caseState.checklist.map((x) =>
-          x.id === item!.id ? { ...x, completed: true } : x,
-        ),
-      }), actor: systemActor()
+       actor: systemActor()
 });
     expect(checklist.ok).toBe(true);
     if (!checklist.ok) return;
@@ -513,9 +494,7 @@ describe("Semantic Commands 仍正常且产生 Audit", () => {
       eventId: event.id,
       operationId: "sem-tl",
       baseUpdatedAt: current.updatedAt,
-      nextCaseState: toNextState(current, {
-        timeline: [...current.caseState.timeline, event],
-      }), actor: systemActor()
+      eventIntent: timelineEventSemanticIntent([...current.caseState.timeline, event], event.id), actor: systemActor()
 });
     expect(timeline.ok).toBe(true);
     if (!timeline.ok) return;

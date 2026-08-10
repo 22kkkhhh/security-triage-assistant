@@ -44,6 +44,7 @@ import type {
   CreateCaseInput,
   PersistedCase,
   PersistedCaseState,
+  SaveCaseStateInput,
 } from "@/services/persistence/types";
 import {
   COMMAND_ERROR_MESSAGES,
@@ -57,9 +58,6 @@ import {
   buildChecklistReopenCanonicalState,
   buildStatusCommandCanonicalState,
   buildTimelineAddCanonicalState,
-  resolveBusinessContextPatch,
-  resolveChecklistAddItemIntent,
-  resolveTimelineEventIntent,
   STRUCTURED_BC_FIELDS,
   type ChecklistAddSemanticIntent,
   type TimelineEventSemanticIntent,
@@ -70,7 +68,6 @@ import {
   staleCommandResult,
   type BusinessContextSemanticPatch,
   type CommandResult,
-  type NextCaseStateInput,
 } from "./types";
 
 async function resolveOperationId(input: {
@@ -114,14 +111,14 @@ function asPersistedState(record: PersistedCase): PersistedCaseState {
 async function commitStateAndAudit(input: {
   caseId: string;
   baseUpdatedAt: string;
-  nextCaseState: NextCaseStateInput;
+  canonicalState: SaveCaseStateInput;
   built: BuiltAuditEvent;
 }): Promise<CommandResult> {
   try {
     const audit = await runInTransaction(async (tx) => {
       await saveCaseStateIfVersionMatches(
         input.caseId,
-        input.nextCaseState,
+        input.canonicalState,
         input.baseUpdatedAt,
         tx,
       );
@@ -278,10 +275,6 @@ export async function changeCaseStatusCommand(input: {
   operationId: string;
   baseUpdatedAt: string;
   actor: AuditActor;
-  /**
-   * @deprecated transitional — fully ignored; remove after Cursor caller migration
-   */
-  nextCaseState?: NextCaseStateInput;
 }): Promise<CommandResult> {
   const actor = requireActor(input.actor);
   if ("ok" in actor && actor.ok === false) return actor;
@@ -317,7 +310,7 @@ export async function changeCaseStatusCommand(input: {
   return commitStateAndAudit({
     caseId: input.caseId,
     baseUpdatedAt: base,
-    nextCaseState: buildStatusCommandCanonicalState(existing, input.nextStatus),
+    canonicalState: buildStatusCommandCanonicalState(existing, input.nextStatus),
     built: buildStatusChangedAudit({
       from: oldStatus,
       to: input.nextStatus,
@@ -332,6 +325,25 @@ export type ChecklistCommandAction =
   | "reopen"
   | "add"
   | "delete";
+
+type ChecklistCommandInput =
+  | {
+      caseId: string;
+      action: "add";
+      itemId: string;
+      itemIntent: ChecklistAddSemanticIntent;
+      operationId: string;
+      baseUpdatedAt: string;
+      actor: AuditActor;
+    }
+  | {
+      caseId: string;
+      action: Exclude<ChecklistCommandAction, "add">;
+      itemId: string;
+      operationId: string;
+      baseUpdatedAt: string;
+      actor: AuditActor;
+    };
 
 function checklistActionType(
   action: ChecklistCommandAction,
@@ -349,20 +361,9 @@ function checklistActionType(
 }
 
 /** Checklist 语义命令 */
-export async function applyChecklistCommand(input: {
-  caseId: string;
-  action: ChecklistCommandAction;
-  itemId: string;
-  operationId: string;
-  baseUpdatedAt: string;
-  actor: AuditActor;
-  /** Minimal add intent (add action only). */
-  itemIntent?: ChecklistAddSemanticIntent;
-  /**
-   * @deprecated transitional fallback — remove after Cursor caller migration
-   */
-  nextCaseState?: NextCaseStateInput;
-}): Promise<CommandResult> {
+export async function applyChecklistCommand(
+  input: ChecklistCommandInput,
+): Promise<CommandResult> {
   const actor = requireActor(input.actor);
   if ("ok" in actor && actor.ok === false) return actor;
   const trusted = actor as TrustedCommandActor;
@@ -384,11 +385,11 @@ export async function applyChecklistCommand(input: {
   let built:
     | ReturnType<typeof buildChecklistCompletedAudit>
     | null = null;
-  let canonicalNextState: NextCaseStateInput;
+  let canonicalState: SaveCaseStateInput;
 
   if (input.action === "complete") {
     const canonical = buildChecklistCompleteCanonicalState(existing, input.itemId);
-    canonicalNextState = canonical.nextState;
+    canonicalState = canonical.nextState;
     const { oldItem, nextItem } = canonical;
     if (!oldItem) return { ok: false, error: "核查事项不存在" };
     if (oldItem.completed) {
@@ -409,7 +410,7 @@ export async function applyChecklistCommand(input: {
     };
   } else if (input.action === "reopen") {
     const canonical = buildChecklistReopenCanonicalState(existing, input.itemId);
-    canonicalNextState = canonical.nextState;
+    canonicalState = canonical.nextState;
     const { oldItem, nextItem } = canonical;
     if (!oldItem) return { ok: false, error: "核查事项不存在" };
     if (!oldItem.completed) {
@@ -430,21 +431,16 @@ export async function applyChecklistCommand(input: {
     };
   } else if (input.action === "add") {
     const oldItems = existing.caseState.checklist;
-    const resolvedItem = resolveChecklistAddItemIntent({
-      itemId: input.itemId,
-      itemIntent: input.itemIntent,
-      nextCaseState: input.nextCaseState,
-    });
-    if (!resolvedItem) {
+    if (input.itemIntent.id !== input.itemId) {
       return { ok: false, error: "新增核查事项的目标状态无效" };
     }
     if (oldItems.some((item) => item.id === input.itemId)) {
       return { ok: true, alreadyApplied: true, case: existing, audit: null };
     }
-    const canonical = buildChecklistAddCanonicalState(existing, resolvedItem);
-    canonicalNextState = canonical.nextState;
+    const canonical = buildChecklistAddCanonicalState(existing, input.itemIntent);
+    canonicalState = canonical.nextState;
     const nextItem = canonical.normalizedItem;
-    if (!nextItem || nextItem.origin !== "MANUAL") {
+    if (nextItem.origin !== "MANUAL") {
       return { ok: false, error: "仅允许新增人工核查事项" };
     }
     const suggestionKey = nextItem.sourceRef?.suggestionKey;
@@ -490,7 +486,7 @@ export async function applyChecklistCommand(input: {
     };
   } else if (input.action === "delete") {
     const canonical = buildChecklistDeleteCanonicalState(existing, input.itemId);
-    canonicalNextState = canonical.nextState;
+    canonicalState = canonical.nextState;
     const { oldItem, deleted } = canonical;
     if (!deleted) {
       return { ok: true, alreadyApplied: true, case: existing, audit: null };
@@ -515,7 +511,7 @@ export async function applyChecklistCommand(input: {
   return commitStateAndAudit({
     caseId: input.caseId,
     baseUpdatedAt: base,
-    nextCaseState: canonicalNextState,
+    canonicalState,
     built: built!,
   });
 }
@@ -539,11 +535,7 @@ export async function updateBusinessContextCommand(input: {
   operationId: string;
   baseUpdatedAt: string;
   actor: AuditActor;
-  businessContextPatch?: BusinessContextSemanticPatch;
-  /**
-   * @deprecated transitional fallback — remove after Cursor caller migration
-   */
-  nextCaseState?: NextCaseStateInput;
+  businessContextPatch: BusinessContextSemanticPatch;
 }): Promise<CommandResult> {
   const actor = requireActor(input.actor);
   if ("ok" in actor && actor.ok === false) return actor;
@@ -563,19 +555,12 @@ export async function updateBusinessContextCommand(input: {
   const existing = await getCaseById(input.caseId);
   if (!existing) return { ok: false, error: "案件不存在" };
 
-  const patch = resolveBusinessContextPatch({
-    businessContextPatch: input.businessContextPatch,
-    nextCaseState: input.nextCaseState,
-  });
-  if (!patch) {
-    return { ok: false, error: "业务上下文变更缺少有效字段" };
-  }
-  const canonicalNextState = buildBusinessContextCommandCanonicalState(
+  const canonicalState = buildBusinessContextCommandCanonicalState(
     existing,
-    patch,
+    input.businessContextPatch,
   );
   const oldBc = asPersistedState(existing).businessContext;
-  const nextBc = canonicalNextState.businessContext;
+  const nextBc = canonicalState.businessContext;
   const enumChanges = collectStructuredBcDiff(oldBc, nextBc);
 
   if (Object.keys(enumChanges).length === 0) {
@@ -606,7 +591,7 @@ export async function updateBusinessContextCommand(input: {
   return commitStateAndAudit({
     caseId: input.caseId,
     baseUpdatedAt: base,
-    nextCaseState: canonicalNextState,
+    canonicalState,
     built: {
       ...built,
       changes: fieldChanges,
@@ -712,7 +697,7 @@ export async function updateHumanReviewCommand(input: {
     changes.humanRiskLevel = { from: oldRisk, to: nextRisk };
   }
 
-  const nextCaseState: NextCaseStateInput = {
+  const canonicalState: SaveCaseStateInput = {
     caseData: existing.caseState.caseData,
     businessContext: existing.caseState.businessContext,
     checklist: existing.caseState.checklist,
@@ -725,7 +710,7 @@ export async function updateHumanReviewCommand(input: {
   return commitStateAndAudit({
     caseId: input.caseId,
     baseUpdatedAt: base,
-    nextCaseState,
+    canonicalState,
     built: {
       ...built,
       changes,
@@ -740,11 +725,7 @@ export async function addTimelineEventCommand(input: {
   eventId: string;
   baseUpdatedAt: string;
   actor: AuditActor;
-  eventIntent?: TimelineEventSemanticIntent;
-  /**
-   * @deprecated transitional fallback — remove after Cursor caller migration
-   */
-  nextCaseState?: NextCaseStateInput;
+  eventIntent: TimelineEventSemanticIntent;
 }): Promise<CommandResult> {
   const actor = requireActor(input.actor);
   if ("ok" in actor && actor.ok === false) return actor;
@@ -774,20 +755,18 @@ export async function addTimelineEventCommand(input: {
     };
   }
 
-  const nextEvent = resolveTimelineEventIntent({
-    eventId: input.eventId,
-    eventIntent: input.eventIntent,
-    nextCaseState: input.nextCaseState,
-  });
-  if (!nextEvent) {
+  if (input.eventIntent.id !== input.eventId) {
     return { ok: false, error: "目标时间线事件缺失" };
   }
 
-  const canonicalNextState = buildTimelineAddCanonicalState(existing, nextEvent);
+  const canonicalNextState = buildTimelineAddCanonicalState(
+    existing,
+    input.eventIntent,
+  );
 
   const built = buildTimelineEventAddedAudit({
-    eventId: nextEvent.id,
-    title: nextEvent.title,
+    eventId: input.eventIntent.id,
+    title: input.eventIntent.title,
     actor: trusted,
     operationId: input.operationId,
   });
@@ -795,13 +774,13 @@ export async function addTimelineEventCommand(input: {
   return commitStateAndAudit({
     caseId: input.caseId,
     baseUpdatedAt: base,
-    nextCaseState: canonicalNextState,
+    canonicalState: canonicalNextState,
     built: {
       ...built,
       changes: {
-        eventId: nextEvent.id,
-        eventType: nextEvent.eventType,
-        title: nextEvent.title,
+        eventId: input.eventIntent.id,
+        eventType: input.eventIntent.eventType,
+        title: input.eventIntent.title,
       },
     },
   });

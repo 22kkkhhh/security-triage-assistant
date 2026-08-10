@@ -115,15 +115,7 @@ describe("commandErrorBoundary integration (mocked persistence)", () => {
       operationId: "op-status-error-1",
       baseUpdatedAt: created.updatedAt,
       actor: systemActor(),
-      nextCaseState: {
-        caseData: created.caseState.caseData,
-        businessContext: created.caseState.businessContext,
-        checklist: created.caseState.checklist,
-        humanReview: created.caseState.humanReview,
-        timeline: created.caseState.timeline,
-        suggestedRiskLevel: created.suggestedRiskLevel,
-        status: "PENDING_VERIFICATION",
-      },
+
     });
 
     expect(result.ok).toBe(false);

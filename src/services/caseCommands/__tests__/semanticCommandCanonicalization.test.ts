@@ -1,22 +1,20 @@
-import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
-import { systemActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { caseA, caseB } from "@/domain/demo";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
-import { createManualChecklistItem } from "@/services/checklist/generateChecklist";
-import { createChecklistItemFromComplianceSuggestion } from "@/services/checklist/fromComplianceSuggestion";
+import { systemActor } from "@/services/audit/auditEventBuilder";
 import {
   addTimelineEventCommand,
   applyChecklistCommand,
   changeCaseStatusCommand,
   updateBusinessContextCommand,
 } from "@/services/caseCommands";
-import type { CaseComplianceChecklistItem } from "@/services/knowledge/caseComplianceChecklist";
+import { createChecklistItemFromComplianceSuggestion } from "@/services/checklist/fromComplianceSuggestion";
 import { resetPrismaClient } from "@/lib/prisma";
-import { createCase, getCaseById } from "@/services/persistence/caseRepository";
-import type { SaveCaseStateInput } from "@/services/persistence/types";
+import { createCase } from "@/services/persistence/caseRepository";
+import type { CaseComplianceChecklistItem } from "@/services/knowledge/caseComplianceChecklist";
+import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 
 const TEST_DB_FILE = path.resolve("prisma/test-semantic-canonical.db");
 const TEST_DB_URL = `file:${TEST_DB_FILE.replace(/\\/g, "/")}`;
@@ -26,22 +24,6 @@ function cleanDbFiles() {
     const file = `${TEST_DB_FILE}${suffix}`;
     if (existsSync(file)) unlinkSync(file);
   }
-}
-
-function toNextState(
-  record: NonNullable<Awaited<ReturnType<typeof getCaseById>>>,
-  patch: Partial<SaveCaseStateInput> = {},
-): SaveCaseStateInput {
-  return {
-    caseData: record.caseState.caseData,
-    businessContext: record.caseState.businessContext,
-    checklist: record.caseState.checklist,
-    humanReview: record.caseState.humanReview,
-    timeline: record.caseState.timeline,
-    suggestedRiskLevel: record.suggestedRiskLevel,
-    status: record.status,
-    ...patch,
-  };
 }
 
 async function seedCase(draft: typeof caseA) {
@@ -87,50 +69,15 @@ afterAll(async () => {
   cleanDbFiles();
 });
 
-describe("semantic command canonicalization — cross-field smuggling", () => {
-  it("status smuggling: forged HumanReview / checklist / BC / timeline ignored", async () => {
+describe("semantic command canonicalization：最小意图与跨字段保护", () => {
+  it("status 仅变更 status；HumanReview、Checklist、BC、Timeline 均保持原值", async () => {
     const created = await seedCase(caseA);
-    const forged = toNextState(created, {
-      status: "CLOSED",
-      humanReview: {
-        reviewer: "攻击者",
-        reviewedByUserId: "attacker",
-        finalConclusion: "NORMAL_BUSINESS",
-        humanRiskLevel: "LOW",
-        conclusionNote: "伪造",
-        adjustments: [],
-        confirmedAt: new Date().toISOString(),
-      },
-      businessContext: {
-        ...created.caseState.businessContext,
-        businessJustification: "伪造 BC",
-        changeTicketId: "FORGED-TICKET",
-      },
-      checklist: created.caseState.checklist.map((item) => ({
-        ...item,
-        completed: true,
-      })),
-      timeline: [
-        ...created.caseState.timeline,
-        {
-          id: "TL-FORGE",
-          occurredAt: new Date().toISOString(),
-          eventType: "其他",
-          title: "伪造事件",
-          description: "x",
-          operator: "攻击者",
-          source: "HUMAN" as const,
-        },
-      ],
-      suggestedRiskLevel: "LOW",
-    });
 
     const result = await changeCaseStatusCommand({
       caseId: created.id,
       nextStatus: "CLOSED",
       operationId: "smuggle-status",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: forged,
       actor: systemActor(),
     });
     expect(result.ok).toBe(true);
@@ -146,49 +93,19 @@ describe("semantic command canonicalization — cross-field smuggling", () => {
     expect(result.case.suggestedRiskLevel).toBe(created.suggestedRiskLevel);
   });
 
-  it("business context smuggling: only structured BC fields change", async () => {
+  it("BusinessContext 只接受四个结构化字段，快照自动保存字段保持不变", async () => {
     const created = await seedCase(caseA);
-    const forged = toNextState(created, {
-      businessContext: {
-        ...created.caseState.businessContext,
-        businessLegitimacy: "UNAUTHORIZED",
-        businessJustification: "伪造说明",
-        changeTicketId: "FORGED-999",
-        businessOwner: "伪造负责人",
-      },
-      humanReview: {
-        reviewer: "攻击者",
-        reviewedByUserId: "attacker",
-        finalConclusion: "NORMAL_BUSINESS",
-        humanRiskLevel: "LOW",
-        conclusionNote: null,
-        adjustments: [],
-        confirmedAt: null,
-      },
-      checklist: created.caseState.checklist.map((item) => ({
-        ...item,
-        completed: true,
-      })),
-      timeline: [
-        ...created.caseState.timeline,
-        {
-          id: "TL-BC-SMUGGLE",
-          occurredAt: new Date().toISOString(),
-          eventType: "其他",
-          title: "伪造",
-          description: "",
-          operator: null,
-          source: "HUMAN" as const,
-        },
-      ],
-    });
-
     const result = await updateBusinessContextCommand({
       caseId: created.id,
       operationId: "smuggle-bc",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: forged,
       actor: systemActor(),
+      businessContextPatch: {
+        plannedTaskStatus: created.caseState.businessContext.plannedTaskStatus,
+        changeTicketStatus: created.caseState.businessContext.changeTicketStatus,
+        ownerVerification: created.caseState.businessContext.ownerVerification,
+        businessLegitimacy: "UNAUTHORIZED",
+      },
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -210,31 +127,10 @@ describe("semantic command canonicalization — cross-field smuggling", () => {
     expect(result.case.caseState.timeline).toEqual(created.caseState.timeline);
   });
 
-  it("checklist complete smuggling: only target item completed", async () => {
+  it("checklist complete 仅完成目标项，不能影响其他持久化字段", async () => {
     const created = await seedCase(caseA);
     const target = created.caseState.checklist.find((item) => !item.completed);
     expect(target).toBeTruthy();
-
-    const forged = toNextState(created, {
-      status: "CLOSED",
-      humanReview: {
-        reviewer: "攻击者",
-        reviewedByUserId: "attacker",
-        finalConclusion: "NORMAL_BUSINESS",
-        humanRiskLevel: "LOW",
-        conclusionNote: null,
-        adjustments: [],
-        confirmedAt: null,
-      },
-      businessContext: {
-        ...created.caseState.businessContext,
-        businessJustification: "伪造",
-      },
-      checklist: created.caseState.checklist.map((item) => ({
-        ...item,
-        completed: true,
-      })),
-    });
 
     const result = await applyChecklistCommand({
       caseId: created.id,
@@ -242,7 +138,6 @@ describe("semantic command canonicalization — cross-field smuggling", () => {
       itemId: target!.id,
       operationId: "smuggle-cl-complete",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: forged,
       actor: systemActor(),
     });
     expect(result.ok).toBe(true);
@@ -259,32 +154,23 @@ describe("semantic command canonicalization — cross-field smuggling", () => {
     expect(completedIds).toEqual([target!.id]);
   });
 
-  it("checklist add smuggling: only target item appended; forged completed reset", async () => {
+  it("checklist add 强制 MANUAL、completed=false、relatedRuleId=null", async () => {
     const created = await seedCase(caseA);
-    const manual = createManualChecklistItem({
-      category: "IDENTITY",
+    const itemIntent = {
+      id: "CL-MINIMAL-1",
+      category: "IDENTITY" as const,
       label: "人工补充核查",
-    });
-    const forged = toNextState(created, {
-      status: "CLOSED",
-      checklist: [
-        ...created.caseState.checklist,
-        { ...manual, completed: true },
-        ...created.caseState.checklist.map((item) => ({
-          ...item,
-          completed: true,
-        })),
-      ],
-    });
+      note: "仅人工添加",
+    };
 
     const result = await applyChecklistCommand({
       caseId: created.id,
       action: "add",
-      itemId: manual.id,
+      itemId: itemIntent.id,
       operationId: "smuggle-cl-add",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: forged,
       actor: systemActor(),
+      itemIntent,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -294,9 +180,14 @@ describe("semantic command canonicalization — cross-field smuggling", () => {
       created.caseState.checklist.length + 1,
     );
     const added = result.case.caseState.checklist.find(
-      (item) => item.id === manual.id,
+      (item) => item.id === itemIntent.id,
     );
-    expect(added?.completed).toBe(false);
+    expect(added).toMatchObject({
+      ...itemIntent,
+      completed: false,
+      origin: "MANUAL",
+      relatedRuleId: null,
+    });
     expect(
       result.case.caseState.checklist.filter((item) => item.completed),
     ).toHaveLength(
@@ -304,258 +195,96 @@ describe("semantic command canonicalization — cross-field smuggling", () => {
     );
   });
 
-  it("timeline add smuggling: only target HUMAN event appended", async () => {
+  it("Timeline 不接受客户端 source，服务端强制 HUMAN", async () => {
     const created = await seedCase(caseA);
-    const event = {
+    const eventIntent = {
       id: "TL-HUMAN-1",
       occurredAt: new Date().toISOString(),
       eventType: "处置",
       title: "人工记录",
       description: "合法事件",
       operator: "测试员",
-      source: "HUMAN" as const,
     };
-    const forged = toNextState(created, {
-      status: "CLOSED",
-      humanReview: {
-        reviewer: "攻击者",
-        reviewedByUserId: "attacker",
-        finalConclusion: "NORMAL_BUSINESS",
-        humanRiskLevel: "LOW",
-        conclusionNote: null,
-        adjustments: [],
-        confirmedAt: null,
-      },
-      timeline: [...created.caseState.timeline, event],
-    });
 
-    const result = await addTimelineEventCommand({
-      caseId: created.id,
-      eventId: event.id,
-      operationId: "smuggle-tl",
-      baseUpdatedAt: created.updatedAt,
-      nextCaseState: forged,
-      actor: systemActor(),
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-
-    expect(result.case.status).toBe(created.status);
-    expect(result.case.caseState.humanReview).toEqual(created.caseState.humanReview);
-    expect(result.case.caseState.timeline).toHaveLength(
-      created.caseState.timeline.length + 1,
-    );
-    expect(result.case.caseState.timeline.at(-1)).toEqual(event);
-  });
-
-  it("KNOWLEDGE_SUGGESTED add preserves provenance without smuggling other fields", async () => {
-    const created = await seedCase(caseB);
-    const ksItem = createChecklistItemFromComplianceSuggestion(
-      complianceSuggestion,
-      "smuggle",
-    );
-    const forged = toNextState(created, {
-      status: "RESPONDING",
-      checklist: [...created.caseState.checklist, { ...ksItem, completed: true }],
-    });
-
-    const result = await applyChecklistCommand({
-      caseId: created.id,
-      action: "add",
-      itemId: ksItem.id,
-      operationId: "smuggle-ks-add",
-      baseUpdatedAt: created.updatedAt,
-      nextCaseState: forged,
-      actor: systemActor(),
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-
-    const added = result.case.caseState.checklist.find(
-      (item) => item.id === ksItem.id,
-    );
-    expect(added?.sourceKind).toBe("KNOWLEDGE_SUGGESTED");
-    expect(added?.sourceRef?.suggestionKey).toBe(complianceSuggestion.key);
-    expect(added?.completed).toBe(false);
-    expect(result.case.status).toBe(created.status);
-  });
-});
-
-describe("semantic command minimal contract bridge", () => {
-  it("status without nextCaseState passes", async () => {
-    const created = await seedCase(caseA);
-    const result = await changeCaseStatusCommand({
-      caseId: created.id,
-      nextStatus: "INVESTIGATING",
-      operationId: "minimal-status",
-      baseUpdatedAt: created.updatedAt,
-      actor: systemActor(),
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.case.status).toBe("INVESTIGATING");
-    expect(result.case.caseState.humanReview).toEqual(
-      created.caseState.humanReview,
-    );
-  });
-
-  it("BC with businessContextPatch only passes", async () => {
-    const created = await seedCase(caseA);
-    const result = await updateBusinessContextCommand({
-      caseId: created.id,
-      operationId: "minimal-bc",
-      baseUpdatedAt: created.updatedAt,
-      actor: systemActor(),
-      businessContextPatch: {
-        plannedTaskStatus: "CONFIRMED",
-        changeTicketStatus: "CONFIRMED",
-        ownerVerification: "CONFIRMED",
-        businessLegitimacy: "AUTHORIZED",
-      },
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.case.caseState.businessContext.plannedTaskStatus).toBe(
-      "CONFIRMED",
-    );
-    expect(result.case.caseState.businessContext.changeTicketId).toBe(
-      created.caseState.businessContext.changeTicketId,
-    );
-  });
-
-  it("BC without patch or legacy fails validation", async () => {
-    const created = await seedCase(caseA);
-    const result = await updateBusinessContextCommand({
-      caseId: created.id,
-      operationId: "minimal-bc-fail",
-      baseUpdatedAt: created.updatedAt,
-      actor: systemActor(),
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.error).toBe("业务上下文变更缺少有效字段");
-  });
-
-  it("checklist complete without nextCaseState passes", async () => {
-    const created = await seedCase(caseA);
-    const target = created.caseState.checklist[0]!;
-    const result = await applyChecklistCommand({
-      caseId: created.id,
-      action: "complete",
-      itemId: target.id,
-      operationId: "minimal-cl-complete",
-      baseUpdatedAt: created.updatedAt,
-      actor: systemActor(),
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const updated = result.case.caseState.checklist.find(
-      (item) => item.id === target.id,
-    );
-    expect(updated?.completed).toBe(true);
-  });
-
-  it("checklist add with minimal itemIntent forces MANUAL/completed=false/relatedRuleId=null", async () => {
-    const created = await seedCase(caseB);
-    const itemIntent = {
-      id: "CL-MINIMAL-1",
-      category: "DATA" as const,
-      label: "最小路径新增项",
-      note: "note",
-    };
-    const result = await applyChecklistCommand({
-      caseId: created.id,
-      action: "add",
-      itemId: itemIntent.id,
-      operationId: "minimal-cl-add",
-      baseUpdatedAt: created.updatedAt,
-      actor: systemActor(),
-      itemIntent,
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const added = result.case.caseState.checklist.find(
-      (item) => item.id === itemIntent.id,
-    );
-    expect(added).toMatchObject({
-      origin: "MANUAL",
-      completed: false,
-      relatedRuleId: null,
-      label: "最小路径新增项",
-    });
-  });
-
-  it("checklist add KNOWLEDGE_SUGGESTED via minimal itemIntent preserves provenance", async () => {
-    const created = await seedCase(caseB);
-    const ksItem = createChecklistItemFromComplianceSuggestion(
-      complianceSuggestion,
-      "minimal",
-    );
-    const result = await applyChecklistCommand({
-      caseId: created.id,
-      action: "add",
-      itemId: ksItem.id,
-      operationId: "minimal-ks-add",
-      baseUpdatedAt: created.updatedAt,
-      actor: systemActor(),
-      itemIntent: {
-        id: ksItem.id,
-        category: ksItem.category,
-        label: ksItem.label,
-        note: ksItem.note,
-        sourceKind: "KNOWLEDGE_SUGGESTED",
-        sourceRef: ksItem.sourceRef,
-      },
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const added = result.case.caseState.checklist.find(
-      (item) => item.id === ksItem.id,
-    );
-    expect(added?.sourceKind).toBe("KNOWLEDGE_SUGGESTED");
-    expect(added?.sourceRef?.suggestionKey).toBe(complianceSuggestion.key);
-    expect(added?.completed).toBe(false);
-    expect(added?.relatedRuleId).toBeNull();
-  });
-
-  it("timeline with minimal eventIntent forces source=HUMAN", async () => {
-    const created = await seedCase(caseA);
-    const eventIntent = {
-      id: "TL-MINIMAL-1",
-      occurredAt: new Date().toISOString(),
-      eventType: "其他",
-      title: "最小路径事件",
-      description: "desc",
-      operator: "分析师",
-    };
     const result = await addTimelineEventCommand({
       caseId: created.id,
       eventId: eventIntent.id,
-      operationId: "minimal-tl",
+      operationId: "smuggle-tl",
       baseUpdatedAt: created.updatedAt,
       actor: systemActor(),
       eventIntent,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const added = result.case.caseState.timeline.find(
-      (event) => event.id === eventIntent.id,
+
+    expect(result.case.status).toBe(created.status);
+    expect(result.case.caseState.humanReview).toEqual(created.caseState.humanReview);
+    const added = result.case.caseState.timeline.at(-1);
+    expect(added).toEqual({ ...eventIntent, source: "HUMAN" });
+  });
+
+  it("KNOWLEDGE_SUGGESTED 最小 intent 保留 provenance，且不改其他状态", async () => {
+    const created = await seedCase(caseB);
+    const knowledgeItem = createChecklistItemFromComplianceSuggestion(
+      complianceSuggestion,
+      "canonical",
     );
-    expect(added).toMatchObject({
-      ...eventIntent,
-      source: "HUMAN",
+
+    const result = await applyChecklistCommand({
+      caseId: created.id,
+      action: "add",
+      itemId: knowledgeItem.id,
+      operationId: "smuggle-knowledge-add",
+      baseUpdatedAt: created.updatedAt,
+      actor: systemActor(),
+      itemIntent: {
+        id: knowledgeItem.id,
+        category: knowledgeItem.category,
+        label: knowledgeItem.label,
+        note: knowledgeItem.note,
+        sourceKind: "KNOWLEDGE_SUGGESTED",
+        sourceRef: knowledgeItem.sourceRef,
+      },
     });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const added = result.case.caseState.checklist.find(
+      (item) => item.id === knowledgeItem.id,
+    );
+    expect(added?.sourceKind).toBe("KNOWLEDGE_SUGGESTED");
+    expect(added?.sourceRef?.suggestionKey).toBe(complianceSuggestion.key);
+    expect(added?.completed).toBe(false);
+    expect(added?.relatedRuleId).toBeNull();
+    expect(result.case.status).toBe(created.status);
   });
 });
 
-describe("semantic command canonicalization — deterministic builders", () => {
-  it("copyPersistedCaseState is stable for Case A/B", async () => {
+describe("semantic command canonicalization：服务端状态构造", () => {
+  it("copyPersistedCaseState 为不同持久化 Case 生成稳定完整状态", async () => {
     const a = await seedCase(caseA);
     const b = await seedCase(caseB);
     const { copyPersistedCaseState } = await import(
       "../semanticCommandCanonicalization"
     );
-    expect(copyPersistedCaseState(a)).toEqual(toNextState(a));
-    expect(copyPersistedCaseState(b)).toEqual(toNextState(b));
+
+    expect(copyPersistedCaseState(a)).toEqual({
+      caseData: a.caseState.caseData,
+      businessContext: a.caseState.businessContext,
+      checklist: a.caseState.checklist,
+      humanReview: a.caseState.humanReview,
+      timeline: a.caseState.timeline,
+      suggestedRiskLevel: a.suggestedRiskLevel,
+      status: a.status,
+    });
+    expect(copyPersistedCaseState(b)).toEqual({
+      caseData: b.caseState.caseData,
+      businessContext: b.caseState.businessContext,
+      checklist: b.caseState.checklist,
+      humanReview: b.caseState.humanReview,
+      timeline: b.caseState.timeline,
+      suggestedRiskLevel: b.suggestedRiskLevel,
+      status: b.status,
+    });
   });
 });

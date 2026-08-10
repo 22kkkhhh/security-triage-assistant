@@ -251,7 +251,7 @@ export async function saveCaseStateIfVersionMatches(
 
 /**
  * 保存案件可恢复状态（单一 caseState Source of Truth）。
- * 供 Semantic Command 等受信路径构造完整 nextCaseState 后写入。
+ * 供 Semantic Command 等受信路径构造完整规范状态后写入。
  * 普通客户端 Snapshot Autosave 不得直接调用；应使用 saveCaseSnapshot。
  * 提供 baseUpdatedAt 时走条件更新（与 Semantic Command 共用版本约束）。
  * 可注入事务客户端，供 Semantic Command 与 Audit 同提交。
@@ -282,7 +282,7 @@ export async function saveCaseState(
 
 /**
  * Snapshot Autosave：仅应用 allowlisted CaseSnapshotPatch。
- * - 从 canonical case 合并，禁止客户端提交完整 nextCaseState
+ * - 从 canonical case 合并，禁止客户端提交完整状态
  * - 空 patch / 无实际变化：NO-OP（不抬升 updatedAt）
  * - 成功写入不产生 Audit、不更新 lastActivityAt
  * - 必须带 baseUpdatedAt，走 OCC 条件更新

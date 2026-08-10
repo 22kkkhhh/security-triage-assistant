@@ -2,7 +2,7 @@
  * Semantic Command canonical state builders (v1.5 M4).
  *
  * Server builds persistence state from persisted Case + minimal command intent.
- * Legacy client full-state payloads are transitional inputs only — never persisted as-is.
+ * Browser callers never submit a complete Case state for semantic mutations.
  */
 
 import type {
@@ -88,76 +88,6 @@ export function buildTimelineEventFromIntent(
   };
 }
 
-/**
- * Resolve BusinessContext patch: minimal patch first, legacy fallback second.
- * Returns null when neither source provides intent.
- */
-export function resolveBusinessContextPatch(input: {
-  businessContextPatch?: BusinessContextSemanticPatch;
-  nextCaseState?: SaveCaseStateInput;
-}): BusinessContextSemanticPatch | null {
-  if (input.businessContextPatch) {
-    return input.businessContextPatch;
-  }
-  if (input.nextCaseState) {
-    return extractLegacyBusinessContextPatch(
-      input.nextCaseState.businessContext,
-    );
-  }
-  return null;
-}
-
-/**
- * Resolve checklist add item intent: minimal itemIntent first, legacy fallback.
- */
-export function resolveChecklistAddItemIntent(input: {
-  itemId: string;
-  itemIntent?: ChecklistAddSemanticIntent;
-  nextCaseState?: SaveCaseStateInput;
-}): ChecklistItem | null {
-  if (input.itemIntent) {
-    if (input.itemIntent.id !== input.itemId) {
-      return null;
-    }
-    return buildChecklistItemFromAddIntent(input.itemIntent);
-  }
-  if (input.nextCaseState) {
-    const legacy = extractLegacyChecklistItemIntent(
-      input.nextCaseState.checklist,
-      input.itemId,
-    );
-    return legacy ? normalizeChecklistAddIntent(legacy) : null;
-  }
-  return null;
-}
-
-/**
- * Resolve timeline event intent: minimal eventIntent first, legacy fallback.
- */
-export function resolveTimelineEventIntent(input: {
-  eventId: string;
-  eventIntent?: TimelineEventSemanticIntent;
-  nextCaseState?: SaveCaseStateInput;
-}): TimelineEvent | null {
-  if (input.eventIntent) {
-    if (input.eventIntent.id !== input.eventId) {
-      return null;
-    }
-    return buildTimelineEventFromIntent(input.eventIntent);
-  }
-  if (input.nextCaseState) {
-    const legacy = extractLegacyTimelineEventIntent(
-      input.nextCaseState.timeline,
-      input.eventId,
-    );
-    if (!legacy || legacy.source !== "HUMAN") {
-      return null;
-    }
-    return legacy;
-  }
-  return null;
-}
-
 /** Copy persisted case into SaveCaseStateInput without mutation. */
 export function copyPersistedCaseState(record: PersistedCase): SaveCaseStateInput {
   return {
@@ -181,21 +111,6 @@ export function buildStatusCommandCanonicalState(
   };
 }
 
-/**
- * transitional / remove after Cursor caller migration
- * Extract only authorized structured BusinessContext fields from legacy payload.
- */
-export function extractLegacyBusinessContextPatch(
-  legacyBusinessContext: BusinessContext,
-): BusinessContextSemanticPatch {
-  return {
-    plannedTaskStatus: legacyBusinessContext.plannedTaskStatus,
-    changeTicketStatus: legacyBusinessContext.changeTicketStatus,
-    ownerVerification: legacyBusinessContext.ownerVerification,
-    businessLegitimacy: legacyBusinessContext.businessLegitimacy,
-  };
-}
-
 export function buildBusinessContextCommandCanonicalState(
   record: PersistedCase,
   patch: BusinessContextSemanticPatch,
@@ -208,47 +123,6 @@ export function buildBusinessContextCommandCanonicalState(
     ...copyPersistedCaseState(record),
     businessContext: nextBusinessContext,
   };
-}
-
-/**
- * transitional / remove after Cursor caller migration
- * Extract target checklist item intent from legacy full-state payload.
- */
-export function extractLegacyChecklistItemIntent(
-  legacyChecklist: ChecklistItem[],
-  itemId: string,
-): ChecklistItem | null {
-  return legacyChecklist.find((item) => item.id === itemId) ?? null;
-}
-
-/**
- * Server-owned normalization for checklist add intent.
- * Strips smuggled completed state and non-MANUAL origins.
- */
-export function normalizeChecklistAddIntent(intent: ChecklistItem): ChecklistItem | null {
-  if (intent.origin !== "MANUAL") {
-    return null;
-  }
-  const base: ChecklistItem = {
-    id: intent.id,
-    category: intent.category,
-    label: intent.label,
-    completed: false,
-    note: intent.note ?? null,
-    origin: "MANUAL",
-    relatedRuleId: intent.relatedRuleId ?? null,
-  };
-  if (
-    intent.sourceKind === "KNOWLEDGE_SUGGESTED" &&
-    intent.sourceRef?.suggestionKey
-  ) {
-    return {
-      ...base,
-      sourceKind: "KNOWLEDGE_SUGGESTED",
-      sourceRef: intent.sourceRef,
-    };
-  }
-  return base;
 }
 
 export function buildChecklistCompleteCanonicalState(
@@ -320,18 +194,12 @@ export function buildChecklistDeleteCanonicalState(
 
 export function buildChecklistAddCanonicalState(
   record: PersistedCase,
-  itemIntent: ChecklistItem,
+  itemIntent: ChecklistAddSemanticIntent,
 ): {
   nextState: SaveCaseStateInput;
-  normalizedItem: ChecklistItem | null;
+  normalizedItem: ChecklistItem;
 } {
-  const normalizedItem = normalizeChecklistAddIntent(itemIntent);
-  if (!normalizedItem) {
-    return {
-      nextState: copyPersistedCaseState(record),
-      normalizedItem: null,
-    };
-  }
+  const normalizedItem = buildChecklistItemFromAddIntent(itemIntent);
   return {
     nextState: {
       ...copyPersistedCaseState(record),
@@ -341,23 +209,15 @@ export function buildChecklistAddCanonicalState(
   };
 }
 
-/**
- * transitional / remove after Cursor caller migration
- * Extract target HUMAN timeline event from legacy full-state payload.
- */
-export function extractLegacyTimelineEventIntent(
-  legacyTimeline: TimelineEvent[],
-  eventId: string,
-): TimelineEvent | null {
-  return legacyTimeline.find((event) => event.id === eventId) ?? null;
-}
-
 export function buildTimelineAddCanonicalState(
   record: PersistedCase,
-  eventIntent: TimelineEvent,
+  eventIntent: TimelineEventSemanticIntent,
 ): SaveCaseStateInput {
   return {
     ...copyPersistedCaseState(record),
-    timeline: [...record.caseState.timeline, eventIntent],
+    timeline: [
+      ...record.caseState.timeline,
+      buildTimelineEventFromIntent(eventIntent),
+    ],
   };
 }

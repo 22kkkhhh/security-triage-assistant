@@ -1,3 +1,4 @@
+import { businessContextSemanticPatch, checklistAddSemanticIntent } from "@/test-utils/semanticCommandIntents";
 /**
  * v1.5 Workstream 1：Compliance Runtime Refresh contract 测试。
  */
@@ -29,7 +30,7 @@ import {
   refreshCaseComplianceRuntimeViews,
 } from "@/services/knowledge/refreshCaseComplianceRuntime";
 import { getCaseById } from "@/services/persistence/caseRepository";
-import type { PersistedCase, SaveCaseStateInput } from "@/services/persistence/types";
+import type { PersistedCase } from "@/services/persistence/types";
 
 const CAPTURED = "2026-08-09T12:00:00.000Z";
 const graph = curatedPackToResolutionGraph();
@@ -87,21 +88,6 @@ function toPersistedCase(
   };
 }
 
-function toNextState(
-  record: PersistedCase,
-  patch: Partial<SaveCaseStateInput> = {},
-): SaveCaseStateInput {
-  return {
-    caseData: record.caseState.caseData,
-    businessContext: record.caseState.businessContext,
-    checklist: record.caseState.checklist,
-    humanReview: record.caseState.humanReview,
-    timeline: record.caseState.timeline,
-    suggestedRiskLevel: record.suggestedRiskLevel,
-    status: record.status,
-    ...patch,
-  };
-}
 
 function knowledgeSuggestedItems(items: readonly ChecklistItem[]): ChecklistItem[] {
   return items.filter(
@@ -284,7 +270,7 @@ describe("refreshCaseComplianceRuntimeViews（DB 集成）", () => {
       caseId: created.id,
       operationId: "refresh-report-bc",
       baseUpdatedAt: report.case.updatedAt,
-      nextCaseState: toNextState(report.case, { businessContext: nextBc }),
+      businessContextPatch: businessContextSemanticPatch(nextBc),
       actor: systemActor(),
     });
     expect(updated.ok).toBe(true);
@@ -327,9 +313,7 @@ describe("refreshCaseComplianceRuntimeViews（DB 集成）", () => {
       itemId: ksItem.id,
       operationId: "refresh-cl-add",
       baseUpdatedAt: created.updatedAt,
-      nextCaseState: toNextState(created, {
-        checklist: [...created.caseState.checklist, ksItem],
-      }),
+      itemIntent: checklistAddSemanticIntent([...created.caseState.checklist, ksItem], ksItem.id),
       actor: systemActor(),
     });
     expect(withItem.ok).toBe(true);
@@ -346,7 +330,7 @@ describe("refreshCaseComplianceRuntimeViews（DB 集成）", () => {
       caseId: created.id,
       operationId: "refresh-cl-bc",
       baseUpdatedAt: withItem.case.updatedAt,
-      nextCaseState: toNextState(withItem.case, { businessContext: nextBc }),
+      businessContextPatch: businessContextSemanticPatch(nextBc),
       actor: systemActor(),
     });
     expect(updated.ok).toBe(true);

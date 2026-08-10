@@ -220,7 +220,7 @@ describe("时间戳语义矩阵（v1.2 RC）", () => {
       nextStatus: "PENDING_VERIFICATION",
       operationId: "ts-status-a",
       baseUpdatedAt: v0!.updatedAt,
-      nextCaseState: toNextState(v0!, { status: "PENDING_VERIFICATION" }), actor: systemActor()
+       actor: systemActor()
 });
     const v1 = await getCaseById(created.case.id);
     await expect(
