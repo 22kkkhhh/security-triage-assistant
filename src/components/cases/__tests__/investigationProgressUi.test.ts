@@ -223,7 +223,8 @@ describe("Investigation Progress UI 接线契约", () => {
   });
 
   it("UI 文案：概览风险/异常/UNKNOWN/待办 + 进度计数；非最终结论", () => {
-    expect(panel).toContain("调查概览");
+    expect(panel).toContain("调查进度");
+    expect(panel).toContain("调查概览 · 非最终结论");
     expect(panel).toContain("系统建议风险");
     expect(panel).toContain("技术异常");
     expect(panel).toContain("信息不足");

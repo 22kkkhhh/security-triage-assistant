@@ -124,14 +124,16 @@ function ReportShortcut({
   canWriteReport: boolean;
   onGoToReport: () => void;
 }) {
+  // 文案与底部 CTA 区分，避免 e2e / a11y 同名按钮冲突；仍复用 goToReport()
   if (hasReport) {
     return (
       <button
         type="button"
+        data-testid="overview-report-cta"
         className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 hover:bg-slate-50"
         onClick={onGoToReport}
       >
-        {canWriteReport ? "继续编辑报告" : "查看报告"}
+        {canWriteReport ? "快捷编辑报告" : "快捷查看报告"}
       </button>
     );
   }
@@ -140,10 +142,11 @@ function ReportShortcut({
     return (
       <button
         type="button"
+        data-testid="overview-report-cta"
         className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 hover:bg-slate-50"
         onClick={onGoToReport}
       >
-        生成报告
+        快捷生成报告
       </button>
     );
   }
@@ -175,10 +178,10 @@ function OverviewShell({
             id="investigation-overview-heading"
             className="text-sm font-semibold text-neutral-900"
           >
-            调查概览
+            调查进度
           </h2>
           <p className="mt-0.5 text-xs text-neutral-500">
-            调查进度 · 非最终结论
+            调查概览 · 非最终结论
           </p>
         </div>
         {onGoToReport ? (

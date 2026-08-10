@@ -693,10 +693,10 @@ export function PersistedCaseWorkbench({
         </div>
       </details>
 
-      {/* B. 当前调查（人工优先） */}
-      <section className="space-y-3" aria-label="当前调查">
+      {/* B. 当前调查（人工优先）；外层用 div，避免嵌套 section 干扰 e2e 定位 */}
+      <div className="space-y-3" aria-label="当前调查">
         <div className="border-b border-neutral-200 pb-1">
-          <h2 className="text-sm font-semibold text-neutral-900">当前调查</h2>
+          <p className="text-sm font-semibold text-neutral-900">当前调查</p>
           <p className="text-xs text-neutral-500">
             优先完成业务上下文、证据核查与人工研判
           </p>
@@ -807,18 +807,18 @@ export function PersistedCaseWorkbench({
             }
           />
         </div>
-      </section>
+      </div>
 
       {/* C. 系统分析与参考 */}
-      <section
+      <div
         id={INVESTIGATION_SECTION_IDS.analysis}
         className="scroll-mt-14 space-y-3"
         aria-label="系统分析与合规"
       >
         <div className="border-b border-neutral-200 pb-1">
-          <h2 className="text-sm font-semibold text-neutral-800">
+          <p className="text-sm font-semibold text-neutral-800">
             系统分析与合规
-          </h2>
+          </p>
           <p className="text-xs text-neutral-500">
             辅助参考 · 不替代人工最终研判
           </p>
@@ -868,16 +868,16 @@ export function PersistedCaseWorkbench({
             resolutionStatus={complianceResolutionStatus}
           />
         </div>
-      </section>
+      </div>
 
       {/* D. 调查记录 */}
-      <section
+      <div
         id={INVESTIGATION_SECTION_IDS.records}
         className="scroll-mt-14 space-y-3"
         aria-label="调查记录"
       >
         <div className="border-b border-neutral-200 pb-1">
-          <h2 className="text-sm font-semibold text-neutral-800">调查记录</h2>
+          <p className="text-sm font-semibold text-neutral-800">调查记录</p>
           <p className="text-xs text-neutral-500">时间线与操作活动</p>
         </div>
 
@@ -946,7 +946,7 @@ export function PersistedCaseWorkbench({
             commitExternalSave(updatedAt);
           }}
         />
-      </section>
+      </div>
 
       {/* E. Report action */}
       <div
