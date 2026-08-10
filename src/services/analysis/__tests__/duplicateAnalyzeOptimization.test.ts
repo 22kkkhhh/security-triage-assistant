@@ -186,14 +186,22 @@ describe("M3 duplicate analyze optimization", () => {
       const reportOptions = {
         complianceReferences: FIXED_COMPLIANCE_REFERENCES,
       };
+      const fixedGeneratedAt = "2026-08-10T12:00:00.000Z";
 
-      const legacyReport = buildInitialReportFromRecord(record, reportOptions);
-      const optimizedReport = buildInitialReportFromRecord(record, {
-        ...reportOptions,
-        analyzed,
-      });
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(fixedGeneratedAt));
+      try {
+        const legacyReport = buildInitialReportFromRecord(record, reportOptions);
+        const optimizedReport = buildInitialReportFromRecord(record, {
+          ...reportOptions,
+          analyzed,
+        });
 
-      expect(optimizedReport).toEqual(legacyReport);
+        expect(optimizedReport).toEqual(legacyReport);
+        expect(optimizedReport.generatedAt).toBe(fixedGeneratedAt);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
