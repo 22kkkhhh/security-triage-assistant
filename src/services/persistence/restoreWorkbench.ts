@@ -2,9 +2,11 @@ import type {
   CaseStatus,
   ChecklistItem,
   RiskLevel,
+  SecurityCase,
   SecurityCaseDraft,
   TimelineEvent,
 } from "@/domain/types";
+import { analyzePersistedCase } from "@/services/analysis/analyzePersistedCase";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
 import {
   mergeChecklistOnRestore,
@@ -35,12 +37,23 @@ export interface RestoredWorkbenchView {
 export function restoreWorkbenchFromPersisted(
   record: PersistedCase,
 ): RestoredWorkbenchView {
+  const { draft, analyzed } = analyzePersistedCase(record);
+  return restoreWorkbenchFromAnalyzed(record, draft, analyzed);
+}
+
+export function restoreWorkbenchFromAnalyzed(
+  record: PersistedCase,
+  draft: SecurityCaseDraft,
+  analyzed: SecurityCase,
+): RestoredWorkbenchView {
   return restoreWorkbenchFromState({
     caseId: record.id,
     caseNumber: record.caseNumber,
     status: record.status,
     updatedAt: record.updatedAt,
     caseState: record.caseState,
+    draft,
+    analyzed,
   });
 }
 
@@ -50,9 +63,13 @@ export function restoreWorkbenchFromState(input: {
   status: CaseStatus;
   updatedAt: string;
   caseState: PersistedCaseState;
+  /** 已计算的分析结果；省略时现场 analyze 一次。 */
+  draft?: SecurityCaseDraft;
+  analyzed?: SecurityCase;
 }): RestoredWorkbenchView {
-  const draft = toSecurityCaseDraft(input.caseId, input.caseState);
-  const analyzed = analyzeSecurityCase(draft);
+  const draft =
+    input.draft ?? toSecurityCaseDraft(input.caseId, input.caseState);
+  const analyzed = input.analyzed ?? analyzeSecurityCase(draft);
   const initialChecklist = mergeChecklistOnRestore(
     input.caseState.checklist,
     analyzed.checklist,

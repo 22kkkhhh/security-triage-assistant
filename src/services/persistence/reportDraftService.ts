@@ -1,5 +1,5 @@
 import type { ComplianceReferenceSnapshot } from "@/domain/knowledge";
-import type { Evidence, ReportData, TimelineEvent } from "@/domain/types";
+import type { Evidence, ReportData, SecurityCase, TimelineEvent } from "@/domain/types";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
 import { resolveCaseCompliance } from "@/services/knowledge/resolveCaseCompliance";
 import { buildReportData } from "@/services/reporting/reportBuilder";
@@ -73,10 +73,12 @@ export function buildInitialReportFromRecord(
   record: PersistedCase,
   options?: {
     complianceReferences?: ComplianceReferenceSnapshot[];
+    /** 同一次命令链中已计算的 analyze 结果，避免重复 analyze。 */
+    analyzed?: SecurityCase;
   },
 ): ReportData {
   const draft = toSecurityCaseDraft(record.id, record.caseState);
-  const analyzed = analyzeSecurityCase(draft);
+  const analyzed = options?.analyzed ?? analyzeSecurityCase(draft);
   const checklist = mergeChecklistOnRestore(
     record.caseState.checklist,
     analyzed.checklist,
@@ -110,14 +112,15 @@ export function buildInitialReportFromRecord(
  */
 export async function resolveComplianceSnapshotsForReport(
   record: PersistedCase,
+  analyzed?: SecurityCase,
 ): Promise<ComplianceReferenceSnapshot[]> {
   const draft = toSecurityCaseDraft(record.id, record.caseState);
-  const analyzed = analyzeSecurityCase(draft);
+  const securityCase = analyzed ?? analyzeSecurityCase(draft);
   try {
     const resolved = await resolveCaseCompliance({
       draft,
-      analysisResults: analyzed.analysisResults,
-      evidences: analyzed.evidences,
+      analysisResults: securityCase.analysisResults,
+      evidences: securityCase.evidences,
     });
     return resolved.snapshots;
   } catch {

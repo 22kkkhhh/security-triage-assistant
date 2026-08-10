@@ -266,20 +266,7 @@ export function PersistedCaseWorkbench({
     if (!structured && !capabilities.canSnapshotWrite) return;
 
     const prevBc = businessContext;
-    const prevChecklistBase = checklistBase;
-    const nextAnalyzed = analyzeSecurityCase({
-      ...draftBase,
-      businessContext: next,
-      humanReview,
-      timeline,
-    });
-    const nextChecklist = mergeChecklistOnRestore(
-      checklistBase,
-      nextAnalyzed.checklist,
-    );
-
     setBusinessContext(next);
-    setChecklistBase(nextChecklist);
 
     if (!structured) {
       const isTextHeavy =
@@ -302,7 +289,6 @@ export function PersistedCaseWorkbench({
     void (async () => {
       const rollback = () => {
         setBusinessContext(prevBc);
-        setChecklistBase(prevChecklistBase);
       };
       const lease = await beginSemanticCommand();
       if (!lease.ok) {

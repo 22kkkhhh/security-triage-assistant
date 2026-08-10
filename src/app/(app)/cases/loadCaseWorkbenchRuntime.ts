@@ -3,8 +3,9 @@
  * 勿从 Client Component 引用本模块。
  */
 import type { InvestigationProgressSummary } from "@/domain/investigationProgress";
+import type { SecurityCase, SecurityCaseDraft } from "@/domain/types";
 import { shouldForceComplianceResolutionUnavailable } from "@/lib/e2eHarness";
-import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
+import { analyzePersistedCase } from "@/services/analysis/analyzePersistedCase";
 import {
   CASE_UI_COMPLIANCE_TOP_N,
 } from "@/services/knowledge/caseCompliancePanel";
@@ -16,7 +17,6 @@ import {
 } from "@/services/knowledge/loadCaseCompliancePanel";
 import { resolveCaseCompliance } from "@/services/knowledge/resolveCaseCompliance";
 import { loadInvestigationProgress } from "@/services/knowledge/resolveInvestigationProgress";
-import { toSecurityCaseDraft } from "@/services/persistence/caseMapper";
 import type { PersistedCase } from "@/services/persistence/types";
 
 /** 可序列化、供 Client 只读展示的 Progress DTO（SoT 来自 Hermes projection） */
@@ -55,20 +55,16 @@ function toProgressDto(
 }
 
 /**
- * Persisted Case → analyze → compliance findings → loadInvestigationProgress。
- * 与 M1 compliance loader 同一次 server 路径；Client 不二次 fetch。
+ * Persisted Case + 已分析结果 → compliance + Investigation Progress DTO。
  */
-export async function loadCaseWorkbenchRuntimeViews(
+export async function loadCaseWorkbenchRuntimeViewsFromAnalyzed(
   record: PersistedCase,
+  draft: SecurityCaseDraft,
+  analyzed: SecurityCase,
 ): Promise<CaseWorkbenchRuntimeViews> {
-  const draft = toSecurityCaseDraft(record.id, record.caseState);
-  const analyzed = analyzeSecurityCase(draft);
   const capturedAt = deriveRuntimeCapturedAt(record);
 
   try {
-    // E2E-only test seam：仅在 development + 精确 e2e.db + 显式 harness flag 下
-    // 生效，代码级禁止在 production 触发；详见 src/lib/e2eHarness.ts。
-    // 强制路径与真实 resolver failure 共用同一个既有 catch，不旁路、不伪造响应。
     if (shouldForceComplianceResolutionUnavailable()) {
       throw new Error(
         "E2E harness: forced compliance resolution unavailable",
@@ -97,4 +93,15 @@ export async function loadCaseWorkbenchRuntimeViews(
       investigationProgress: unavailableInvestigationProgressViewDto(),
     };
   }
+}
+
+/**
+ * Persisted Case → analyze → compliance findings → loadInvestigationProgress。
+ * 与 M1 compliance loader 同一次 server 路径；Client 不二次 fetch。
+ */
+export async function loadCaseWorkbenchRuntimeViews(
+  record: PersistedCase,
+): Promise<CaseWorkbenchRuntimeViews> {
+  const { draft, analyzed } = analyzePersistedCase(record);
+  return loadCaseWorkbenchRuntimeViewsFromAnalyzed(record, draft, analyzed);
 }

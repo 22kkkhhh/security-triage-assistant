@@ -8,9 +8,8 @@ import {
   getLatestHandoffNote,
   listCaseAuditLogs,
 } from "@/services/persistence/auditRepository";
-import { loadCaseWorkbenchRuntimeViews } from "@/app/(app)/cases/loadCaseWorkbenchRuntime";
+import { loadCaseDetailPageData } from "@/app/(app)/cases/loadCaseDetailPageData";
 import { getCaseById } from "@/services/persistence/caseRepository";
-import { restoreWorkbenchFromPersisted } from "@/services/persistence/restoreWorkbench";
 
 export const dynamic = "force-dynamic";
 
@@ -42,11 +41,10 @@ export default async function CaseDetailPage({
     notFound();
   }
 
-  const initial = restoreWorkbenchFromPersisted(record);
-  const [auditPage, latestHandoff, runtimeViews] = await Promise.all([
+  const [{ initial, runtimeViews }, auditPage, latestHandoff] = await Promise.all([
+    loadCaseDetailPageData(record),
     listCaseAuditLogs({ caseId: id, limit: 40 }),
     getLatestHandoffNote(id),
-    loadCaseWorkbenchRuntimeViews(record),
   ]);
   const capabilities = buildCaseWorkbenchCapabilities(user);
 

@@ -192,8 +192,8 @@ describe("Investigation Progress UI 接线契约", () => {
   it("Server loader → page → workbench → panel", () => {
     expect(loader).toContain("loadInvestigationProgress");
     expect(loader).toContain("resolveCaseCompliance");
-    expect(loader).toContain("loadCaseWorkbenchRuntimeViews");
-    expect(page).toContain("loadCaseWorkbenchRuntimeViews");
+    expect(loader).toContain("loadCaseWorkbenchRuntimeViewsFromAnalyzed");
+    expect(page).toContain("loadCaseDetailPageData");
     expect(page).toContain("investigationProgress={runtimeViews.investigationProgress}");
     expect(workbench).toContain("investigationProgress:");
     expect(workbench).toContain("toInvestigationProgressPanelView");
@@ -261,6 +261,6 @@ describe("Investigation Progress UI 接线契约", () => {
   it("Context 补齐路径依赖 router.refresh 重载 Server DTO（无第二套 client fetch）", () => {
     expect(workbench).not.toContain("fetch(");
     expect(workbench).not.toContain("loadCaseWorkbenchRuntimeViews");
-    expect(page).toContain("loadCaseWorkbenchRuntimeViews(record)");
+    expect(page).toContain("loadCaseDetailPageData(record)");
   });
 });

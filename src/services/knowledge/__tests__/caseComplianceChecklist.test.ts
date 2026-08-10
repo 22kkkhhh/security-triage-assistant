@@ -347,7 +347,7 @@ describe("CaseComplianceChecklistPanel UI 契约", () => {
     expect(workbench).toContain("handleAddComplianceSuggestion");
     expect(workbench).toContain("canWriteChecklist");
     expect(workbench).not.toContain("resolveCaseCompliance");
-    expect(page).toContain("loadCaseWorkbenchRuntimeViews");
+    expect(page).toContain("loadCaseDetailPageData");
     expect(page).toContain(
       "complianceChecklist={runtimeViews.compliance.checklist}",
     );

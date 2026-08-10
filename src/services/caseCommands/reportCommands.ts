@@ -33,6 +33,7 @@ import {
   getReportExportPayload,
   resolveComplianceSnapshotsForReport,
 } from "@/services/persistence/reportDraftService";
+import { analyzePersistedCase } from "@/services/analysis/analyzePersistedCase";
 import { preserveFrozenComplianceReferences } from "@/services/persistence/reportDraftIntegrity";
 import {
   generateDocxBuffer,
@@ -122,10 +123,12 @@ export async function createReportDraftCommand(input: {
   }
 
   // 报告创建时解析 Snapshot；此后草稿/导出不得再查 Knowledge DB
+  const { analyzed } = analyzePersistedCase(existing);
   const complianceReferences =
-    await resolveComplianceSnapshotsForReport(existing);
+    await resolveComplianceSnapshotsForReport(existing, analyzed);
   const report = buildInitialReportFromRecord(existing, {
     complianceReferences,
+    analyzed,
   });
 
   try {

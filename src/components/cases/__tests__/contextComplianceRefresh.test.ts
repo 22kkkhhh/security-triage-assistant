@@ -58,7 +58,7 @@ describe("Case Context → Compliance UI Refresh（router.refresh）", () => {
   });
 
   it("Server page 仍经服务端 loader 提供 compliance props（refresh 后复用）", () => {
-    expect(page).toContain("loadCaseWorkbenchRuntimeViews");
+    expect(page).toContain("loadCaseDetailPageData");
     expect(page).toContain("compliancePanel={runtimeViews.compliance.panel}");
     expect(page).toContain(
       "complianceChecklist={runtimeViews.compliance.checklist}",
