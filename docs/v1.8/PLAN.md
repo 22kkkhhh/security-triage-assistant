@@ -20,3 +20,9 @@ Historical Case Correlation + Investigation Intelligence + open-source baseline 
 - UI：「历史调查线索」+ 导航「历史线索」；保留 Related Case cards
 - 不继承历史 HumanReview / 不自动提升当前风险；不修改 `src/services/analysis/**`
 - DB：Related Cases 只查一次，Intelligence 不再扫库
+
+## M3 — Release Readiness + v1.8.0 Closeout
+
+- Docs-only：README v1.8.0、CHANGELOG catch-up、`RELEASE_ACCEPTANCE.md`
+- No new product features；no Prisma migration
+- Promote `integration/v1.8` → `main`；annotated tag `v1.8.0`

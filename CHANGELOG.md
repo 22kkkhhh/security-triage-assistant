@@ -2,6 +2,78 @@
 
 本项目采用轻量变更记录。版本号遵循语义化约定；未打正式 tag 的条目以 `-rc` 标记。
 
+## v1.8.0 — 2026-08-11
+
+Theme: Investigation Intelligence（历史关联 + 调查线索）
+
+Added:
+- Related Historical Cases：基于明确共同调查事实的确定性关联（username / source IP / shared system / external alert ID）
+- `SAME_ALERT_SOURCE` 仅作附加 reason，不得单独建立关联
+- 服务端 30 天窗口、最多 5 条结果；排除当前 Case；null/空串不匹配
+- Historical Signals：`RECURRING_USERNAME` / `RECURRING_SOURCE_IP` / `RECURRING_SYSTEM` / `REPEATED_EXTERNAL_ALERT_ID`
+- Investigation Leads：确定性「建议核查」提示（最多 4；不落库、非 Checklist）
+- Workbench「历史调查线索」区 + 导航「历史线索」（只读辅助）
+
+Safety / Semantics:
+- 无 AI / 概率相关分；关联 ≠ 同一安全事件
+- 历史风险与 HumanReview 不改写当前 Case
+- Investigation Lead ≠ 安全结论；≠ 自动写入 Checklist
+- **无 Prisma schema migration**
+
+Deferred / Known Limitations:
+- Case merge / incident graph / attack chain
+- MITRE ATT&CK / threat intelligence / IOC reputation
+- LLM / embeddings / vector DB / clustering / probability scoring
+- automatic risk escalation / auto checklist generation
+- cross-tenant / Case ACL
+
+## v1.7.0 — 2026-08-10
+
+Theme: Alert Intake & Investigation Workbench
+
+Added:
+- Generic single-alert JSON intake（ConfirmationPanel → 人工确认建案）
+- Wazuh JSON adapter：确定性字段映射 + 内部 severity 摄入策略（非官方等价标准）
+- External alert provenance；Golden Case 规则基线
+- 更安全的 UNKNOWN 处理与业务上下文风险聚合
+- Case Investigation Workbench 刷新（概览 / 下一步 / 证据与核查工作区）
+
+Deferred / Known Limitations:
+- webhook / streaming / batch / JSONL ingest
+- externalAlertId dedup / raw JSON persistence
+- Wazuh API 直连 / ML baseline / Context Model v2
+
+## v1.6.0 — 2026-08-10
+
+Theme: Operational Readiness / Demo Reliability
+
+Added:
+- Critical E2E：Analyst 调查流、Report/DOCX、Viewer 只读、fail-closed 解析失败路径
+- Demo/UI：Checklist 展示分组、合规技术详情折叠、案件首屏工作流优先级调整（不改安全语义）
+- 同请求重复 full analyze 收敛（Case detail / Report create / Business Context next-state：2→1）
+- 无全局 cache / 跨请求 memo / 陈旧安全结果复用
+
+Deferred / Known Limitations:
+- Context Model v2 / PostgreSQL migration / schema 扩容
+- external AI/API / runtime Agent
+
+## v1.5.0 — 2026-08-10
+
+Theme: Case Investigation Context / Progress / Hardening
+
+Added:
+- Case Investigation Context 与 Investigation Progress（服务端投影；fail-closed）
+- Security Evidence 稳定 identity / provenance；Compliance runtime 解析
+- Auth/RBAC 与 operation ownership 加固；Production environment hardening
+- Semantic Command minimal intent / server canonicalization
+- Snapshot autosave single-flight；Report autosave race 修复
+- Frozen compliance reference snapshot 保持可重现
+
+Deferred / Known Limitations:
+- SYSTEM checklist 展示分组（后续在 v1.6 完成）
+- duplicate analyze 性能（后续在 v1.6 完成）
+- 完整 WCAG / CONTEXT_MODEL_GAPS 持久化扩展 / PostgreSQL migration
+
 ## v1.4.0 — 2026-08-10
 
 Added（Case 集成合规知识切片）:
