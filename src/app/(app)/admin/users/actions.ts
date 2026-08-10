@@ -25,6 +25,9 @@ import {
   updateUserDisplayName,
   type ManagedUserView,
 } from "@/services/auth/userAdminService";
+import { sanitizeActionErrorMessage } from "@/app/(app)/actionErrorSanitizer";
+
+const USER_ADMIN_FALLBACK = "用户管理操作暂未完成，请稍后重试。";
 
 export type UserAdminActionResult =
   | {
@@ -45,7 +48,11 @@ export type UserAdminActionResult =
 
 function toUserAdminFailure(error: unknown): UserAdminActionResult {
   if (error instanceof UserAdminError) {
-    return { ok: false, error: error.message, code: error.code };
+    return {
+      ok: false,
+      error: sanitizeActionErrorMessage(error.message, USER_ADMIN_FALLBACK),
+      code: error.code,
+    };
   }
   return toAuthActionFailure(error);
 }

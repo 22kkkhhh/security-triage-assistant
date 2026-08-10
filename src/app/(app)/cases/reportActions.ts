@@ -15,6 +15,14 @@ import {
   getCaseById,
   StaleReportDraftError,
 } from "@/services/persistence/caseRepository";
+import {
+  sanitizeActionErrorMessage,
+  unknownActionErrorMessage,
+} from "@/app/(app)/actionErrorSanitizer";
+
+const CREATE_REPORT_FALLBACK = "报告初稿生成暂未完成，请稍后重试。";
+const SAVE_REPORT_FALLBACK = "报告保存暂未完成，请稍后重试。";
+const EXPORT_REPORT_FALLBACK = "报告导出暂未完成，请稍后重试。";
 
 export type SaveReportActionResult =
   | {
@@ -103,7 +111,7 @@ export async function createReportDraftAction(
   if (!result.ok) {
     return {
       ok: false,
-      error: result.error,
+      error: sanitizeActionErrorMessage(result.error, CREATE_REPORT_FALLBACK),
       code: result.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
     };
   }
@@ -152,7 +160,10 @@ export async function saveReportDraftAction(
       if (result.code === "FORBIDDEN") {
         return {
           ok: false,
-          error: result.error || "当前账号无权限执行此操作",
+          error: sanitizeActionErrorMessage(
+            result.error,
+            "当前账号无权限执行此操作",
+          ),
           code: "FORBIDDEN",
         };
       }
@@ -166,7 +177,10 @@ export async function saveReportDraftAction(
           reportUpdatedAt: latest?.reportUpdatedAt ?? null,
         };
       }
-      return { ok: false, error: result.error };
+      return {
+        ok: false,
+        error: sanitizeActionErrorMessage(result.error, SAVE_REPORT_FALLBACK),
+      };
     }
     return {
       ok: true,
@@ -187,8 +201,10 @@ export async function saveReportDraftAction(
         reportUpdatedAt: latest?.reportUpdatedAt ?? null,
       };
     }
-    const message = error instanceof Error ? error.message : "报告保存失败";
-    return { ok: false, error: message };
+    return {
+      ok: false,
+      error: unknownActionErrorMessage(SAVE_REPORT_FALLBACK),
+    };
   }
 }
 
@@ -217,7 +233,7 @@ export async function exportReportAction(
   if (!result.ok) {
     return {
       ok: false,
-      error: result.error,
+      error: sanitizeActionErrorMessage(result.error, EXPORT_REPORT_FALLBACK),
       code: result.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
     };
   }

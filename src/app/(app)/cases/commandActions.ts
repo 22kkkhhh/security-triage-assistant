@@ -26,6 +26,15 @@ import type {
   SaveCaseStateInput,
 } from "@/services/persistence/types";
 import { isCaseStatus } from "@/services/caseCommands";
+import {
+  sanitizeActionErrorMessage,
+  unknownActionErrorMessage,
+} from "@/app/(app)/actionErrorSanitizer";
+
+const COMMAND_FALLBACK = "操作暂未完成，请稍后重试。";
+const STALE_FALLBACK = "案件已发生更新，已刷新到最新状态。";
+const HANDOFF_FALLBACK = "交接记录添加暂未完成，请稍后重试。";
+const ACTIVITY_FALLBACK = "操作记录加载暂未完成，请稍后重试。";
 
 export type SemanticCommandActionResult =
   | {
@@ -96,7 +105,7 @@ function toResult(
     if (result.code === "STALE" && result.case) {
       return {
         ok: false,
-        error: result.error,
+        error: sanitizeActionErrorMessage(result.error, STALE_FALLBACK),
         code: "STALE",
         updatedAt: result.case.updatedAt,
         lastActivityAt: result.case.lastActivityAt,
@@ -107,11 +116,17 @@ function toResult(
     if (result.code === "FORBIDDEN") {
       return {
         ok: false,
-        error: result.error || "当前账号无权限执行此操作",
+        error: sanitizeActionErrorMessage(
+          result.error,
+          "当前账号无权限执行此操作",
+        ),
         code: "FORBIDDEN",
       };
     }
-    return { ok: false, error: result.error };
+    return {
+      ok: false,
+      error: sanitizeActionErrorMessage(result.error, COMMAND_FALLBACK),
+    };
   }
   return {
     ok: true,
@@ -355,12 +370,12 @@ export async function addHandoffNoteAction(
   if (!result.ok) {
     return {
       ok: false,
-      error: result.error,
+      error: sanitizeActionErrorMessage(result.error, HANDOFF_FALLBACK),
       code: result.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
     };
   }
   if (!result.audit) {
-    return { ok: false, error: "交接记录添加失败，请重试。" };
+    return { ok: false, error: HANDOFF_FALLBACK };
   }
   return {
     ok: true,
@@ -402,9 +417,7 @@ export async function loadMoreCaseAuditLogsAction(
       limit: take,
     });
     return { ok: true, result };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "操作记录加载失败，请重试。";
-    return { ok: false, error: message };
+  } catch {
+    return { ok: false, error: unknownActionErrorMessage(ACTIVITY_FALLBACK) };
   }
 }

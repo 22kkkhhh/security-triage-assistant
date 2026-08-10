@@ -8,6 +8,9 @@ import {
 } from "@/services/auth/requirePermission";
 import { changeOwnPassword } from "@/services/auth/passwordLifecycleService";
 import { parseSelfPasswordInput } from "@/services/auth/userAdminParsers";
+import { sanitizeActionErrorMessage } from "@/app/(app)/actionErrorSanitizer";
+
+const CHANGE_PASSWORD_FALLBACK = "密码修改暂未完成，请稍后重试。";
 
 export type AccountActionResult =
   | { ok: true; message: string }
@@ -38,7 +41,14 @@ export async function changeOwnPasswordAction(
     return { ok: true, message: "密码已修改。" };
   } catch (error) {
     if (error instanceof UserAdminError) {
-      return { ok: false, error: error.message, code: error.code };
+      return {
+        ok: false,
+        error: sanitizeActionErrorMessage(
+          error.message,
+          CHANGE_PASSWORD_FALLBACK,
+        ),
+        code: error.code,
+      };
     }
     return toAuthActionFailure(error);
   }
