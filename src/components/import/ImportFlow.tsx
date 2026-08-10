@@ -10,14 +10,20 @@ import {
 } from "@/services/normalization/types";
 import { ConfirmationPanel } from "./ConfirmationPanel";
 import { CsvImport } from "./CsvImport";
+import { JsonAlertImport } from "./JsonAlertImport";
 import { ManualEntryForm } from "./ManualEntryForm";
 import { TextPasteForm } from "./TextPasteForm";
 
-type InputMethod = "MANUAL" | "CSV" | "TEXT";
+type InputMethod = "MANUAL" | "CSV" | "JSON" | "TEXT";
 
 const methodOptions: { key: InputMethod; title: string; description: string }[] = [
   { key: "MANUAL", title: "手工录入", description: "通过结构化表单逐字段填写" },
   { key: "CSV", title: "CSV 导入", description: "上传安全平台导出的 CSV 文件并确认字段映射" },
+  {
+    key: "JSON",
+    title: "JSON 导入",
+    description: "上传单条安全告警 JSON 文件并确认字段映射",
+  },
   { key: "TEXT", title: "文本粘贴", description: "粘贴“键:值”格式的告警文本" },
 ];
 
@@ -115,6 +121,21 @@ export function ImportFlow({
           <h2 className="mb-3 text-sm font-semibold text-neutral-900">CSV 导入</h2>
           <CsvImport
             onSubmit={(pairs) => setPending({ pairs, unrecognized: [] })}
+          />
+        </section>
+      )}
+
+      {pending === null && method === "JSON" && (
+        <section className="rounded-md border border-neutral-200 bg-white px-4 py-3">
+          <h2 className="mb-3 text-sm font-semibold text-neutral-900">JSON 导入</h2>
+          <JsonAlertImport
+            sourceType={effectiveSourceType}
+            onSubmit={(result) =>
+              setPending({
+                pairs: result.pairs,
+                unrecognized: result.unrecognized,
+              })
+            }
           />
         </section>
       )}
