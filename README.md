@@ -228,3 +228,10 @@ Seed 使用固定 `id`（`demo-case-a` / `demo-case-b`）、固定案件编号�
 - 通知 / 排班 / 多人实时协作
 
 **不作为近期默认方向**：AI 自动判定攻击、自动封禁、自动响应。
+
+## License
+
+Copyright 2026 22kkkhhh.
+
+Licensed under the Apache License, Version 2.0.
+See [LICENSE](LICENSE) for details.
