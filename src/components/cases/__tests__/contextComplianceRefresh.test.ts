@@ -58,9 +58,14 @@ describe("Case Context → Compliance UI Refresh（router.refresh）", () => {
   });
 
   it("Server page 仍经服务端 loader 提供 compliance props（refresh 后复用）", () => {
-    expect(page).toContain("loadCaseComplianceWorkbenchViews");
-    expect(page).toContain("compliancePanel={complianceViews.panel}");
-    expect(page).toContain("complianceChecklist={complianceViews.checklist}");
+    expect(page).toContain("loadCaseWorkbenchRuntimeViews");
+    expect(page).toContain("compliancePanel={runtimeViews.compliance.panel}");
+    expect(page).toContain(
+      "complianceChecklist={runtimeViews.compliance.checklist}",
+    );
+    expect(page).toContain(
+      "investigationProgress={runtimeViews.investigationProgress}",
+    );
   });
 
   it("加入核查清单 handler 不触发 compliance refresh", () => {

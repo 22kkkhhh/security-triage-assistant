@@ -56,6 +56,12 @@ import {
 import { CaseComplianceChecklistPanel } from "./CaseComplianceChecklistPanel";
 import { CaseCompliancePanel } from "./CaseCompliancePanel";
 import { CaseHeader } from "./CaseHeader";
+import { InvestigationProgressPanel } from "./InvestigationProgressPanel";
+import {
+  INVESTIGATION_SECTION_IDS,
+  toInvestigationProgressPanelView,
+  type InvestigationProgressViewDto,
+} from "./investigationProgressSummary";
 
 const emptyHumanReview = (): HumanReview => ({
   reviewer: null,
@@ -87,6 +93,7 @@ export function PersistedCaseWorkbench({
   capabilities,
   compliancePanel,
   complianceChecklist,
+  investigationProgress,
 }: {
   initial: RestoredWorkbenchView;
   hasReport?: boolean;
@@ -101,14 +108,16 @@ export function PersistedCaseWorkbench({
   compliancePanel: CaseCompliancePanelView;
   /** 服务端聚合的建议核查事项；只读，不写回 ChecklistItem */
   complianceChecklist: CaseComplianceChecklistView;
+  /** 服务端 Investigation Progress 投影；Client 不自行 resolve */
+  investigationProgress: InvestigationProgressViewDto;
 }) {
   const router = useRouter();
   const readOnly = isCaseWorkbenchReadOnly(capabilities);
 
   /**
    * Context 已成功持久化后：软刷新 Server Component，
-   * 由案件详情页服务端 loader 重算合规面板与建议清单。
-   * Client 不执行 compliance resolver；刷新完成前保留旧 props。
+   * 由案件详情页服务端 loader 重算合规面板、建议清单与 Investigation Progress。
+   * Client 不执行 compliance / progress resolver；刷新完成前保留旧 props。
    */
   const refreshComplianceAfterContextPersist = useCallback(() => {
     router.refresh();
@@ -540,6 +549,12 @@ export function PersistedCaseWorkbench({
     return keys;
   }, [checklist]);
 
+  /** M3C：Server Progress DTO → 展示模型（不做 Client 侧 OPEN/RESOLVED 推导） */
+  const investigationProgressView = useMemo(
+    () => toInvestigationProgressPanelView(investigationProgress),
+    [investigationProgress],
+  );
+
   const handleAddComplianceSuggestion = (
     suggestion: CaseComplianceChecklistItem,
   ) => {
@@ -689,6 +704,8 @@ export function PersistedCaseWorkbench({
         系统分析仅用于辅助研判，最终结论以安全人员人工确认结果为准。
       </div>
 
+      <InvestigationProgressPanel view={investigationProgressView} />
+
       {analyzed.suggestedAssessment && (
         <SuggestedAssessmentBar assessment={analyzed.suggestedAssessment} />
       )}
@@ -699,78 +716,89 @@ export function PersistedCaseWorkbench({
 
       <CaseCompliancePanel view={compliancePanel} />
 
-      <CaseComplianceChecklistPanel
-        view={complianceChecklist}
-        addedSuggestionKeys={addedSuggestionKeys}
-        canWrite={capabilities.canWriteChecklist}
-        pendingSuggestionKey={pendingSuggestionKey}
-        onAddSuggestion={handleAddComplianceSuggestion}
-      />
-
-      <BusinessContextPanel
-        businessContext={businessContext}
-        onChange={handleBusinessContextChange}
-        canWriteStructured={capabilities.canWriteBusinessContext}
-        canWriteSnapshot={capabilities.canSnapshotWrite}
-        saveState={saveState}
-        onRetrySave={retrySave}
-      />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <EvidencePanel evidences={analyzed.evidences} />
-        <ChecklistPanel
-          items={checklist}
+      <div id={INVESTIGATION_SECTION_IDS.complianceChecklist}>
+        <CaseComplianceChecklistPanel
+          view={complianceChecklist}
+          addedSuggestionKeys={addedSuggestionKeys}
           canWrite={capabilities.canWriteChecklist}
-          canEditNote={capabilities.canSnapshotWrite}
-          onToggle={(id) => {
-            if (!capabilities.canWriteChecklist) return;
-            const current = checklist.find((item) => item.id === id);
-            if (!current) return;
-            const prevBase = checklistBase;
-            const next = checklist.map((item) =>
-              item.id === id
-                ? { ...item, completed: !item.completed }
-                : item,
-            );
-            runChecklistCommand(
-              current.completed ? "reopen" : "complete",
-              id,
-              next,
-              prevBase,
-            );
-          }}
-          onEditNote={(id, note) => {
-            if (!capabilities.canSnapshotWrite) return;
-            const next = checklist.map((item) =>
-              item.id === id ? { ...item, note: note || null } : item,
-            );
-            setChecklistBase(next);
-            payloadRef.current = { ...payloadRef.current, checklist: next };
-            scheduleSave("debounce", {
-              checklistNotes: [{ checklistId: id, note: note || null }],
-            });
-          }}
-          onDelete={(id) => {
-            if (!capabilities.canWriteChecklist) return;
-            const prevBase = checklistBase;
-            const next = checklist.filter((item) => item.id !== id);
-            runChecklistCommand("delete", id, next, prevBase);
-          }}
-          onAdd={(item) => {
-            if (!capabilities.canWriteChecklist) return;
-            const prevBase = checklistBase;
-            const next = [...checklist, item];
-            runChecklistCommand("add", item.id, next, prevBase);
-          }}
+          pendingSuggestionKey={pendingSuggestionKey}
+          onAddSuggestion={handleAddComplianceSuggestion}
         />
       </div>
 
-      <HumanReviewPanel
-        humanReview={humanReview}
-        onChange={handleHumanReviewChange}
-        canWriteSemantic={capabilities.canWriteHumanReview}
-        canWriteNote={capabilities.canSnapshotWrite}
-      />
+      <div id={INVESTIGATION_SECTION_IDS.businessContext}>
+        <BusinessContextPanel
+          businessContext={businessContext}
+          onChange={handleBusinessContextChange}
+          canWriteStructured={capabilities.canWriteBusinessContext}
+          canWriteSnapshot={capabilities.canSnapshotWrite}
+          saveState={saveState}
+          onRetrySave={retrySave}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div id={INVESTIGATION_SECTION_IDS.evidence}>
+          <EvidencePanel evidences={analyzed.evidences} />
+        </div>
+        <div id={INVESTIGATION_SECTION_IDS.checklist}>
+          <ChecklistPanel
+            items={checklist}
+            canWrite={capabilities.canWriteChecklist}
+            canEditNote={capabilities.canSnapshotWrite}
+            onToggle={(id) => {
+              if (!capabilities.canWriteChecklist) return;
+              const current = checklist.find((item) => item.id === id);
+              if (!current) return;
+              const prevBase = checklistBase;
+              const next = checklist.map((item) =>
+                item.id === id
+                  ? { ...item, completed: !item.completed }
+                  : item,
+              );
+              runChecklistCommand(
+                current.completed ? "reopen" : "complete",
+                id,
+                next,
+                prevBase,
+              );
+            }}
+            onEditNote={(id, note) => {
+              if (!capabilities.canSnapshotWrite) return;
+              const next = checklist.map((item) =>
+                item.id === id ? { ...item, note: note || null } : item,
+              );
+              setChecklistBase(next);
+              payloadRef.current = { ...payloadRef.current, checklist: next };
+              scheduleSave("debounce", {
+                checklistNotes: [{ checklistId: id, note: note || null }],
+              });
+            }}
+            onDelete={(id) => {
+              if (!capabilities.canWriteChecklist) return;
+              const prevBase = checklistBase;
+              const next = checklist.filter((item) => item.id !== id);
+              runChecklistCommand("delete", id, next, prevBase);
+            }}
+            onAdd={(item) => {
+              if (!capabilities.canWriteChecklist) return;
+              const prevBase = checklistBase;
+              const next = [...checklist, item];
+              runChecklistCommand("add", item.id, next, prevBase);
+            }}
+          />
+        </div>
+      </div>
+
+      <div id={INVESTIGATION_SECTION_IDS.humanReview}>
+        <HumanReviewPanel
+          humanReview={humanReview}
+          onChange={handleHumanReviewChange}
+          canWriteSemantic={capabilities.canWriteHumanReview}
+          canWriteNote={capabilities.canSnapshotWrite}
+          outstandingWorkHint={investigationProgressView.hasOutstandingWork}
+        />
+      </div>
 
       <TimelinePanel
         events={timeline}

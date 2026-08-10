@@ -18,11 +18,14 @@ export function HumanReviewPanel({
   onChange,
   canWriteSemantic = true,
   canWriteNote = true,
+  outstandingWorkHint = false,
 }: {
   humanReview: HumanReview;
   onChange: (next: HumanReview) => void;
   canWriteSemantic?: boolean;
   canWriteNote?: boolean;
+  /** 仍有待核查/待补事项时的轻量提示；不阻止提交 */
+  outstandingWorkHint?: boolean;
 }) {
   const update = (patch: Partial<HumanReview>) =>
     onChange({ ...humanReview, ...patch });
@@ -46,6 +49,14 @@ export function HumanReviewPanel({
         </span>
       }
     >
+      {outstandingWorkHint ? (
+        <p
+          className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900"
+          data-testid="human-review-outstanding-hint"
+        >
+          当前仍有待核查事项，请结合现有证据完成人工研判。
+        </p>
+      ) : null}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <div className="block text-sm">
           <span className="text-neutral-500">当前研判责任人</span>

@@ -345,8 +345,10 @@ describe("CaseComplianceChecklistPanel UI 契约", () => {
     expect(workbench).toContain("handleAddComplianceSuggestion");
     expect(workbench).toContain("canWriteChecklist");
     expect(workbench).not.toContain("resolveCaseCompliance");
-    expect(page).toContain("loadCaseComplianceWorkbenchViews");
-    expect(page).toContain("complianceChecklist={complianceViews.checklist}");
+    expect(page).toContain("loadCaseWorkbenchRuntimeViews");
+    expect(page).toContain(
+      "complianceChecklist={runtimeViews.compliance.checklist}",
+    );
     expect(panel).toContain("加入核查清单");
     expect(panel).toContain("已加入");
   });
