@@ -649,7 +649,6 @@ describe("operationId ownership", () => {
         created.id,
         "PENDING_VERIFICATION",
         op,
-        toNextState(created, { status: "PENDING_VERIFICATION" }),
         created.updatedAt,
       ),
     );
@@ -660,7 +659,6 @@ describe("operationId ownership", () => {
         created.id,
         "PENDING_VERIFICATION",
         op,
-        toNextState(created, { status: "PENDING_VERIFICATION" }),
         created.updatedAt,
       ),
     );
@@ -877,18 +875,12 @@ describe("reviewer / businessOwner spoof via Action", () => {
 
     const latest = await getCaseById(created.id);
     const bc = await runWithTestAuthUser(USER_A, () =>
-      updateBusinessContextAction(
-        latest!.id,
-        randomUUID(),
-        toNextState(latest!, {
-          businessContext: {
-            ...latest!.caseState.businessContext,
-            businessLegitimacy: "AUTHORIZED",
-            businessOwner: "管理员",
-          },
-        }),
-        latest!.updatedAt,
-      ),
+      updateBusinessContextAction(latest!.id, randomUUID(), latest!.updatedAt, {
+        plannedTaskStatus: latest!.caseState.businessContext.plannedTaskStatus,
+        changeTicketStatus: latest!.caseState.businessContext.changeTicketStatus,
+        ownerVerification: latest!.caseState.businessContext.ownerVerification,
+        businessLegitimacy: "AUTHORIZED",
+      }),
     );
     expect(bc.ok).toBe(true);
     if (bc.ok && bc.audit) {

@@ -248,14 +248,8 @@ describe("Viewer 写拒绝 + 无副作用", () => {
     ],
     [
       "CASE_STATUS_CHANGE",
-      async (caseId: string, updatedAt: string, state: SaveCaseStateInput) =>
-        changeCaseStatusAction(
-          caseId,
-          "CLOSED",
-          randomUUID(),
-          { ...state, status: "CLOSED" },
-          updatedAt,
-        ),
+      async (caseId: string, updatedAt: string) =>
+        changeCaseStatusAction(caseId, "CLOSED", randomUUID(), updatedAt),
     ],
     [
       "CHECKLIST_WRITE",
@@ -266,12 +260,6 @@ describe("Viewer 写拒绝 + 无副作用", () => {
           "COMPLETE",
           item.id,
           randomUUID(),
-          {
-            ...state,
-            checklist: state.checklist.map((c) =>
-              c.id === item.id ? { ...c, completed: true } : c,
-            ),
-          },
           updatedAt,
         );
       },
@@ -279,18 +267,12 @@ describe("Viewer 写拒绝 + 无副作用", () => {
     [
       "BUSINESS_CONTEXT_WRITE",
       async (caseId: string, updatedAt: string, state: SaveCaseStateInput) =>
-        updateBusinessContextAction(
-          caseId,
-          randomUUID(),
-          {
-            ...state,
-            businessContext: {
-              ...state.businessContext,
-              businessLegitimacy: "AUTHORIZED",
-            },
-          },
-          updatedAt,
-        ),
+        updateBusinessContextAction(caseId, randomUUID(), updatedAt, {
+          plannedTaskStatus: state.businessContext.plannedTaskStatus,
+          changeTicketStatus: state.businessContext.changeTicketStatus,
+          ownerVerification: state.businessContext.ownerVerification,
+          businessLegitimacy: "AUTHORIZED",
+        }),
     ],
     [
       "HUMAN_REVIEW_WRITE",
@@ -307,20 +289,21 @@ describe("Viewer 写拒绝 + 无副作用", () => {
     ],
     [
       "TIMELINE_WRITE",
-      async (caseId: string, updatedAt: string, state: SaveCaseStateInput) => {
-        const event = {
-          id: randomUUID(),
-          occurredAt: "2026-08-08T03:00:00.000Z",
-          title: "viewer event",
-          description: null,
-          source: "MANUAL" as const,
-        };
+      async (caseId: string, updatedAt: string) => {
+        const eventId = randomUUID();
         return addTimelineEventAction(
           caseId,
-          event.id,
+          eventId,
           randomUUID(),
-          { ...state, timeline: [...state.timeline, event] },
           updatedAt,
+          {
+            id: eventId,
+            occurredAt: "2026-08-08T03:00:00.000Z",
+            eventType: "其他",
+            title: "viewer event",
+            description: "",
+            operator: null,
+          },
         );
       },
     ],
@@ -387,13 +370,7 @@ describe("Viewer 写拒绝 + 无副作用", () => {
 
   it("VIEWER 非法写 payload 优先 FORBIDDEN，不暴露 validation", async () => {
     const result = await runWithTestAuthUser(VITEST_VIEWER_USER, () =>
-      changeCaseStatusAction(
-        "",
-        "NOT_A_STATUS",
-        "",
-        { bogus: true },
-        "not-a-date",
-      ),
+      changeCaseStatusAction("", "NOT_A_STATUS", "", "not-a-date"),
     );
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -447,7 +424,6 @@ describe("Analyst / Admin 写允许", () => {
         created.id,
         "PENDING_VERIFICATION",
         randomUUID(),
-        toNextState(latest!, { status: "PENDING_VERIFICATION" }),
         latest!.updatedAt,
       );
       expect(status.ok).toBe(true);
@@ -500,7 +476,6 @@ describe("Unauthenticated / Disabled / Role freshness", () => {
         created.id,
         "CLOSED",
         randomUUID(),
-        toNextState(created, { status: "CLOSED" }),
         created.updatedAt,
       ),
     );
@@ -521,7 +496,6 @@ describe("Unauthenticated / Disabled / Role freshness", () => {
         created.id,
         "CLOSED",
         randomUUID(),
-        toNextState(created, { status: "CLOSED" }),
         created.updatedAt,
       ),
     );
@@ -605,28 +579,19 @@ describe("Snapshot allowlist / OCC / operationId 回归", () => {
   it("ANALYST 双旧版本：A 成功 B STALE", async () => {
     const created = await seedCase("occ-authz");
     const base = created.updatedAt;
-    const nextA = toNextState(created, { status: "PENDING_VERIFICATION" });
-    const nextB = toNextState(created, { status: "RESPONDING" });
 
     const a = await runWithTestAuthUser(VITEST_ANALYST_USER, () =>
       changeCaseStatusAction(
         created.id,
         "PENDING_VERIFICATION",
         randomUUID(),
-        nextA,
         base,
       ),
     );
     expect(a.ok).toBe(true);
 
     const b = await runWithTestAuthUser(VITEST_ANALYST_USER, () =>
-      changeCaseStatusAction(
-        created.id,
-        "RESPONDING",
-        randomUUID(),
-        nextB,
-        base,
-      ),
+      changeCaseStatusAction(created.id, "RESPONDING", randomUUID(), base),
     );
     expect(b.ok).toBe(false);
     if (!b.ok) expect(b.code).toBe("STALE");
@@ -635,14 +600,12 @@ describe("Snapshot allowlist / OCC / operationId 回归", () => {
   it("同一 ANALYST 相同 operationId retry → alreadyApplied，不重复 Audit", async () => {
     const created = await seedCase("opid-authz");
     const opId = randomUUID();
-    const next = toNextState(created, { status: "PENDING_VERIFICATION" });
 
     const first = await runWithTestAuthUser(VITEST_ANALYST_USER, () =>
       changeCaseStatusAction(
         created.id,
         "PENDING_VERIFICATION",
         opId,
-        next,
         created.updatedAt,
       ),
     );
@@ -658,7 +621,6 @@ describe("Snapshot allowlist / OCC / operationId 回归", () => {
         created.id,
         "PENDING_VERIFICATION",
         opId,
-        next,
         created.updatedAt,
       ),
     );
@@ -691,7 +653,6 @@ describe("Permission 入口覆盖", () => {
           created.id,
           "CLOSED",
           randomUUID(),
-          { ...state, status: "CLOSED" },
           latest!.updatedAt,
         ),
       CHECKLIST_WRITE: () =>
@@ -700,15 +661,19 @@ describe("Permission 入口覆盖", () => {
           "COMPLETE",
           state.checklist[0]!.id,
           randomUUID(),
-          state,
           latest!.updatedAt,
         ),
       BUSINESS_CONTEXT_WRITE: () =>
         updateBusinessContextAction(
           created.id,
           randomUUID(),
-          state,
           latest!.updatedAt,
+          {
+            plannedTaskStatus: state.businessContext.plannedTaskStatus,
+            changeTicketStatus: state.businessContext.changeTicketStatus,
+            ownerVerification: state.businessContext.ownerVerification,
+            businessLegitimacy: "AUTHORIZED",
+          },
         ),
       HUMAN_REVIEW_WRITE: () =>
         updateHumanReviewAction(
@@ -720,14 +685,23 @@ describe("Permission 入口覆盖", () => {
           },
           latest!.updatedAt,
         ),
-      TIMELINE_WRITE: () =>
-        addTimelineEventAction(
+      TIMELINE_WRITE: () => {
+        const eventId = randomUUID();
+        return addTimelineEventAction(
           created.id,
+          eventId,
           randomUUID(),
-          randomUUID(),
-          state,
           latest!.updatedAt,
-        ),
+          {
+            id: eventId,
+            occurredAt: "2026-08-08T04:00:00.000Z",
+            eventType: "其他",
+            title: "probe",
+            description: "",
+            operator: null,
+          },
+        );
+      },
       HANDOFF_WRITE: () =>
         addHandoffNoteAction(created.id, "x", randomUUID()),
       ACTIVITY_READ: async () => {
