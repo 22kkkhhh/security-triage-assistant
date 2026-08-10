@@ -2,6 +2,7 @@
  * Security verification action 的稳定 identity（ruleId + actionId）。
  * actionId 来自规则 registry 显式定义，不依赖数组位置或展示 label。
  */
+import type { ChecklistItem } from "@/domain/types";
 
 /** M3D index-based provenance 无法安全映射到新 actionId，legacy checklist 保持 fail-closed OPEN。 */
 export const LEGACY_SECURITY_EVIDENCE_INDEX_PROVENANCE =
@@ -46,4 +47,25 @@ export function parseSecurityVerificationSuggestionKey(
     ruleId: match[1]!,
     actionId: match[2]!,
   };
+}
+
+/**
+ * Security Evidence RESOLVED 的 provenance gate：
+ * 非 SECURITY_VERIFICATION sourceKind 永远不得 resolve Security Evidence。
+ */
+export function isSecurityVerificationEvidenceResolvedByChecklist(
+  checklist: readonly ChecklistItem[],
+  ruleId: string,
+  actionId: string,
+): boolean {
+  const suggestionKey = buildSecurityVerificationSuggestionKey(
+    ruleId,
+    actionId,
+  );
+  return checklist.some(
+    (item) =>
+      item.completed &&
+      item.sourceKind === "SECURITY_VERIFICATION" &&
+      item.sourceRef?.suggestionKey === suggestionKey,
+  );
 }

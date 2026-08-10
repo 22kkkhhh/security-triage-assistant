@@ -16,6 +16,7 @@ import {
 import {
   buildSecurityEvidenceProgressSourceKey,
   buildSecurityVerificationSuggestionKey,
+  isSecurityVerificationEvidenceResolvedByChecklist,
 } from "@/domain/securityEvidenceIdentity";
 import type {
   AnalysisResult,
@@ -135,24 +136,6 @@ function isComplianceEvidenceSuggestionResolved(
   );
 }
 
-function isSecurityVerificationEvidenceResolved(
-  ruleId: string,
-  actionId: string,
-  checklist: readonly ChecklistItem[],
-): boolean {
-  const suggestionKey = buildSecurityVerificationSuggestionKey(
-    ruleId,
-    actionId,
-  );
-  return checklist.some(
-    (item) =>
-      item.completed &&
-      item.sourceRef?.suggestionKey === suggestionKey &&
-      (item.sourceKind === "SECURITY_VERIFICATION" ||
-        item.relatedRuleId === ruleId),
-  );
-}
-
 function collectSecurityEvidenceItems(
   results: readonly AnalysisResult[],
   checklist: readonly ChecklistItem[],
@@ -171,10 +154,10 @@ function collectSecurityEvidenceItems(
       const key = evidenceProgressKey(sourceKey);
       if (byKey.has(key)) continue;
 
-      const resolved = isSecurityVerificationEvidenceResolved(
+      const resolved = isSecurityVerificationEvidenceResolvedByChecklist(
+        checklist,
         result.ruleId,
         action.id,
-        checklist,
       );
       byKey.set(key, {
         key,
