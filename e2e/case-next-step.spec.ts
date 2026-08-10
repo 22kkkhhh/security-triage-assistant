@@ -22,20 +22,23 @@ test("建议下一步、基础信息与系统分析折叠、CTA 可导航", asyn
   await expect(progress.getByText("建议下一步")).toBeVisible();
   await expect(progress.getByTestId("case-next-step-cta")).toBeVisible();
 
-  // 案件基础信息默认关闭
+  // 案件基础信息默认关闭（details 内容仍在 DOM，以可见性断言）
   const basic = page.getByTestId("case-basic-info");
   await expect(basic).toBeVisible();
-  await expect(basic).not.toHaveAttribute("open", "");
-  await expect(basic.getByText("告警来源")).toHaveCount(0);
+  await expect(basic).not.toHaveAttribute("open");
+  await expect(basic.getByText("告警来源")).toBeHidden();
   await basic.locator("summary").click();
   await expect(basic).toHaveAttribute("open", "");
   await expect(basic.getByText("告警来源")).toBeVisible();
   await expect(basic.getByText("告警时间")).toBeVisible();
 
-  // 系统分析详情默认关闭；Suggested Assessment 仍可见时不要求
+  // 系统分析详情默认关闭
   const analysis = page.getByTestId("system-analysis-details");
   await expect(analysis).toBeVisible();
-  await expect(analysis).not.toHaveAttribute("open", "");
+  await expect(analysis).not.toHaveAttribute("open");
+  await expect(
+    analysis.getByRole("heading", { name: /异常与待确认行为摘要/ }),
+  ).toBeHidden();
   await analysis.locator("summary").click();
   await expect(analysis).toHaveAttribute("open", "");
   await expect(
