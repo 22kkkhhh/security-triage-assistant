@@ -133,7 +133,7 @@ describe("Investigation Context Catalog", () => {
     expect(byKey.dataCategory?.status).toBe("PRESENT");
     expect(byKey.accessedRecordCount?.status).toBe("PRESENT");
     expect(byKey.outboundVolume?.status).toBe("PRESENT");
-    expect(byKey.destinationRegion?.status).toBe("PRESENT");
+    expect(byKey.destinationRegion?.status).toBe("MISSING");
     expect(byKey.externalDestination?.status).toBe("PRESENT");
     expect(byKey.loginSourceIp?.status).toBe("PRESENT");
     expect(byKey.failedLoginAttempts?.status).toBe("PRESENT");
@@ -165,7 +165,9 @@ describe("Investigation Context Catalog", () => {
     ]);
 
     const caseBResolution = resolveInvestigationContext(caseB, { requirements });
-    expect(caseBResolution.missingRequirements).toEqual([]);
+    expect(caseBResolution.missingRequirements.map((r) => r.key)).toEqual([
+      "destinationRegion",
+    ]);
   });
 
   it("deterministic：相同 draft 多次解析输出一致", () => {
@@ -191,7 +193,7 @@ describe("Investigation Context Catalog", () => {
     const keysB = collectAvailableContextKeys(caseB);
     expect(keysB).toContain("dataCategory");
     expect(keysB).toContain("loginSourceIp");
-    expect(keysB).toContain("destinationRegion");
+    expect(keysB).not.toContain("destinationRegion");
   });
 
   it("M1 compliance refresh regression：context catalog 不影响 refresh 输出", () => {
@@ -239,12 +241,13 @@ describe("Investigation Context Catalog", () => {
   });
 
   it("CONTEXT_MODEL_GAPS 记录 operator / account owner 等缺口", () => {
-    expect(CONTEXT_MODEL_GAPS.length).toBe(4);
+    expect(CONTEXT_MODEL_GAPS.length).toBe(5);
     expect(CONTEXT_MODEL_GAPS.map((g) => g.gapId)).toEqual([
       "operator",
       "account-owner",
       "business-purpose",
       "incident-owner",
+      "destination-region",
     ]);
   });
 });

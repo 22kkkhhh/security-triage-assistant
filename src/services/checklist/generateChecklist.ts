@@ -64,6 +64,9 @@ export function applyBusinessContextCompletion(
     ["联系业务负责人", businessContext.ownerVerification === "CONFIRMED"],
   ];
   return items.map((item) => {
+    if (item.sourceKind === "SECURITY_VERIFICATION") {
+      return item;
+    }
     const confirmed = confirmations.some(
       ([label, ok]) => item.label === label && ok,
     );

@@ -183,6 +183,7 @@ describe("refreshCaseComplianceRuntimeFromGraph（纯函数）", () => {
     const result = refreshCaseComplianceRuntimeFromGraph(record, graph, {
       capturedAt: CAPTURED,
     });
+    expect(result.resolutionStatus).toBe("SUCCESS");
     expect(Array.isArray(result.meta.skippedUnknownRuleIds)).toBe(true);
     expect(result.meta.skippedUnknownRuleIds).toEqual([]);
     expect(result.meta.hitRuleIds.length).toBeGreaterThan(0);

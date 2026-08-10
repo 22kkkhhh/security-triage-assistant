@@ -432,7 +432,7 @@ describe("resolveCaseComplianceFromGraph（纯函数）", () => {
     );
   });
 
-  it("POSSIBLE_OBLIGATION 上下文齐全 → POSSIBLE", () => {
+  it("POSSIBLE_OBLIGATION 缺 destinationRegion → INSUFFICIENT_CONTEXT（fail closed）", () => {
     const result = resolveCaseComplianceFromGraph(
       {
         draft: draftWithDate("2025-06-01", {
@@ -450,7 +450,10 @@ describe("resolveCaseComplianceFromGraph（纯函数）", () => {
     const possible = result.findings.find(
       (f) => f.relationType === "POSSIBLE_OBLIGATION",
     );
-    expect(possible?.relevance).toBe("POSSIBLE");
+    expect(possible?.relevance).toBe("INSUFFICIENT_CONTEXT");
+    expect(
+      possible?.missingContext.some((m) => m.key === "destinationRegion"),
+    ).toBe(true);
   });
 
   it("多 rule 命中同一 control/clause → 去重并保留 supportingRuleIds/evidence", () => {

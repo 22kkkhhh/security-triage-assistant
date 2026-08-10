@@ -112,12 +112,13 @@ describe("Case A：技术异常但业务授权", () => {
     expect(assessment?.summary).toMatch(/授权/);
   });
 
-  it("业务上下文已确认的核查事项自动标记为已完成", () => {
+  it("业务上下文已确认不再自动完成 SECURITY_VERIFICATION 核查项", () => {
     const byLabel = new Map(analyzedA.checklist.map((item) => [item.label, item]));
     for (const label of ["核查计划任务", "查询变更工单", "联系业务负责人"]) {
       const item = byLabel.get(label);
       expect(item, `缺少核查项：${label}`).toBeDefined();
-      expect(item?.completed).toBe(true);
+      expect(item?.sourceKind).toBe("SECURITY_VERIFICATION");
+      expect(item?.completed).toBe(false);
     }
     // 仍需技术核查的事项保持未完成
     expect(

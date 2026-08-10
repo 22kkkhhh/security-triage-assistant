@@ -33,6 +33,7 @@ import {
   getReportExportPayload,
   resolveComplianceSnapshotsForReport,
 } from "@/services/persistence/reportDraftService";
+import { preserveFrozenComplianceReferences } from "@/services/persistence/reportDraftIntegrity";
 import {
   generateDocxBuffer,
   suggestDocxFileName,
@@ -210,12 +211,17 @@ export async function saveReportDraftCommand(input: {
     return { ok: false, error: "报告草稿不存在" };
   }
 
+  const reportDraftToSave = preserveFrozenComplianceReferences(
+    existing.reportDraft,
+    input.reportDraft,
+  );
+
   try {
     if (input.auditOperationId?.trim()) {
       const opId = input.auditOperationId.trim();
       const fromAt = existing.reportUpdatedAt;
       const audit = await runInTransaction(async (tx) => {
-        await saveReportDraft(input.caseId, input.reportDraft, tx, {
+        await saveReportDraft(input.caseId, reportDraftToSave, tx, {
           baseReportUpdatedAt: input.baseReportUpdatedAt,
         });
         const after = await tx.caseRecord.findUnique({
@@ -247,7 +253,7 @@ export async function saveReportDraftCommand(input: {
 
     const saved = await saveReportDraft(
       input.caseId,
-      input.reportDraft,
+      reportDraftToSave,
       prisma,
       { baseReportUpdatedAt: input.baseReportUpdatedAt },
     );
