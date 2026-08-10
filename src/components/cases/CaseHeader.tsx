@@ -33,6 +33,7 @@ function saveStatusLabel(state: AutosaveState): string {
 
 /**
  * 持久化案件工作台顶部栏：返回、案件信息、状态、保存反馈。
+ * commandPending 与 Snapshot autosave 状态分离，避免语义命令飞行中误导为「已保存」。
  */
 export function CaseHeader({
   caseNumber,
@@ -41,6 +42,7 @@ export function CaseHeader({
   humanRiskLevel,
   suggestedRiskLevel,
   saveState,
+  commandPending = false,
   navigationError,
   canChangeStatus,
   readOnly = false,
@@ -54,6 +56,8 @@ export function CaseHeader({
   humanRiskLevel: RiskLevel | null;
   suggestedRiskLevel: RiskLevel | null;
   saveState: AutosaveState;
+  /** 语义命令飞行中（非 autosave domain state） */
+  commandPending?: boolean;
   navigationError: string | null;
   canChangeStatus: boolean;
   readOnly?: boolean;
@@ -82,14 +86,16 @@ export function CaseHeader({
             <>
               <span
                 className={
-                  saveState.status === "ERROR"
-                    ? "text-red-700"
-                    : "text-neutral-500"
+                  commandPending
+                    ? "text-amber-700"
+                    : saveState.status === "ERROR"
+                      ? "text-red-700"
+                      : "text-neutral-500"
                 }
               >
-                {saveStatusLabel(saveState)}
+                {commandPending ? "处理中…" : saveStatusLabel(saveState)}
               </span>
-              {saveState.status === "ERROR" && (
+              {!commandPending && saveState.status === "ERROR" && (
                 <button
                   type="button"
                   onClick={onRetry}
@@ -131,6 +137,7 @@ export function CaseHeader({
               <select
                 value={status}
                 onChange={(e) => onStatusChange(e.target.value as CaseStatus)}
+                disabled={commandPending}
                 className={`rounded border px-2 py-1 text-xs ${statusBadgeClass(status)}`}
               >
                 {(

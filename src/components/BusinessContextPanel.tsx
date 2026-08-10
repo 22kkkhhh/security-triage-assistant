@@ -56,21 +56,26 @@ export function businessContextFieldNeedsAttention(
 }
 
 function ExistenceSelect({
+  id,
   value,
   onChange,
   disabled,
 }: {
+  id?: string;
   value: ExistenceStatus;
   onChange: (value: ExistenceStatus) => void;
   disabled?: boolean;
 }) {
   if (disabled) {
     return (
-      <span className={readOnlyClass}>{existenceStatusLabels[value]}</span>
+      <span id={id} className={readOnlyClass}>
+        {existenceStatusLabels[value]}
+      </span>
     );
   }
   return (
     <select
+      id={id}
       className={selectClass}
       value={value}
       onChange={(e) => onChange(e.target.value as ExistenceStatus)}
@@ -97,17 +102,29 @@ function FieldBlock({
   label,
   helper,
   pending,
+  controlId,
   children,
 }: {
   label: string;
   helper?: string;
   pending?: boolean;
+  /** 与控件 id 关联（label htmlFor） */
+  controlId?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-1 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium text-neutral-700">{label}</span>
+        {controlId ? (
+          <label
+            htmlFor={controlId}
+            className="font-medium text-neutral-700"
+          >
+            {label}
+          </label>
+        ) : (
+          <span className="font-medium text-neutral-700">{label}</span>
+        )}
         <PendingBadge show={Boolean(pending)} />
       </div>
       {helper ? (
@@ -173,6 +190,7 @@ export function BusinessContextPanel({
   canWriteStructured = true,
   canWriteSnapshot = true,
   saveState,
+  commandPending = false,
   onRetrySave,
 }: {
   businessContext: BusinessContext;
@@ -181,12 +199,16 @@ export function BusinessContextPanel({
   canWriteSnapshot?: boolean;
   /** Snapshot autosave 状态；语义命令成功后也会经 EXTERNAL_SAVED 变为已保存 */
   saveState?: AutosaveState;
+  /** 语义命令飞行中（与 autosave 状态分离） */
+  commandPending?: boolean;
   onRetrySave?: () => void;
 }) {
   const update = (patch: Partial<BusinessContext>) =>
     onChange({ ...businessContext, ...patch });
   const readOnly = !canWriteStructured && !canWriteSnapshot;
-  const saveLabel = businessContextSaveStatusLabel(saveState);
+  const saveLabel = commandPending
+    ? "提交中…"
+    : businessContextSaveStatusLabel(saveState);
   const showSave = Boolean(saveState) && !readOnly;
 
   return (
@@ -201,12 +223,14 @@ export function BusinessContextPanel({
           {showSave && saveLabel ? (
             <span
               className={
-                saveState?.status === "ERROR"
-                  ? "text-red-600"
-                  : saveState?.status === "SAVING" ||
-                      saveState?.status === "DIRTY"
-                    ? "text-amber-700"
-                    : "text-neutral-500"
+                commandPending
+                  ? "text-amber-700"
+                  : saveState?.status === "ERROR"
+                    ? "text-red-600"
+                    : saveState?.status === "SAVING" ||
+                        saveState?.status === "DIRTY"
+                      ? "text-amber-700"
+                      : "text-neutral-500"
               }
             >
               {saveLabel}
@@ -218,7 +242,10 @@ export function BusinessContextPanel({
                 : "结构化变更将写入案件并记入操作审计"}
             </span>
           )}
-          {showSave && saveState?.status === "ERROR" && onRetrySave ? (
+          {!commandPending &&
+          showSave &&
+          saveState?.status === "ERROR" &&
+          onRetrySave ? (
             <button
               type="button"
               onClick={onRetrySave}
@@ -241,6 +268,7 @@ export function BusinessContextPanel({
         >
           <FieldBlock
             label="计划任务状态"
+            controlId="bc-planned-task-status"
             helper="是否已确认存在（或不存在）对应的计划任务 / 批处理。未知表示尚未核实。"
             pending={businessContextFieldNeedsAttention(
               "plannedTaskStatus",
@@ -248,6 +276,7 @@ export function BusinessContextPanel({
             )}
           >
             <ExistenceSelect
+              id="bc-planned-task-status"
               value={businessContext.plannedTaskStatus}
               disabled={!canWriteStructured}
               onChange={(plannedTaskStatus) => update({ plannedTaskStatus })}
@@ -256,6 +285,7 @@ export function BusinessContextPanel({
 
           <FieldBlock
             label="变更工单状态"
+            controlId="bc-change-ticket-status"
             helper="工单用于证明敏感操作是否经过变更管理。有工单不等于已确认合法，仍需核对编号与范围。"
             pending={businessContextFieldNeedsAttention(
               "changeTicketStatus",
@@ -263,6 +293,7 @@ export function BusinessContextPanel({
             )}
           >
             <ExistenceSelect
+              id="bc-change-ticket-status"
               value={businessContext.changeTicketStatus}
               disabled={!canWriteStructured}
               onChange={(changeTicketStatus) => update({ changeTicketStatus })}
@@ -271,6 +302,7 @@ export function BusinessContextPanel({
 
           <FieldBlock
             label="工单编号"
+            controlId="bc-change-ticket-id"
             helper="填写可追溯的变更 / 授权工单号，便于后续核验。无工单时留空。"
             pending={businessContextFieldNeedsAttention(
               "changeTicketId",
@@ -279,6 +311,7 @@ export function BusinessContextPanel({
           >
             {canWriteSnapshot ? (
               <input
+                id="bc-change-ticket-id"
                 className={`${selectClass} w-full max-w-xs`}
                 value={businessContext.changeTicketId ?? ""}
                 placeholder="例如 CHG-20260808-001"
@@ -287,7 +320,10 @@ export function BusinessContextPanel({
                 }
               />
             ) : (
-              <span className={`${readOnlyClass} inline-block min-w-48`}>
+              <span
+                id="bc-change-ticket-id"
+                className={`${readOnlyClass} inline-block min-w-48`}
+              >
                 {businessContext.changeTicketId ?? "（无数据）"}
               </span>
             )}
@@ -300,6 +336,7 @@ export function BusinessContextPanel({
         >
           <FieldBlock
             label="业务负责人"
+            controlId="bc-business-owner"
             helper="对该业务系统或数据负有确认责任的联系人（演示环境使用虚构姓名）。"
             pending={businessContextFieldNeedsAttention(
               "businessOwner",
@@ -308,6 +345,7 @@ export function BusinessContextPanel({
           >
             {canWriteSnapshot ? (
               <input
+                id="bc-business-owner"
                 className={`${selectClass} w-full max-w-xs`}
                 value={businessContext.businessOwner ?? ""}
                 placeholder="（未填写）"
@@ -316,7 +354,10 @@ export function BusinessContextPanel({
                 }
               />
             ) : (
-              <span className={`${readOnlyClass} inline-block min-w-48`}>
+              <span
+                id="bc-business-owner"
+                className={`${readOnlyClass} inline-block min-w-48`}
+              >
                 {businessContext.businessOwner ?? "（无数据）"}
               </span>
             )}
@@ -324,6 +365,7 @@ export function BusinessContextPanel({
 
           <FieldBlock
             label="负责人确认状态"
+            controlId="bc-owner-verification"
             helper="是否已联系负责人并得到明确确认或否认。未知表示尚未联系到或尚未核实，不能当作「已确认合法」。"
             pending={businessContextFieldNeedsAttention(
               "ownerVerification",
@@ -332,6 +374,7 @@ export function BusinessContextPanel({
           >
             {canWriteStructured ? (
               <select
+                id="bc-owner-verification"
                 className={selectClass}
                 value={businessContext.ownerVerification}
                 onChange={(e) =>
@@ -349,7 +392,7 @@ export function BusinessContextPanel({
                 )}
               </select>
             ) : (
-              <span className={readOnlyClass}>
+              <span id="bc-owner-verification" className={readOnlyClass}>
                 {verificationStatusLabels[businessContext.ownerVerification]}
               </span>
             )}
@@ -362,6 +405,7 @@ export function BusinessContextPanel({
         >
           <FieldBlock
             label="业务合理性结论"
+            controlId="bc-business-legitimacy"
             helper="当前基于已有信息的研判倾向：已授权 / 确认未授权 / 尚未判断。不是法律结论，也不自动等于最终案件结论。"
             pending={businessContextFieldNeedsAttention(
               "businessLegitimacy",
@@ -370,6 +414,7 @@ export function BusinessContextPanel({
           >
             {canWriteStructured ? (
               <select
+                id="bc-business-legitimacy"
                 className={selectClass}
                 value={businessContext.businessLegitimacy}
                 onChange={(e) =>
@@ -387,7 +432,7 @@ export function BusinessContextPanel({
                 )}
               </select>
             ) : (
-              <span className={readOnlyClass}>
+              <span id="bc-business-legitimacy" className={readOnlyClass}>
                 {businessLegitimacyLabels[businessContext.businessLegitimacy]}
               </span>
             )}
@@ -396,6 +441,7 @@ export function BusinessContextPanel({
           <div className="md:col-span-2">
             <FieldBlock
               label="业务合理性说明"
+              controlId="bc-business-justification"
               helper="用简短事实说明「为何认为合理/不合理」（如任务目的、时间窗口、系统范围）。说明不等于结论；结论请使用上方「业务合理性结论」。"
               pending={businessContextFieldNeedsAttention(
                 "businessJustification",
@@ -404,6 +450,7 @@ export function BusinessContextPanel({
             >
               {canWriteSnapshot ? (
                 <textarea
+                  id="bc-business-justification"
                   className="w-full rounded border border-neutral-300 px-2 py-1 text-sm text-neutral-900"
                   rows={3}
                   value={businessContext.businessJustification ?? ""}
@@ -415,7 +462,10 @@ export function BusinessContextPanel({
                   }
                 />
               ) : (
-                <p className="w-full whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-800">
+                <p
+                  id="bc-business-justification"
+                  className="w-full whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-800"
+                >
                   {businessContext.businessJustification ?? "（无数据）"}
                 </p>
               )}

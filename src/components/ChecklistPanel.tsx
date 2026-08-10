@@ -51,6 +51,7 @@ export function ChecklistPanel({
                 className="mt-1"
                 checked={item.completed}
                 onChange={() => onToggle(item.id)}
+                aria-label={`${item.label}（${item.completed ? "已完成" : "未完成"}）`}
               />
             ) : (
               <span

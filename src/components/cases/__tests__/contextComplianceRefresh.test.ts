@@ -68,13 +68,22 @@ describe("Case Context → Compliance UI Refresh（router.refresh）", () => {
     );
   });
 
-  it("加入核查清单 handler 不触发 compliance refresh", () => {
+  it("加入核查清单 handler 本身不直接 refresh（成功路径经 runChecklistCommand）", () => {
     const match = workbench.match(
       /const handleAddComplianceSuggestion = \([\s\S]*?\n  \};\n\n  const handleBack/,
     );
     expect(match).toBeTruthy();
     expect(match![0]).toContain("runChecklistCommand");
     expect(match![0]).not.toContain("refreshComplianceAfterContextPersist()");
+  });
+
+  it("Checklist / HumanReview 语义成功路径触发 Progress refresh（复用 router.refresh）", () => {
+    expect(workbench).toMatch(
+      /applyChecklistCommandAction[\s\S]*?mergeReturnedAudit\(result\.audit\);\n\s*refreshComplianceAfterContextPersist\(\);/,
+    );
+    expect(workbench).toMatch(
+      /updateHumanReviewAction[\s\S]*?mergeReturnedAudit\(result\.audit\);\n\s*refreshComplianceAfterContextPersist\(\);/,
+    );
   });
 
   it("KNOWLEDGE_SUGGESTED checklist 合并逻辑仍保留", () => {
