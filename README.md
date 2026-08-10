@@ -2,8 +2,8 @@
 
 数据与网络安全联合研判及案件运营助手。
 
-当前稳定版本：**v1.4.0**（2026-08-10；本地可运行的安全研判与案件运营 **MVP / Prototype**）。  
-在 v1.3 身份认证之上增加 **Case 集成合规知识**（引用 / 核查建议 / 报告快照 / 官方来源导航）。  
+当前稳定版本：**v1.7.0**（本地可运行的安全研判与案件运营 **MVP / Prototype**）。
+在身份认证与 Case 合规知识之上，已具备 **Generic JSON / Wazuh JSON 告警导入**、**Golden Case 规则基线**与 **Case Investigation Workbench**。
 不是 Production-ready 企业平台 / Enterprise IAM；**不是**法律意见或合规认证系统。
 
 ## 一、项目是什么
@@ -25,9 +25,11 @@
 
 本工具负责：
 
-- 导入（手工 / CSV / 文本粘贴）
-- 字段标准化与人工确认
-- 数据 / 网络 / 身份联合辅助研判
+- 导入（手工 / CSV / 文本粘贴 / JSON 单条告警）
+- Wazuh JSON 确定性字段映射（JSON adapter，**不是** Wazuh/SIEM 直连）
+- 字段标准化与人工确认（不自动创建 Case）
+- 数据 / 网络 / 身份联合辅助研判（含 Golden Case 规则基线）
+- Case Investigation Workbench（概览 / 下一步 / 证据与核查 / 人工研判）
 - 业务合理性核查（工单 / 负责人确认）
 - Evidence / Checklist / Timeline
 - 人工最终结论（HumanReview）

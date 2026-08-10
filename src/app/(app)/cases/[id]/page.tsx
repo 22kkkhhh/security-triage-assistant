@@ -9,6 +9,7 @@ import {
   listCaseAuditLogs,
 } from "@/services/persistence/auditRepository";
 import { loadCaseDetailPageData } from "@/app/(app)/cases/loadCaseDetailPageData";
+import { loadRelatedCasesForCase } from "@/services/correlation/loadRelatedCases";
 import { getCaseById } from "@/services/persistence/caseRepository";
 
 export const dynamic = "force-dynamic";
@@ -41,11 +42,13 @@ export default async function CaseDetailPage({
     notFound();
   }
 
-  const [{ initial, runtimeViews }, auditPage, latestHandoff] = await Promise.all([
-    loadCaseDetailPageData(record),
-    listCaseAuditLogs({ caseId: id, limit: 40 }),
-    getLatestHandoffNote(id),
-  ]);
+  const [{ initial, runtimeViews }, auditPage, latestHandoff, relatedCases] =
+    await Promise.all([
+      loadCaseDetailPageData(record),
+      listCaseAuditLogs({ caseId: id, limit: 40 }),
+      getLatestHandoffNote(id),
+      loadRelatedCasesForCase(record),
+    ]);
   const capabilities = buildCaseWorkbenchCapabilities(user);
 
   return (
@@ -57,6 +60,7 @@ export default async function CaseDetailPage({
       complianceChecklist={runtimeViews.compliance.checklist}
       complianceResolutionStatus={runtimeViews.complianceResolutionStatus}
       investigationProgress={runtimeViews.investigationProgress}
+      relatedCases={relatedCases}
       initialAudit={{
         items: auditPage.items,
         nextCursor: auditPage.nextCursor,
