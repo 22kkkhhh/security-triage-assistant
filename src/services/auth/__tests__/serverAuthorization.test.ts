@@ -1,7 +1,7 @@
 /**
  * v1.3 Step 4：Server Authorization 边界、无副作用、三角色矩阵、回归。
  */
-import { execSync } from "node:child_process";
+import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { systemActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
@@ -187,10 +187,7 @@ beforeAll(async () => {
   }
   cleanDbFiles(TEST_DB_FILE);
   process.env.DATABASE_URL = TEST_DB_URL;
-  execSync("npx prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: TEST_DB_URL },
-    stdio: "pipe",
-  });
+  runPrismaMigrateDeploy({ databaseUrl: TEST_DB_URL });
   await resetPrismaClient(TEST_DB_URL);
   setVitestDefaultAuthUser(null);
 });

@@ -3,6 +3,7 @@
  * 仅使用虚构 TEST-* fixture；隔离 DB，不污染 demo。
  */
 import { execSync } from "node:child_process";
+import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { existsSync, readFileSync, readdirSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -36,10 +37,7 @@ function cleanDbFiles(file: string) {
 }
 
 function migrateDeploy(url: string) {
-  execSync("npx prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: url },
-    stdio: "pipe",
-  });
+  runPrismaMigrateDeploy({ databaseUrl: url });
 }
 
 function runSeed(url: string) {

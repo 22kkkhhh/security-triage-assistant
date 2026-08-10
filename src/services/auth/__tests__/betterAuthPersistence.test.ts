@@ -1,7 +1,7 @@
 /**
  * v1.3 Step 2：Better Auth + Prisma 7 persistence integration。
  */
-import { execSync } from "node:child_process";
+import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -30,10 +30,7 @@ function cleanDbFiles(file: string) {
 }
 
 function migrateDeploy(url: string) {
-  execSync("npx prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: url },
-    stdio: "pipe",
-  });
+  runPrismaMigrateDeploy({ databaseUrl: url });
 }
 
 beforeAll(async () => {

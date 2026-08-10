@@ -1,7 +1,7 @@
 /**
  * v1.5 Workstream 1：Compliance Runtime Refresh contract 测试。
  */
-import { execSync } from "node:child_process";
+import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -227,10 +227,7 @@ describe("refreshCaseComplianceRuntimeViews（DB 集成）", () => {
   beforeAll(async () => {
     cleanDb();
     process.env.DATABASE_URL = TEST_URL;
-    execSync("npx prisma migrate deploy", {
-      env: { ...process.env, DATABASE_URL: TEST_URL },
-      stdio: "pipe",
-    });
+    runPrismaMigrateDeploy({ databaseUrl: TEST_URL });
     await resetPrismaClient(TEST_URL);
     await importCuratedKnowledgePack();
   });

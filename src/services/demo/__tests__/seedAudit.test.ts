@@ -2,6 +2,7 @@
  * Seed Audit 幂等 / lastActivityAt / 数据最小化（不扩大生产 API）。
  */
 import { execSync } from "node:child_process";
+import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -40,10 +41,7 @@ const FORBIDDEN_PAYLOAD_KEYS = [
 beforeAll(async () => {
   cleanDbFiles();
   process.env.DATABASE_URL = TEST_DB_URL;
-  execSync("npx prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: TEST_DB_URL },
-    stdio: "pipe",
-  });
+  runPrismaMigrateDeploy({ databaseUrl: TEST_DB_URL });
   await resetPrismaClient(TEST_DB_URL);
 });
 

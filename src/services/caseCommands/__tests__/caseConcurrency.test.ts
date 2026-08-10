@@ -1,7 +1,7 @@
 /**
  * Case Semantic Command 乐观并发：防止旧 Tab 完整 nextCaseState lost update。
  */
-import { execSync } from "node:child_process";
+import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { systemActor } from "@/services/audit/auditEventBuilder";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
@@ -66,10 +66,7 @@ async function seed() {
 beforeAll(async () => {
   cleanDbFiles();
   process.env.DATABASE_URL = TEST_DB_URL;
-  execSync("npx prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: TEST_DB_URL },
-    stdio: "pipe",
-  });
+  runPrismaMigrateDeploy({ databaseUrl: TEST_DB_URL });
   await resetPrismaClient(TEST_DB_URL);
 });
 

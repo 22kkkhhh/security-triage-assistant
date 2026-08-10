@@ -1,7 +1,7 @@
 /**
  * v1.4 Step 2B：Runtime Compliance Resolution 测试。
  */
-import { execSync } from "node:child_process";
+import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -584,10 +584,7 @@ describe("Case A/B + curated pack（DB）", () => {
   beforeAll(async () => {
     cleanDb();
     process.env.DATABASE_URL = TEST_URL;
-    execSync("npx prisma migrate deploy", {
-      env: { ...process.env, DATABASE_URL: TEST_URL },
-      stdio: "pipe",
-    });
+    runPrismaMigrateDeploy({ databaseUrl: TEST_URL });
     await resetPrismaClient(TEST_URL);
     await importCuratedKnowledgePack();
   }, 60_000);

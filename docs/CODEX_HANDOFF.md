@@ -25,7 +25,8 @@
 - lint：通过。
 - TypeScript：通过。
 - Prisma schema validate：通过。
-- 全量测试与 build：需要在可用 Prisma Schema Engine 的环境复验；本机 `prisma migrate deploy` 在未修改 schema 的情况下失败，未返回具体引擎错误。
+- 全量测试：通过；Windows 测试 bootstrap 使用 test-only `spawnSync` helper，未设置 Prisma 诊断环境变量。
+- build：通过。
 
 ## 后续入口
 

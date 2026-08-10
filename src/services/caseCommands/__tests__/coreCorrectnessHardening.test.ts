@@ -1,7 +1,7 @@
 /**
  * v1.5 M4 Workstream C1 — Core Correctness Hardening regression。
  */
-import { execSync } from "node:child_process";
+import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -99,10 +99,7 @@ async function seedCase(draft = caseA) {
 beforeAll(async () => {
   cleanDbFiles();
   process.env.DATABASE_URL = TEST_DB_URL;
-  execSync("npx prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: TEST_DB_URL },
-    stdio: "pipe",
-  });
+  runPrismaMigrateDeploy({ databaseUrl: TEST_DB_URL });
   await resetPrismaClient(TEST_DB_URL);
 });
 

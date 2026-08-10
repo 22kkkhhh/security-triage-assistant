@@ -43,5 +43,6 @@ loadCaseWorkbenchRuntime → page DTO → PersistedCaseWorkbench → Investigati
 - CONTEXT_MODEL_GAPS 持久化扩展。
 - `destinationRegion` 新 schema 字段。
 - PostgreSQL 迁移。
+- Node 22 LTS 是否应作为生产环境推荐/支持运行时（当前 Node 24.16.0 + Prisma 7.9.1 已通过测试，不在本轮调整工具链）。
 
 未获明确批准前不得实现上述延后项。

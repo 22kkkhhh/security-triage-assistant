@@ -1,7 +1,7 @@
 /**
  * v1.4 Step 2A：Curated Knowledge Pack 校验 + 幂等导入。
  */
-import { execSync } from "node:child_process";
+import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
 import { existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -32,10 +32,7 @@ function cleanDb() {
 beforeAll(async () => {
   cleanDb();
   process.env.DATABASE_URL = TEST_URL;
-  execSync("npx prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: TEST_URL },
-    stdio: "pipe",
-  });
+  runPrismaMigrateDeploy({ databaseUrl: TEST_URL });
   await resetPrismaClient(TEST_URL);
 });
 
