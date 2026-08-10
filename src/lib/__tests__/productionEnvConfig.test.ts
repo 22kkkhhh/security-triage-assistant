@@ -90,9 +90,16 @@ describe("production env config guards", () => {
 
   describe("reset-demo script production guard", () => {
     it("exits before destructive operations in production", () => {
+      const command =
+        process.platform === "win32"
+          ? {
+              executable: process.env.ComSpec ?? "cmd.exe",
+              args: ["/d", "/s", "/c", "npx tsx scripts/reset-demo.ts"],
+            }
+          : { executable: "npx", args: ["tsx", "scripts/reset-demo.ts"] };
       const result = (() => {
         try {
-          execFileSync("npx", ["tsx", "scripts/reset-demo.ts"], {
+          execFileSync(command.executable, command.args, {
             cwd: repoRoot,
             env: { ...process.env, NODE_ENV: "production" },
             stdio: "pipe",
