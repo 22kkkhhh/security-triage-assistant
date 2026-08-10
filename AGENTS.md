@@ -341,23 +341,21 @@ MVP 优先可读、可测试、可演示。
 
 ---
 
-## 14. 多开发 Agent 协作
+## 14. 双开发 Agent + Codex 总控
 
-v1.5 起，Cursor / Hermes 等开发编码 Agent 并行时须遵守：
+自 M4-D2 完成 Acceptance 后，默认组织为：用户负责最终决策；Codex 负责 Lead / Controller / Reviewer；Cursor 负责 UI / App；Hermes 负责 Domain / Backend。
 
-1. `integration/v1.5` 是 v1.5 **集成基线**，不是日常业务开发工作区
-2. 各 Agent 必须在各自的 `agent/*` 分支工作（如 `agent/cursor-*`、`agent/hermes-*`）
-3. **禁止**直接在 `integration/v1.5` 上开发业务功能
-4. Agent 分支 **不得自行 merge** 进 `integration/v1.5`（须经 PR / 审查合入）
-5. **禁止**对 shared / `integration/*` 分支 force push
-6. Prisma / schema / migrations **默认禁止修改**；任务确需变更时必须先报告并获得明确授权
-7. 共享 / 高冲突文件同一时间只能由任务明确指定的 **唯一 owner** 修改
+- Codex 必须先读取 repository state、拆分 workstream、指定 ownership、审查 branch / diff / tests，并决定 merge 顺序与 milestone acceptance。
+- Codex 默认不承担 Cursor 或 Hermes 的完整业务编码；只直接处理项目治理文档、integration-only glue、明确指定的 shared file、merge conflict 与很小的跨 Agent integration fix。
+- Cursor 默认负责 `src/components/**`、`src/app/**`、UI interaction、loading/error/empty、responsive/a11y 与 frontend/UI tests。
+- Hermes 默认负责 `src/domain/**`、`src/services/**`、persistence、backend contracts、runtime resolution 与 backend/unit tests。
+- Prisma schema/migrations、Evidence identity、Frozen Report semantics 仍须明确授权；shared/high-conflict 文件在同一轮只能有一个任务指定的 owner。
 
-详细 ownership、Git 工作流、验证与 v1.5 产品方向见：`docs/v1.5/DUAL_AGENT.md`。
+`docs/v1.5/DUAL_AGENT.md` 是唯一详细协作执行规范；本节只声明总控原则，不重复其 ownership、任务指令与审查流程。
 
-## 15. Codex 分支工作流
+## 15. 分支与 workstream 工作流
 
-Codex 接手后的开发工作同样遵循分支隔离，`integration/*` 仅作为集成基线，禁止直接开发。
+`integration/*` 仅为集成基线，禁止直接开发业务功能。
 
 每个任务开始前必须执行：
 
@@ -371,11 +369,11 @@ git rev-parse HEAD
 分支决策规则：
 
 ```text
-是否继续尚未完成的 Codex 任务？
+是否继续尚未完成且已明确由 Codex 承担的任务？
   是：继续该任务既有的 agent/codex-* 分支。
   否：
     是否为新任务？
-      是：从最新 origin/integration/<current-version> 创建新的 agent/codex-* 分支。
+      是：Codex 先指定 Cursor / Hermes / shared owner；实现 Agent 从最新 origin/integration/<current-version> 创建自己的 agent/<agent>-<version>-<topic> 分支。
       否：停止并向用户说明当前分支状态。
 ```
 
@@ -384,10 +382,10 @@ git rev-parse HEAD
 - 禁止直接在 `integration/*` 上实现功能。
 - 禁止在 milestone tag 上开发。
 - 不得进入 `agent/cursor-*` 或 `agent/hermes-*` 分支开发；仅在明确的接管、审查或整合任务中只读审计其历史。
+- Cursor / Hermes 仅可 commit / push 自己分支，不得自行 merge integration 或 force push shared / integration 分支。
 - 已合并或已完成的旧任务分支不能作为新任务的开发起点。
 - `integration/<current-version>` 是版本线变量；版本升级后必须更新基线，不得把 `v1.5` 硬编码为永久规则。
-- 无法判断应继续哪个 `agent/codex-*` 分支时，停止修改并先向用户报告。
-
+- 无法安全分配 owner 或判断应继续哪个任务分支时，停止修改并先向用户报告。
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
