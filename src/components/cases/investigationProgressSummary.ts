@@ -28,6 +28,8 @@ export type InvestigationProgressViewDto =
 export const INVESTIGATION_SECTION_IDS = {
   /** 调查概览（原 progress 锚点，保持兼容） */
   progress: "investigation-progress",
+  /** 历史调查线索（Related Cases + Signals + Leads） */
+  historicalLeads: "investigation-historical-leads",
   businessContext: "investigation-business-context",
   /** 证据与核查工作区（桌面双栏容器） */
   evidenceWorkspace: "investigation-evidence-workspace",

@@ -7,6 +7,7 @@ import {
 
 const NAV_LINKS: ReadonlyArray<{ label: string; targetId: string }> = [
   { label: "概览", targetId: INVESTIGATION_SECTION_IDS.progress },
+  { label: "历史线索", targetId: INVESTIGATION_SECTION_IDS.historicalLeads },
   { label: "业务上下文", targetId: INVESTIGATION_SECTION_IDS.businessContext },
   {
     label: "证据与核查",

@@ -67,7 +67,7 @@ import {
   type InvestigationProgressViewDto,
 } from "./investigationProgressSummary";
 import { RelatedCasesPanel } from "./RelatedCasesPanel";
-import type { RelatedCaseItem } from "@/services/correlation/types";
+import type { InvestigationIntelligenceView } from "@/services/correlation/investigationIntelligenceTypes";
 
 const emptyHumanReview = (): HumanReview => ({
   reviewer: null,
@@ -92,7 +92,12 @@ export function PersistedCaseWorkbench({
   complianceChecklist,
   complianceResolutionStatus,
   investigationProgress,
-  relatedCases = [],
+  investigationIntelligence = {
+    relatedCases: [],
+    relatedCaseCount: 0,
+    signals: [],
+    leads: [],
+  },
 }: {
   initial: RestoredWorkbenchView;
   hasReport?: boolean;
@@ -114,8 +119,8 @@ export function PersistedCaseWorkbench({
   complianceResolutionStatus: ComplianceResolutionStatus;
   /** 服务端 Investigation Progress 投影；Client 不自行 resolve */
   investigationProgress: InvestigationProgressViewDto;
-  /** 服务端确定性关联历史案件；只读辅助，不改研判语义 */
-  relatedCases?: RelatedCaseItem[];
+  /** Related Cases → Signals → Leads；只读，不改风险 / HumanReview */
+  investigationIntelligence?: InvestigationIntelligenceView;
 }) {
   const router = useRouter();
   const readOnly = isCaseWorkbenchReadOnly(capabilities);
@@ -680,7 +685,7 @@ export function PersistedCaseWorkbench({
         onGoToReport={() => void goToReport()}
       />
 
-      <RelatedCasesPanel items={relatedCases} />
+      <RelatedCasesPanel intelligence={investigationIntelligence} />
 
       <details
         className="rounded-md border border-neutral-200 bg-white px-4 py-2"

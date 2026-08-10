@@ -9,6 +9,8 @@ import {
   listCaseAuditLogs,
 } from "@/services/persistence/auditRepository";
 import { loadCaseDetailPageData } from "@/app/(app)/cases/loadCaseDetailPageData";
+import { buildInvestigationIntelligence } from "@/services/correlation/buildInvestigationIntelligence";
+import { toCurrentAnalysisHints } from "@/services/correlation/currentAnalysisHints";
 import { loadRelatedCasesForCase } from "@/services/correlation/loadRelatedCases";
 import { getCaseById } from "@/services/persistence/caseRepository";
 
@@ -42,13 +44,18 @@ export default async function CaseDetailPage({
     notFound();
   }
 
-  const [{ initial, runtimeViews }, auditPage, latestHandoff, relatedCases] =
+  const [{ initial, runtimeViews, analyzed }, auditPage, latestHandoff, relatedCases] =
     await Promise.all([
       loadCaseDetailPageData(record),
       listCaseAuditLogs({ caseId: id, limit: 40 }),
       getLatestHandoffNote(id),
       loadRelatedCasesForCase(record),
     ]);
+  // Related Cases 只查一次 DB；Intelligence 为纯函数，不再扫库
+  const investigationIntelligence = buildInvestigationIntelligence({
+    relatedCases,
+    currentAnalysis: toCurrentAnalysisHints(analyzed.analysisResults),
+  });
   const capabilities = buildCaseWorkbenchCapabilities(user);
 
   return (
@@ -60,7 +67,7 @@ export default async function CaseDetailPage({
       complianceChecklist={runtimeViews.compliance.checklist}
       complianceResolutionStatus={runtimeViews.complianceResolutionStatus}
       investigationProgress={runtimeViews.investigationProgress}
-      relatedCases={relatedCases}
+      investigationIntelligence={investigationIntelligence}
       initialAudit={{
         items: auditPage.items,
         nextCursor: auditPage.nextCursor,
