@@ -135,6 +135,18 @@ describe("BusinessContextPanel UI 契约", () => {
     expect(src).toContain("onRetrySave");
   });
 
+  it("FieldBlock label 通过 htmlFor/id 关联控件", () => {
+    expect(src).toContain("htmlFor={controlId}");
+    expect(src).toContain('id="bc-planned-task-status"');
+    expect(src).toContain('id="bc-change-ticket-id"');
+    expect(src).toContain('id="bc-business-justification"');
+  });
+
+  it("语义命令 pending 显示提交中，不混入 autosave domain state", () => {
+    expect(src).toContain("commandPending");
+    expect(src).toContain("提交中…");
+  });
+
   it("不导入 Prisma / compliance resolver", () => {
     expect(src).not.toContain("resolveCaseCompliance");
     expect(src).not.toContain("refreshCaseComplianceRuntimeViews");

@@ -142,6 +142,8 @@ export function PersistedCaseWorkbench({
   const [pendingSuggestionKey, setPendingSuggestionKey] = useState<
     string | null
   >(null);
+  /** 语义命令飞行中（与 Snapshot autosave 状态分离） */
+  const [commandPending, setCommandPending] = useState(false);
   const activityPanelRef = useRef<CaseActivityPanelHandle>(null);
 
   /** Command 返回的 Audit 局部合并进 Feed，避免 router.refresh 冲掉未保存输入 */
@@ -364,38 +366,43 @@ export function PersistedCaseWorkbench({
     const baseUpdatedAt = getPersistedUpdatedAt();
     cancelPendingSave();
     setCommandError(null);
+    setCommandPending(true);
     void (async () => {
-      const result = await updateBusinessContextAction(
-        initial.caseId,
-        operationId,
-        getCommandPayload(),
-        baseUpdatedAt,
-      );
-      if (!result.ok) {
-        if (applyCommandStale(result)) return;
-        setBusinessContext(prevBc);
-        setChecklistBase(prevChecklistBase);
-        payloadRef.current = {
-          ...payloadRef.current,
-          businessContext: prevBc,
-          checklist: mergeChecklistOnRestore(
-            prevChecklistBase,
-            analyzeSecurityCase({
-              ...draftBase,
-              businessContext: prevBc,
-              humanReview,
-              timeline,
-            }).checklist,
-          ),
-        };
-        setCommandError(
-          actionErrorMessage(result, "业务核查信息更新失败，请重试。"),
+      try {
+        const result = await updateBusinessContextAction(
+          initial.caseId,
+          operationId,
+          getCommandPayload(),
+          baseUpdatedAt,
         );
-        return;
+        if (!result.ok) {
+          if (applyCommandStale(result)) return;
+          setBusinessContext(prevBc);
+          setChecklistBase(prevChecklistBase);
+          payloadRef.current = {
+            ...payloadRef.current,
+            businessContext: prevBc,
+            checklist: mergeChecklistOnRestore(
+              prevChecklistBase,
+              analyzeSecurityCase({
+                ...draftBase,
+                businessContext: prevBc,
+                humanReview,
+                timeline,
+              }).checklist,
+            ),
+          };
+          setCommandError(
+            actionErrorMessage(result, "业务核查信息更新失败，请重试。"),
+          );
+          return;
+        }
+        commitExternalSave(result.updatedAt);
+        mergeReturnedAudit(result.audit);
+        refreshComplianceAfterContextPersist();
+      } finally {
+        setCommandPending(false);
       }
-      commitExternalSave(result.updatedAt);
-      mergeReturnedAudit(result.audit);
-      refreshComplianceAfterContextPersist();
     })();
   };
 
@@ -424,33 +431,39 @@ export function PersistedCaseWorkbench({
     const baseUpdatedAt = getPersistedUpdatedAt();
     cancelPendingSave();
     setCommandError(null);
+    setCommandPending(true);
     void (async () => {
-      const result = await updateHumanReviewAction(
-        initial.caseId,
-        operationId,
-        {
-          finalConclusion: next.finalConclusion,
-          humanRiskLevel: next.humanRiskLevel,
-        },
-        baseUpdatedAt,
-      );
-      if (!result.ok) {
-        if (applyCommandStale(result)) return;
-        setHumanReview(prev);
-        payloadRef.current = { ...payloadRef.current, humanReview: prev };
-        setCommandError(
-          actionErrorMessage(result, "人工研判更新失败，请重试。"),
+      try {
+        const result = await updateHumanReviewAction(
+          initial.caseId,
+          operationId,
+          {
+            finalConclusion: next.finalConclusion,
+            humanRiskLevel: next.humanRiskLevel,
+          },
+          baseUpdatedAt,
         );
-        return;
+        if (!result.ok) {
+          if (applyCommandStale(result)) return;
+          setHumanReview(prev);
+          payloadRef.current = { ...payloadRef.current, humanReview: prev };
+          setCommandError(
+            actionErrorMessage(result, "人工研判更新失败，请重试。"),
+          );
+          return;
+        }
+        const serverHr = result.caseState.humanReview ?? emptyHumanReview();
+        setHumanReview(serverHr);
+        payloadRef.current = {
+          ...payloadRef.current,
+          humanReview: serverHr,
+        };
+        commitExternalSave(result.updatedAt);
+        mergeReturnedAudit(result.audit);
+        refreshComplianceAfterContextPersist();
+      } finally {
+        setCommandPending(false);
       }
-      const serverHr = result.caseState.humanReview ?? emptyHumanReview();
-      setHumanReview(serverHr);
-      payloadRef.current = {
-        ...payloadRef.current,
-        humanReview: serverHr,
-      };
-      commitExternalSave(result.updatedAt);
-      mergeReturnedAudit(result.audit);
     })();
   };
 
@@ -463,25 +476,30 @@ export function PersistedCaseWorkbench({
     const baseUpdatedAt = getPersistedUpdatedAt();
     cancelPendingSave();
     setCommandError(null);
+    setCommandPending(true);
     void (async () => {
-      const result = await changeCaseStatusAction(
-        initial.caseId,
-        next,
-        operationId,
-        getCommandPayload(),
-        baseUpdatedAt,
-      );
-      if (!result.ok) {
-        if (applyCommandStale(result)) return;
-        setStatus(prev);
-        payloadRef.current = { ...payloadRef.current, status: prev };
-        setCommandError(
-          actionErrorMessage(result, "状态修改失败，请重试。"),
+      try {
+        const result = await changeCaseStatusAction(
+          initial.caseId,
+          next,
+          operationId,
+          getCommandPayload(),
+          baseUpdatedAt,
         );
-        return;
+        if (!result.ok) {
+          if (applyCommandStale(result)) return;
+          setStatus(prev);
+          payloadRef.current = { ...payloadRef.current, status: prev };
+          setCommandError(
+            actionErrorMessage(result, "状态修改失败，请重试。"),
+          );
+          return;
+        }
+        commitExternalSave(result.updatedAt);
+        mergeReturnedAudit(result.audit);
+      } finally {
+        setCommandPending(false);
       }
-      commitExternalSave(result.updatedAt);
-      mergeReturnedAudit(result.audit);
     })();
   };
 
@@ -501,40 +519,46 @@ export function PersistedCaseWorkbench({
     const baseUpdatedAt = getPersistedUpdatedAt();
     cancelPendingSave();
     setCommandError(null);
+    setCommandPending(true);
     void (async () => {
-      const result = await applyChecklistCommandAction(
-        initial.caseId,
-        action,
-        itemId,
-        operationId,
-        getCommandPayload(),
-        baseUpdatedAt,
-      );
-      if (options?.suggestionKey) {
-        setPendingSuggestionKey(null);
-      }
-      if (!result.ok) {
-        if (applyCommandStale(result)) return;
-        setChecklistBase(prevChecklistBase);
-        payloadRef.current = {
-          ...payloadRef.current,
-          checklist: prevChecklistBase,
-        };
-        setCommandError(
-          actionErrorMessage(result, "核查项更新失败，请重试。"),
+      try {
+        const result = await applyChecklistCommandAction(
+          initial.caseId,
+          action,
+          itemId,
+          operationId,
+          getCommandPayload(),
+          baseUpdatedAt,
         );
-        return;
+        if (options?.suggestionKey) {
+          setPendingSuggestionKey(null);
+        }
+        if (!result.ok) {
+          if (applyCommandStale(result)) return;
+          setChecklistBase(prevChecklistBase);
+          payloadRef.current = {
+            ...payloadRef.current,
+            checklist: prevChecklistBase,
+          };
+          setCommandError(
+            actionErrorMessage(result, "核查项更新失败，请重试。"),
+          );
+          return;
+        }
+        // 幂等已加入：以服务端 canonical checklist 为准
+        if (result.caseState?.checklist) {
+          setChecklistBase(result.caseState.checklist);
+          payloadRef.current = {
+            ...payloadRef.current,
+            checklist: result.caseState.checklist,
+          };
+        }
+        commitExternalSave(result.updatedAt);
+        mergeReturnedAudit(result.audit);
+        refreshComplianceAfterContextPersist();
+      } finally {
+        setCommandPending(false);
       }
-      // 幂等已加入：以服务端 canonical checklist 为准
-      if (result.caseState?.checklist) {
-        setChecklistBase(result.caseState.checklist);
-        payloadRef.current = {
-          ...payloadRef.current,
-          checklist: result.caseState.checklist,
-        };
-      }
-      commitExternalSave(result.updatedAt);
-      mergeReturnedAudit(result.audit);
     })();
   };
 
@@ -645,6 +669,7 @@ export function PersistedCaseWorkbench({
           analyzed.suggestedAssessment?.suggestedRiskLevel ?? null
         }
         saveState={saveState}
+        commandPending={commandPending}
         navigationError={navigationError}
         canChangeStatus={capabilities.canChangeStatus}
         readOnly={readOnly}
@@ -733,6 +758,7 @@ export function PersistedCaseWorkbench({
           canWriteStructured={capabilities.canWriteBusinessContext}
           canWriteSnapshot={capabilities.canSnapshotWrite}
           saveState={saveState}
+          commandPending={commandPending}
           onRetrySave={retrySave}
         />
       </div>
@@ -813,25 +839,30 @@ export function PersistedCaseWorkbench({
           const baseUpdatedAt = getPersistedUpdatedAt();
           cancelPendingSave();
           setCommandError(null);
+          setCommandPending(true);
           void (async () => {
-            const result = await addTimelineEventAction(
-              initial.caseId,
-              event.id,
-              operationId,
-              getCommandPayload(),
-              baseUpdatedAt,
-            );
-            if (!result.ok) {
-              if (applyCommandStale(result)) return;
-              setTimeline(prev);
-              payloadRef.current = { ...payloadRef.current, timeline: prev };
-              setCommandError(
-                actionErrorMessage(result, "时间线事件添加失败，请重试。"),
+            try {
+              const result = await addTimelineEventAction(
+                initial.caseId,
+                event.id,
+                operationId,
+                getCommandPayload(),
+                baseUpdatedAt,
               );
-              return;
+              if (!result.ok) {
+                if (applyCommandStale(result)) return;
+                setTimeline(prev);
+                payloadRef.current = { ...payloadRef.current, timeline: prev };
+                setCommandError(
+                  actionErrorMessage(result, "时间线事件添加失败，请重试。"),
+                );
+                return;
+              }
+              commitExternalSave(result.updatedAt);
+              mergeReturnedAudit(result.audit);
+            } finally {
+              setCommandPending(false);
             }
-            commitExternalSave(result.updatedAt);
-            mergeReturnedAudit(result.audit);
           })();
         }}
       />

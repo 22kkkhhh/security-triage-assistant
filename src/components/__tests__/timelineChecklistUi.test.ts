@@ -43,4 +43,10 @@ describe("ChecklistPanel UI 删除权限", () => {
       /canWrite && item\.origin === "MANUAL"[\s\S]*删除[\s\S]*\)\s*\}/,
     );
   });
+
+  it("可写 checkbox 具备含事项标签的 accessible name", () => {
+    expect(src).toMatch(
+      /aria-label=\{`\$\{item\.label\}（\$\{item\.completed \? "已完成" : "未完成"\}）`\}/,
+    );
+  });
 });

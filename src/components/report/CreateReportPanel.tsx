@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createReportDraftAction } from "@/app/(app)/cases/reportActions";
@@ -52,6 +53,14 @@ export function CreateReportPanel({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 rounded-md border border-neutral-200 bg-white px-6 py-8">
+      <div>
+        <Link
+          href={`/cases/${caseId}`}
+          className="text-sm text-slate-600 hover:text-slate-900"
+        >
+          ← 返回本案
+        </Link>
+      </div>
       <div className="font-mono text-xs text-neutral-500">{caseNumber}</div>
       <h1 className="text-xl font-semibold text-neutral-900">{title}</h1>
       <p className="text-sm text-neutral-600">该案件尚未生成调查报告。</p>

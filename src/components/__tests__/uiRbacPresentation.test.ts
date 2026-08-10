@@ -100,12 +100,11 @@ describe("Case Workbench Viewer presentation", () => {
 
 describe("Report Viewer presentation", () => {
   it("CreateReportPanel / Export / Editor 受 capability 控制", () => {
-    expect(readSrc("components/report/CreateReportPanel.tsx")).toContain(
-      "canWrite",
-    );
-    expect(readSrc("components/report/CreateReportPanel.tsx")).toContain(
-      "该案件尚未生成调查报告",
-    );
+    const createReport = readSrc("components/report/CreateReportPanel.tsx");
+    expect(createReport).toContain("canWrite");
+    expect(createReport).toContain("该案件尚未生成调查报告");
+    expect(createReport).toContain("返回本案");
+    expect(createReport).toContain("href={`/cases/${caseId}`}");
     expect(readSrc("components/reports/ReportExportButton.tsx")).toContain(
       "当前账号无权限导出报告",
     );
