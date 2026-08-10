@@ -27,6 +27,7 @@ import {
 } from "@/services/persistence/caseRepository";
 import { preserveFrozenComplianceReferences } from "@/services/persistence/reportDraftIntegrity";
 import { loadCaseComplianceWorkbenchRuntime } from "@/services/knowledge/loadCaseCompliancePanel";
+import { loadCaseWorkbenchRuntimeViews } from "@/app/(app)/cases/loadCaseWorkbenchRuntime";
 import * as resolveCaseComplianceModule from "@/services/knowledge/resolveCaseCompliance";
 import { vi } from "vitest";
 
@@ -303,5 +304,17 @@ describe("SF-6 compliance runtime failure contract", () => {
     expect(runtime.views.panel.groups).toEqual([]);
     expect(runtime.views.checklist.groups).toEqual([]);
     expect(runtime.views.panel.empty).toBe(true);
+  });
+
+  it("resolver 失败 → 工作台 Progress 为 RESOLUTION_UNAVAILABLE，非全 0 成功 DTO", async () => {
+    const created = await seedCase(caseB);
+    vi.spyOn(resolveCaseComplianceModule, "resolveCaseCompliance").mockRejectedValue(
+      new Error("Knowledge DB unavailable"),
+    );
+
+    const runtime = await loadCaseWorkbenchRuntimeViews(created);
+    expect(runtime.investigationProgress).toEqual({
+      resolutionStatus: "RESOLUTION_UNAVAILABLE",
+    });
   });
 });

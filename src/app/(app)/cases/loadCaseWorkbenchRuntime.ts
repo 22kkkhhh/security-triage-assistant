@@ -19,33 +19,31 @@ import { toSecurityCaseDraft } from "@/services/persistence/caseMapper";
 import type { PersistedCase } from "@/services/persistence/types";
 
 /** 可序列化、供 Client 只读展示的 Progress DTO（SoT 来自 Hermes projection） */
-export type InvestigationProgressViewDto = {
-  summary: InvestigationProgressSummary;
-};
+export type InvestigationProgressViewDto =
+  | {
+      resolutionStatus: "SUCCESS";
+      summary: InvestigationProgressSummary;
+    }
+  | {
+      /** 运行时 resolver 不可用；绝不能伪装为全 0 的成功进度。 */
+      resolutionStatus: "RESOLUTION_UNAVAILABLE";
+    };
 
 export type CaseWorkbenchRuntimeViews = {
   compliance: CaseComplianceWorkbenchViews;
   investigationProgress: InvestigationProgressViewDto;
 };
 
-export function emptyInvestigationProgressViewDto(): InvestigationProgressViewDto {
+function unavailableInvestigationProgressViewDto(): InvestigationProgressViewDto {
   return {
-    summary: {
-      openCount: 0,
-      resolvedCount: 0,
-      openContextCount: 0,
-      openEvidenceCount: 0,
-      openChecklistCount: 0,
-      hasUnresolvedInvestigationGaps: false,
-      humanReviewSubmitted: false,
-    },
+    resolutionStatus: "RESOLUTION_UNAVAILABLE",
   };
 }
 
 function toProgressDto(
   summary: InvestigationProgressSummary,
 ): InvestigationProgressViewDto {
-  return { summary: { ...summary } };
+  return { resolutionStatus: "SUCCESS", summary: { ...summary } };
 }
 
 /**
@@ -76,17 +74,9 @@ export async function loadCaseWorkbenchRuntimeViews(
       investigationProgress: toProgressDto(progress.summary),
     };
   } catch {
-    try {
-      const progress = loadInvestigationProgress(analyzed);
-      return {
-        compliance: emptyCaseComplianceWorkbenchViews(),
-        investigationProgress: toProgressDto(progress.summary),
-      };
-    } catch {
-      return {
-        compliance: emptyCaseComplianceWorkbenchViews(),
-        investigationProgress: emptyInvestigationProgressViewDto(),
-      };
-    }
+    return {
+      compliance: emptyCaseComplianceWorkbenchViews(),
+      investigationProgress: unavailableInvestigationProgressViewDto(),
+    };
   }
 }

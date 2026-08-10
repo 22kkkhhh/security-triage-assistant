@@ -823,6 +823,9 @@ export function PersistedCaseWorkbench({
           canWriteSemantic={capabilities.canWriteHumanReview}
           canWriteNote={capabilities.canSnapshotWrite}
           outstandingWorkHint={investigationProgressView.hasOutstandingWork}
+          investigationProgressUnavailable={
+            investigationProgressView.isResolutionUnavailable
+          }
         />
       </div>
 

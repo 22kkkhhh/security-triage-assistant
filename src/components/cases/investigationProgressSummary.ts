@@ -7,17 +7,22 @@
  */
 
 /** 与 Server `InvestigationProgressViewDto` 对齐的只读形状（避免 Client import resolver） */
-export type InvestigationProgressViewDto = {
-  summary: {
-    openCount: number;
-    resolvedCount: number;
-    openContextCount: number;
-    openEvidenceCount: number;
-    openChecklistCount: number;
-    hasUnresolvedInvestigationGaps: boolean;
-    humanReviewSubmitted: boolean;
-  };
-};
+export type InvestigationProgressViewDto =
+  | {
+      resolutionStatus: "SUCCESS";
+      summary: {
+        openCount: number;
+        resolvedCount: number;
+        openContextCount: number;
+        openEvidenceCount: number;
+        openChecklistCount: number;
+        hasUnresolvedInvestigationGaps: boolean;
+        humanReviewSubmitted: boolean;
+      };
+    }
+  | {
+      resolutionStatus: "RESOLUTION_UNAVAILABLE";
+    };
 
 /** 可滚动定位的工作台区域 id */
 export const INVESTIGATION_SECTION_IDS = {
@@ -30,6 +35,9 @@ export const INVESTIGATION_SECTION_IDS = {
 } as const;
 
 export type InvestigationProgressPanelView = {
+  resolutionStatus: InvestigationProgressViewDto["resolutionStatus"];
+  /** resolver 不可用时为 true；不能把未知当成「没有待办」。 */
+  isResolutionUnavailable: boolean;
   pendingContext: number;
   pendingEvidence: number;
   pendingChecks: number;
@@ -51,8 +59,26 @@ export const INVESTIGATION_PROGRESS_DISCLAIMER =
 export function toInvestigationProgressPanelView(
   dto: InvestigationProgressViewDto,
 ): InvestigationProgressPanelView {
+  if (dto.resolutionStatus === "RESOLUTION_UNAVAILABLE") {
+    return {
+      resolutionStatus: dto.resolutionStatus,
+      isResolutionUnavailable: true,
+      pendingContext: 0,
+      pendingEvidence: 0,
+      pendingChecks: 0,
+      resolvedCount: 0,
+      hasOutstandingWork: true,
+      humanReviewSubmitted: false,
+      disclaimer:
+        "调查进度暂不可用，当前无法完成重新解析；请稍后刷新后继续核查。",
+      humanReviewFactLabel: "人工研判结论：调查进度不可用，未能确认当前核查状态。",
+    };
+  }
+
   const s = dto.summary;
   return {
+    resolutionStatus: dto.resolutionStatus,
+    isResolutionUnavailable: false,
     pendingContext: s.openContextCount,
     pendingEvidence: s.openEvidenceCount,
     pendingChecks: s.openChecklistCount,

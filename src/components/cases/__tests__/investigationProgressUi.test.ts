@@ -22,7 +22,7 @@ function readSrc(rel: string): string {
 function dtoFromSummary(
   summary: ReturnType<typeof loadInvestigationProgress>["summary"],
 ): InvestigationProgressViewDto {
-  return { summary: { ...summary } };
+  return { resolutionStatus: "SUCCESS", summary: { ...summary } };
 }
 
 describe("Server Progress DTO → UI view model", () => {
@@ -116,6 +116,7 @@ describe("Server Progress DTO → UI view model", () => {
 
   it("全部 resolved 不等于 Case normal / 可结案", () => {
     const view = toInvestigationProgressPanelView({
+      resolutionStatus: "SUCCESS",
       summary: {
         openCount: 0,
         resolvedCount: 12,
@@ -165,6 +166,18 @@ describe("Server Progress DTO → UI view model", () => {
       expect(view.resolvedCount).toBe(progress.summary.resolvedCount);
     }
   });
+
+  it("RESOLUTION_UNAVAILABLE 显式映射为不可用状态，不伪装为成功进度", () => {
+    const view = toInvestigationProgressPanelView({
+      resolutionStatus: "RESOLUTION_UNAVAILABLE",
+    });
+
+    expect(view.resolutionStatus).toBe("RESOLUTION_UNAVAILABLE");
+    expect(view.isResolutionUnavailable).toBe(true);
+    expect(view.hasOutstandingWork).toBe(true);
+    expect(view.disclaimer).toContain("调查进度暂不可用");
+    expect(view.humanReviewFactLabel).toContain("未能确认");
+  });
 });
 
 describe("Investigation Progress UI 接线契约", () => {
@@ -195,6 +208,15 @@ describe("Investigation Progress UI 接线契约", () => {
     expect(panel).not.toContain("loadInvestigationProgress");
     expect(summary).not.toContain("loadInvestigationProgress");
     expect(summary).not.toContain("businessContextFieldNeedsAttention");
+  });
+
+  it("resolver 不可用时显示 fail-closed 提示，不渲染成功计数", () => {
+    expect(loader).toContain('resolutionStatus: "RESOLUTION_UNAVAILABLE"');
+    expect(panel).toContain('view.resolutionStatus === "RESOLUTION_UNAVAILABLE"');
+    expect(panel).toContain("调查进度暂不可用");
+    expect(panel).toContain("不得将当前状态视为已完成核查或全部已解决");
+    expect(workbench).toContain("investigationProgressUnavailable");
+    expect(humanReview).toContain("当前无法确认核查状态");
   });
 
   it("UI 文案：待补/证据/核查/已解决；非最终结论", () => {

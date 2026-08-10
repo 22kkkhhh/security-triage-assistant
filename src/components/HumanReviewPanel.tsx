@@ -19,6 +19,7 @@ export function HumanReviewPanel({
   canWriteSemantic = true,
   canWriteNote = true,
   outstandingWorkHint = false,
+  investigationProgressUnavailable = false,
 }: {
   humanReview: HumanReview;
   onChange: (next: HumanReview) => void;
@@ -26,6 +27,8 @@ export function HumanReviewPanel({
   canWriteNote?: boolean;
   /** 仍有待核查/待补事项时的轻量提示；不阻止提交 */
   outstandingWorkHint?: boolean;
+  /** 服务端未能重新解析调查进度；不作为「无待办」处理。 */
+  investigationProgressUnavailable?: boolean;
 }) {
   const update = (patch: Partial<HumanReview>) =>
     onChange({ ...humanReview, ...patch });
@@ -49,7 +52,14 @@ export function HumanReviewPanel({
         </span>
       }
     >
-      {outstandingWorkHint ? (
+      {investigationProgressUnavailable ? (
+        <p
+          className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900"
+          data-testid="human-review-progress-unavailable-hint"
+        >
+          调查进度暂不可用，当前无法确认核查状态；请结合现有证据完成人工研判。
+        </p>
+      ) : outstandingWorkHint ? (
         <p
           className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900"
           data-testid="human-review-outstanding-hint"

@@ -48,6 +48,25 @@ export function InvestigationProgressPanel({
 }: {
   view: InvestigationProgressPanelView;
 }) {
+  if (view.resolutionStatus === "RESOLUTION_UNAVAILABLE") {
+    return (
+      <div id={INVESTIGATION_SECTION_IDS.progress}>
+        <Panel
+          title="调查进度"
+          extra={<span className="text-xs text-amber-700">当前不可用</span>}
+        >
+          <p
+            className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900"
+            role="status"
+            data-testid="investigation-progress-unavailable"
+          >
+            调查进度暂不可用。当前无法完成重新解析，请稍后刷新后继续核查；不得将当前状态视为已完成核查或全部已解决。
+          </p>
+        </Panel>
+      </div>
+    );
+  }
+
   return (
     <div id={INVESTIGATION_SECTION_IDS.progress}>
       <Panel
