@@ -91,10 +91,18 @@ export function resolveSqliteDatabaseFilePaths(options?: {
   nodeEnv?: string;
   projectRoot?: string;
 }): SqliteDatabaseFilePaths {
-  const databaseUrl = resolveDatabaseUrl({
-    databaseUrl: options?.databaseUrl,
-    nodeEnv: options?.nodeEnv,
-  });
+  // 只在调用方显式携带 databaseUrl 键（哪怕值为 undefined）时才转发该键；
+  // 否则必须省略此键，让 resolveDatabaseUrl 回退读取 process.env.DATABASE_URL。
+  // 若无条件转发 `databaseUrl: options?.databaseUrl`，未显式传参时也会带上
+  // 一个值为 undefined 的键，被 resolveDatabaseUrl 的 `"databaseUrl" in options`
+  // 误判为"显式传入"，从而跳过真实环境变量，永远回退到 dev.db 默认值——
+  // 这会让本函数在真实 DATABASE_URL 已指向其它文件（如 e2e.db）时，
+  // 仍错误解析并删除 prisma/dev.db。
+  const databaseUrl = resolveDatabaseUrl(
+    options && "databaseUrl" in options
+      ? { databaseUrl: options.databaseUrl, nodeEnv: options.nodeEnv }
+      : { nodeEnv: options?.nodeEnv },
+  );
 
   if (!databaseUrl.startsWith("file:")) {
     throw new Error(

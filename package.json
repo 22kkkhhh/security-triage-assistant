@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "tsx scripts/run-e2e.ts",
     "generate:samples": "tsx scripts/generate-samples.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -32,6 +33,7 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.2.0",

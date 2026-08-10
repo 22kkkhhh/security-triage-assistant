@@ -43,3 +43,7 @@ Thumbs.db
 /docs/law/*.pdf
 /docs/law/*.PDF
 
+# v1.6-M1 Playwright（E2E DB 已由上方 *.db / *.db-journal 规则覆盖）
+/playwright-report/
+/test-results/
+

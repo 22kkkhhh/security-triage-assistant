@@ -65,6 +65,32 @@ describe("reset-demo DATABASE_URL safety", () => {
         }),
       ).toThrow(/无法解析空的 SQLite/);
     });
+
+    it("当调用方未携带 databaseUrl 键（如 reset-demo.ts 的真实调用形态）时，必须读取 process.env.DATABASE_URL，而不是无条件回退到 dev.db", () => {
+      const previous = process.env.DATABASE_URL;
+      process.env.DATABASE_URL = "file:./prisma/e2e.db";
+      try {
+        // 与 scripts/reset-demo.ts 完全一致的调用形态：只传 projectRoot，
+        // 不显式传 databaseUrl 键。
+        const resolved = resolveSqliteDatabaseFilePaths({
+          projectRoot: repoRoot,
+        });
+
+        expect(resolved.databaseUrl).toBe("file:./prisma/e2e.db");
+        expect(resolved.dbFilePath).toBe(
+          path.resolve(repoRoot, "prisma/e2e.db"),
+        );
+        expect(resolved.dbFilePath).not.toBe(
+          path.resolve(repoRoot, "prisma/dev.db"),
+        );
+      } finally {
+        if (previous === undefined) {
+          delete process.env.DATABASE_URL;
+        } else {
+          process.env.DATABASE_URL = previous;
+        }
+      }
+    });
   });
 
   describe("removeSqliteDatabaseFiles", () => {
