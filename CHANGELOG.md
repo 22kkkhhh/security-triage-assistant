@@ -2,6 +2,36 @@
 
 本项目采用轻量变更记录。版本号遵循语义化约定；未打正式 tag 的条目以 `-rc` 标记。
 
+## v1.10.0 — 2026-08-11
+
+Theme: Human-centered UX
+
+### Added / Changed
+
+- Human-centered Case Workbench information architecture
+- Four-section navigation: Overview / Investigation / Analysis / Records
+- Task-first investigation flow and progressive disclosure
+- Simplified responsive Case List
+- Case List risk labels distinguish human vs system suggestion
+- Three-step Case creation / alert intake presentation
+- Responsive Case Comparison
+- Document-style report editing experience
+- Shared PageFrame / PageHeader presentation consistency
+
+### Semantics
+
+- UI-only / presentation-focused release
+- No change to analysis, correlation, risk or HumanReview semantics
+- System suggestions remain distinct from human decisions
+- No schema migration or new permissions
+
+### Deferred / Known Limitations
+
+- Dark Mode / theme system / design-system package
+- Charts / dashboard
+- Richer record filtering / saved UI preferences / drag-drop
+- New security capabilities / AI / LLM
+
 ## v1.9.0 — 2026-08-11
 
 Theme: Comparative Investigation

@@ -12,6 +12,48 @@ export function displayCaseListRisk(
   return riskLevelLabels[level];
 }
 
+/** Case List 风险来源（仅 presentation；不改变 risk semantics） */
+export type CaseListRiskSource = "HUMAN" | "SUGGESTED" | "UNAVAILABLE";
+
+export type CaseListRiskDisplay = {
+  source: CaseListRiskSource;
+  /** 实际风险等级文案，供 riskBadgeClass 使用 */
+  riskLabel: string;
+  /** 带来源前缀的展示文案 */
+  text: string;
+};
+
+/**
+ * Case List 风险展示：明确区分人工风险 / 系统建议。
+ * 优先级仍为 humanRiskLevel → suggestedRiskLevel → 暂无法评级。
+ */
+export function resolveCaseListRiskDisplay(
+  humanRiskLevel: RiskLevel | null,
+  suggestedRiskLevel: RiskLevel | null,
+): CaseListRiskDisplay {
+  if (humanRiskLevel) {
+    const riskLabel = riskLevelLabels[humanRiskLevel];
+    return {
+      source: "HUMAN",
+      riskLabel,
+      text: `人工 · ${riskLabel}`,
+    };
+  }
+  if (suggestedRiskLevel) {
+    const riskLabel = riskLevelLabels[suggestedRiskLevel];
+    return {
+      source: "SUGGESTED",
+      riskLabel,
+      text: `系统建议 · ${riskLabel}`,
+    };
+  }
+  return {
+    source: "UNAVAILABLE",
+    riskLabel: "暂无法评级",
+    text: "暂无法评级",
+  };
+}
+
 export function displayCaseStatus(status: CaseStatus): string {
   return caseStatusLabels[status];
 }

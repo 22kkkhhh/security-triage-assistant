@@ -2,8 +2,11 @@
 
 数据与网络安全联合研判及案件运营助手。
 
-当前稳定版本：**v1.9.0**（本地可运行的安全研判与案件运营 **MVP / Prototype**）。
-在身份认证、Case 合规知识、告警导入与 Investigation Workbench 之上，已具备 **关联历史案件**、**Historical Signals**、**Investigation Leads**，以及 **Case Comparison Workspace** 与 **Analyst opt-in Checklist**（确定性辅助；非自动合并/非自动升风险）。
+当前稳定版本：**v1.10.0**（本地可运行的安全研判与案件运营 **MVP / Prototype**）。
+
+**v1.10** 聚焦 Human-centered UX / 信息架构：任务优先的 Case Workbench、渐进披露、简化历史线索、响应式 Case List、三步告警导入呈现、响应式 Case Comparison、文档式报告编辑，以及全局页面一致性。本版本为 **UI / presentation** 工作，**不**新增自动化安全判定，**不**改变确定性分析语义。
+
+在既有身份认证、Case 合规知识、告警导入、Investigation Workbench、关联历史案件、Investigation Leads、Case Comparison 与 Analyst opt-in Checklist 之上交付。
 不是 Production-ready 企业平台 / Enterprise IAM；**不是**法律意见或合规认证系统。
 
 ## 一、项目是什么
@@ -41,7 +44,7 @@
 - 操作审计、最近活动与交接说明
 - 报告草稿持久化与 DOCX 导出
 
-**v1.9 明确不做：** AI / 概率关联、自动合并案件、自动写入 Checklist、自动提升当前风险、攻击归因。
+**v1.10 明确不做：** AI / 概率关联、自动合并案件、自动写入 Checklist、自动提升当前风险、攻击归因；Dark Mode / 主题系统 / 设计系统包 / 图表 Dashboard。
 
 ## 三、v1.2 新增
 
@@ -98,7 +101,7 @@ Production 首个管理员：显式运行 `npm run user:bootstrap-admin`（见 `
 
 ```text
 已有平台告警
-→ Import（手工 / CSV / 文本）
+→ Import（手工 / CSV / 文本 / JSON；Wazuh = JSON adapter，非 SIEM 直连）
 → Normalization + 人工确认
 → SecurityCase
 → Analysis（静态规则引擎）

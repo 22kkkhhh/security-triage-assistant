@@ -3,10 +3,10 @@ import { ForbiddenPanel } from "@/components/auth/ForbiddenPanel";
 import { caseStatusLabels, riskLevelLabels } from "@/domain/labels";
 import type { CaseStatus, RiskLevel } from "@/domain/types";
 import {
-  displayCaseListRisk,
   displayCaseStatus,
   displaySystems,
   displayUpdatedAt,
+  resolveCaseListRiskDisplay,
   riskBadgeClass,
   statusBadgeClass,
 } from "@/components/cases/caseDisplay";
@@ -162,7 +162,7 @@ export default async function CasesPage({
               </thead>
               <tbody>
                 {cases.map((item) => {
-                  const riskLabel = displayCaseListRisk(
+                  const risk = resolveCaseListRiskDisplay(
                     item.humanRiskLevel,
                     item.suggestedRiskLevel,
                   );
@@ -196,9 +196,11 @@ export default async function CasesPage({
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(riskLabel)}`}
+                          className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(risk.riskLabel)}`}
+                          data-testid="case-list-risk"
+                          data-risk-source={risk.source}
                         >
-                          {riskLabel}
+                          {risk.text}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -229,7 +231,7 @@ export default async function CasesPage({
             data-testid="case-list-mobile"
           >
             {cases.map((item) => {
-              const riskLabel = displayCaseListRisk(
+              const risk = resolveCaseListRiskDisplay(
                 item.humanRiskLevel,
                 item.suggestedRiskLevel,
               );
@@ -252,9 +254,11 @@ export default async function CasesPage({
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <span
-                        className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(riskLabel)}`}
+                        className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(risk.riskLabel)}`}
+                        data-testid="case-list-risk"
+                        data-risk-source={risk.source}
                       >
-                        {riskLabel}
+                        {risk.text}
                       </span>
                       <span
                         className={`inline-block rounded border px-1.5 py-0.5 text-xs ${statusBadgeClass(item.status)}`}

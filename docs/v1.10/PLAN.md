@@ -35,6 +35,8 @@ Human-centered UX
 - Global：PageHeader / page width / button hierarchy / AppShell 调查工作台气质
 - Workbench：仅 Audit 默认 collapsed（Timeline 仍默认 open）
 
-## M3 — Release
+## M3 — Release Readiness
 
-（后续）
+- Case List risk-source clarity（人工 · / 系统建议 ·）
+- README / CHANGELOG / RELEASE_ACCEPTANCE
+- Promote `main` + annotated `v1.10.0`
