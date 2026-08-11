@@ -24,6 +24,9 @@ export function ConfirmationPanel({
   onConfirm,
   onBack,
   confirming = false,
+  confirmLabel = "创建研判案件",
+  confirmClassName,
+  backClassName,
 }: {
   sourceType: ImportSourceType;
   initialPairs: RawKeyValue[];
@@ -32,6 +35,9 @@ export function ConfirmationPanel({
   onBack: () => void;
   /** 创建案件进行中：禁用确认按钮，防止重复提交 */
   confirming?: boolean;
+  confirmLabel?: string;
+  confirmClassName?: string;
+  backClassName?: string;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
@@ -54,19 +60,25 @@ export function ConfirmationPanel({
     preview.unrecognized.map((item) => [item.rawKey, item.reason]),
   );
 
+  const primaryBtn =
+    confirmClassName ??
+    "rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700 disabled:opacity-40";
+  const secondaryBtn =
+    backClassName ??
+    "rounded border border-neutral-300 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-40";
+
   return (
     <div className="space-y-4">
-      <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-        请确认以下解析结果。无法确定的内容保持为空，系统不会自动假设为正常；
-        确认后才会创建研判案件。
-      </div>
+      <p className="text-xs leading-5 text-neutral-500">
+        无法确定的内容保持为空，系统不会自动假设为正常。
+      </p>
 
       {groupOrder.map((group) => (
         <fieldset
           key={group}
-          className="rounded-md border border-neutral-200 px-4 py-3"
+          className="border-t border-neutral-100 pt-3 first:border-t-0 first:pt-0"
         >
-          <legend className="px-1 text-sm font-medium text-neutral-700">
+          <legend className="mb-2 px-0 text-xs font-semibold uppercase tracking-wide text-neutral-500">
             {group}
           </legend>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -161,10 +173,10 @@ export function ConfirmationPanel({
         </section>
       )}
 
-      <div className="flex justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 pt-4">
         <button
           type="button"
-          className="rounded border border-neutral-300 px-4 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+          className={secondaryBtn}
           onClick={onBack}
           disabled={confirming}
         >
@@ -172,11 +184,11 @@ export function ConfirmationPanel({
         </button>
         <button
           type="button"
-          className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
+          className={primaryBtn}
           disabled={confirming}
           onClick={() => void onConfirm(preview.input)}
         >
-          {confirming ? "正在创建案件…" : "确认并开始研判"}
+          {confirming ? "正在创建案件…" : confirmLabel}
         </button>
       </div>
     </div>

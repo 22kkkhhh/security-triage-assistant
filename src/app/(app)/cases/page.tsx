@@ -10,6 +10,9 @@ import {
   riskBadgeClass,
   statusBadgeClass,
 } from "@/components/cases/caseDisplay";
+import { actionClass } from "@/components/layout/pageChrome";
+import { PageFrame } from "@/components/layout/PageFrame";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { ForbiddenError } from "@/domain/auth";
 import { buildNavigationCapabilities } from "@/domain/uiCapabilities";
 import { requirePermission } from "@/services/auth/requirePermission";
@@ -29,7 +32,6 @@ const riskOptions = Object.entries(riskLevelLabels) as [RiskLevel, string][];
 /**
  * 历史案件列表（Server Component）。
  * 搜索与筛选通过 GET searchParams 传递给 listCases，不在客户端过滤。
- * 新建入口由 Server 派生 canCreateCase 控制（UX）。
  */
 export default async function CasesPage({
   searchParams,
@@ -61,45 +63,43 @@ export default async function CasesPage({
   });
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">历史案件</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {canCreateCase
-              ? "查看并继续处理已保存的安全研判案件"
-              : "查看已保存的安全研判案件（只读）"}
-          </p>
-        </div>
-        {canCreateCase ? (
-          <Link
-            href="/cases/new"
-            className="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700"
-          >
-            + 新建研判
-          </Link>
-        ) : null}
-      </header>
+    <PageFrame width="normal">
+      <PageHeader
+        title="历史案件"
+        description={
+          canCreateCase
+            ? "查看并继续处理已保存的安全研判案件"
+            : "查看已保存的安全研判案件（只读）"
+        }
+        actions={
+          canCreateCase ? (
+            <Link href="/cases/new" className={actionClass.primary}>
+              + 新建研判
+            </Link>
+          ) : null
+        }
+      />
 
       <form
         method="get"
-        className="flex flex-wrap items-end gap-3 rounded-md border border-neutral-200 bg-white px-4 py-3"
+        className="flex flex-col gap-3 border-b border-neutral-200 pb-4 sm:flex-row sm:flex-wrap sm:items-end"
+        data-testid="case-list-filters"
       >
-        <label className="min-w-[220px] flex-1 text-sm">
-          <span className="text-neutral-500">搜索</span>
+        <label className="min-w-0 flex-1 text-sm sm:min-w-[240px]">
+          <span className="text-xs font-medium text-neutral-600">搜索</span>
           <input
             name="q"
             defaultValue={q}
-            placeholder="搜索案件编号 / 事件名称 / 账号 / IP / 系统"
+            placeholder="案件编号 / 事件名称 / 账号 / IP / 系统"
             className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
           />
         </label>
         <label className="text-sm">
-          <span className="text-neutral-500">状态</span>
+          <span className="text-xs font-medium text-neutral-600">状态</span>
           <select
             name="status"
             defaultValue={status ?? ""}
-            className="mt-1 block rounded border border-neutral-300 px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded border border-neutral-300 px-3 py-2 text-sm sm:w-auto"
           >
             <option value="">全部状态</option>
             {statusOptions.map(([value, label]) => (
@@ -110,11 +110,11 @@ export default async function CasesPage({
           </select>
         </label>
         <label className="text-sm">
-          <span className="text-neutral-500">风险等级</span>
+          <span className="text-xs font-medium text-neutral-600">风险</span>
           <select
             name="risk"
             defaultValue={risk ?? ""}
-            className="mt-1 block rounded border border-neutral-300 px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded border border-neutral-300 px-3 py-2 text-sm sm:w-auto"
           >
             <option value="">全部风险</option>
             {riskOptions.map(([value, label]) => (
@@ -124,46 +124,40 @@ export default async function CasesPage({
             ))}
           </select>
         </label>
-        <button
-          type="submit"
-          className="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700"
-        >
+        <button type="submit" className={actionClass.secondary}>
           搜索
         </button>
       </form>
 
-      <section className="overflow-hidden rounded-md border border-neutral-200 bg-white">
-        {cases.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <p className="text-base font-medium text-neutral-800">暂无历史案件</p>
-            <p className="mt-2 text-sm text-neutral-500">
-              {canCreateCase
-                ? "创建第一个研判案件后，可在这里继续处理。"
-                : "当前账号为只读访问，暂无可见案件。"}
-            </p>
-            {canCreateCase ? (
-              <Link
-                href="/cases/new"
-                className="mt-5 inline-block rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700"
-              >
-                + 新建研判
-              </Link>
-            ) : null}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
+      {cases.length === 0 ? (
+        <div className="py-14 text-center" data-testid="case-list-empty">
+          <p className="text-base font-medium text-neutral-800">暂无案件</p>
+          <p className="mt-1 text-sm text-neutral-500">
+            {canCreateCase
+              ? "创建第一个研判案件后，可在这里继续处理。"
+              : "当前账号为只读访问，暂无可见案件。"}
+          </p>
+          {canCreateCase ? (
+            <Link
+              href="/cases/new"
+              className={`mt-4 ${actionClass.primary}`}
+            >
+              + 新建研判
+            </Link>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          {/* Desktop / tablet：主列精简；账号与系统并入案件单元格 */}
+          <div className="hidden overflow-hidden border border-neutral-200 bg-white md:block">
             <table className="min-w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-neutral-200 bg-neutral-50 text-left text-neutral-600">
-                  <th className="px-4 py-3 font-medium">案件编号</th>
-                  <th className="px-4 py-3 font-medium">事件名称</th>
-                  <th className="px-4 py-3 font-medium">风险</th>
-                  <th className="px-4 py-3 font-medium">状态</th>
-                  <th className="px-4 py-3 font-medium">涉及账号</th>
-                  <th className="px-4 py-3 font-medium">涉及系统</th>
-                  <th className="px-4 py-3 font-medium">待核查</th>
-                  <th className="px-4 py-3 font-medium">最近活动</th>
-                  <th className="px-4 py-3 font-medium">操作</th>
+                <tr className="border-b border-neutral-200 text-left text-xs font-medium text-neutral-500">
+                  <th className="px-4 py-3">案件</th>
+                  <th className="px-4 py-3">风险</th>
+                  <th className="px-4 py-3">状态</th>
+                  <th className="px-4 py-3">待核查</th>
+                  <th className="px-4 py-3">最近活动</th>
                 </tr>
               </thead>
               <tbody>
@@ -172,64 +166,55 @@ export default async function CasesPage({
                     item.humanRiskLevel,
                     item.suggestedRiskLevel,
                   );
+                  const systems = displaySystems(item.systemsSearchText);
+                  const secondary = [item.username, systems]
+                    .filter((part) => part && part !== "—")
+                    .join(" · ");
                   return (
                     <tr
                       key={item.id}
-                      className="border-b border-neutral-100 hover:bg-neutral-50"
-                      style={{ height: 52 }}
+                      className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50"
+                      data-testid="case-list-row"
                     >
-                      <td className="px-4 py-2 font-mono text-xs">
+                      <td className="max-w-[360px] px-4 py-3">
                         <Link
                           href={`/cases/${item.id}`}
-                          className="text-slate-800 underline-offset-2 hover:underline"
+                          className="block min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
                         >
-                          {item.caseNumber}
+                          <span className="font-mono text-xs text-slate-700">
+                            {item.caseNumber}
+                          </span>
+                          <span className="mt-0.5 block text-[14px] font-medium leading-5 text-neutral-900">
+                            {item.title}
+                          </span>
+                          {secondary ? (
+                            <span className="mt-0.5 block truncate text-xs text-neutral-500">
+                              {secondary}
+                            </span>
+                          ) : null}
                         </Link>
                       </td>
-                      <td className="max-w-[260px] px-4 py-2">
-                        <Link
-                          href={`/cases/${item.id}`}
-                          title={item.title}
-                          className="line-clamp-2 text-[14px] leading-5 text-neutral-900 underline-offset-2 hover:underline"
-                        >
-                          {item.title}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2">
+                      <td className="px-4 py-3">
                         <span
-                          className={`inline-block rounded border px-2 py-0.5 text-xs ${riskBadgeClass(riskLabel)}`}
+                          className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(riskLabel)}`}
                         >
                           {riskLabel}
                         </span>
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-4 py-3">
                         <span
-                          className={`inline-block rounded border px-2 py-0.5 text-xs ${statusBadgeClass(item.status)}`}
+                          className={`inline-block rounded border px-1.5 py-0.5 text-xs ${statusBadgeClass(item.status)}`}
                         >
                           {displayCaseStatus(item.status)}
                         </span>
                       </td>
-                      <td className="px-4 py-2 text-neutral-700">
-                        {item.username ?? "—"}
+                      <td className="px-4 py-3 tabular-nums text-neutral-700">
+                        {item.pendingChecklistCount > 0
+                          ? `${item.pendingChecklistCount} 待核查`
+                          : "—"}
                       </td>
-                      <td className="max-w-[180px] px-4 py-2 text-neutral-700">
-                        <span className="line-clamp-2">
-                          {displaySystems(item.systemsSearchText)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-neutral-700">
-                        {item.pendingChecklistCount}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-neutral-600">
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-600">
                         {displayUpdatedAt(item.lastActivityAt)}
-                      </td>
-                      <td className="px-4 py-2">
-                        <Link
-                          href={`/cases/${item.id}`}
-                          className="text-sm text-slate-800 underline-offset-2 hover:underline"
-                        >
-                          {canCreateCase ? "继续研判" : "查看案件"}
-                        </Link>
                       </td>
                     </tr>
                   );
@@ -237,9 +222,66 @@ export default async function CasesPage({
               </tbody>
             </table>
           </div>
-        )}
-      </section>
-    </div>
+
+          {/* Mobile：紧凑行，避免横向滚动宽表 */}
+          <ul
+            className="divide-y divide-neutral-200 border border-neutral-200 bg-white md:hidden"
+            data-testid="case-list-mobile"
+          >
+            {cases.map((item) => {
+              const riskLabel = displayCaseListRisk(
+                item.humanRiskLevel,
+                item.suggestedRiskLevel,
+              );
+              const systems = displaySystems(item.systemsSearchText);
+              const secondary = [item.username, systems]
+                .filter((part) => part && part !== "—")
+                .join(" · ");
+              return (
+                <li key={item.id}>
+                  <Link
+                    href={`/cases/${item.id}`}
+                    className="block px-4 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-400"
+                    aria-label={`${item.caseNumber} ${item.title}`}
+                  >
+                    <div className="font-mono text-xs text-slate-700">
+                      {item.caseNumber}
+                    </div>
+                    <div className="mt-0.5 text-sm font-medium text-neutral-900">
+                      {item.title}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <span
+                        className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(riskLabel)}`}
+                      >
+                        {riskLabel}
+                      </span>
+                      <span
+                        className={`inline-block rounded border px-1.5 py-0.5 text-xs ${statusBadgeClass(item.status)}`}
+                      >
+                        {displayCaseStatus(item.status)}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 text-xs text-neutral-500">
+                      {item.pendingChecklistCount > 0
+                        ? `${item.pendingChecklistCount} 待核查`
+                        : "无待核查"}
+                      {" · "}
+                      最近 {displayUpdatedAt(item.lastActivityAt)}
+                    </div>
+                    {secondary ? (
+                      <div className="mt-0.5 truncate text-xs text-neutral-500">
+                        {secondary}
+                      </div>
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </PageFrame>
   );
 }
 

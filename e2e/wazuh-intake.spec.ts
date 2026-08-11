@@ -22,7 +22,7 @@ test("Wazuh JSON 导入可 preview、确认并创建 Case", async ({ page }) => 
 
   await page.locator('input[type="file"]').setInputFiles(FIXTURE);
 
-  await expect(page.getByRole("heading", { name: "导入确认" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "确认导入内容" })).toBeVisible();
 
   await expect(page.getByLabel(/外部告警 ID/)).toHaveValue(
     "wazuh-e2e-1712345678.424242",
@@ -44,7 +44,7 @@ test("Wazuh JSON 导入可 preview、确认并创建 Case", async ({ page }) => 
   await expect(page.getByText("rule.id", { exact: false })).toBeVisible();
   await expect(page.getByText("agent.name", { exact: false })).toBeVisible();
 
-  await page.getByRole("button", { name: "确认并开始研判" }).click();
+  await page.getByRole("button", { name: "创建研判案件" }).click();
   await expect(page).toHaveURL(/\/cases\/[^/]+$/, { timeout: 15_000 });
 
   const basic = page.getByTestId("case-basic-info");

@@ -17,7 +17,7 @@ import {
   formatDateTimesInDisplayText,
 } from "@/lib/formatDateTimeForDisplay";
 import type { AutosaveState } from "@/hooks/autosaveState";
-import { Panel } from "@/components/common";
+import { actionClass, pageWidth } from "@/components/layout/pageChrome";
 import type { ReportPageCapabilities } from "@/domain/uiCapabilities";
 import type { ReportDraftBundle } from "@/services/persistence/reportDraftService";
 
@@ -174,7 +174,7 @@ export function PersistedReportEditor({
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className={`${pageWidth.document} space-y-4`}>
       <ReportHeader
         caseNumber={bundle.caseNumber}
         title={report.title || bundle.title}
@@ -198,13 +198,13 @@ export function PersistedReportEditor({
       />
 
       {!canWrite && (
-        <div className="rounded border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
+        <p className="text-sm text-neutral-600">
           只读模式：可查看报告内容，但不能编辑或自动保存。
-        </div>
+        </p>
       )}
 
       {staleNotice && (
-        <div className="rounded border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+        <div className="border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
           {staleNotice}
           <button
             type="button"
@@ -217,21 +217,28 @@ export function PersistedReportEditor({
       )}
 
       {mode === "edit" && canWrite ? (
-        <>
-          <Panel title="事件名称">
+        <div className="border border-neutral-200 bg-white px-5 py-5 sm:px-8">
+          <section className="pb-5">
+            <h2 className="text-sm font-semibold text-neutral-900">事件名称</h2>
             <input
-              className="w-full rounded border border-neutral-300 px-2 py-1 text-sm"
+              className="mt-2 w-full border-0 border-b border-neutral-300 bg-transparent px-0 py-1.5 text-base text-neutral-900 focus:border-slate-500 focus:outline-none"
               value={report.title}
               onChange={(e) =>
                 commitReport({ ...report, title: e.target.value }, "debounce")
               }
             />
-          </Panel>
+          </section>
 
           {report.sections.map((section) => (
-            <Panel key={section.key} title={section.title}>
+            <section
+              key={section.key}
+              className="border-t border-neutral-100 py-5"
+            >
+              <h2 className="text-sm font-semibold text-neutral-900">
+                {section.title}
+              </h2>
               <textarea
-                className="h-28 w-full rounded border border-neutral-300 px-2 py-1 text-sm leading-6"
+                className="mt-2 h-28 w-full resize-y border-0 bg-transparent px-0 py-1 text-sm leading-7 text-neutral-800 focus:outline-none"
                 value={section.content}
                 onChange={(e) =>
                   commitReport(
@@ -265,14 +272,14 @@ export function PersistedReportEditor({
                 />
               )}
               {section.key === "timelineIntro" && (
-                <p className="mt-2 text-xs text-neutral-500">
+                <p className="mt-1 text-xs text-neutral-500">
                   时间线共 {report.timelineEventIds.length}{" "}
                   条，将以结构化表格进入报告。
                 </p>
               )}
-            </Panel>
+            </section>
           ))}
-        </>
+        </div>
       ) : (
         <ReportPreview
           report={report}
@@ -282,18 +289,29 @@ export function PersistedReportEditor({
       )}
 
       {exportFindings !== null && (
-        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-lg rounded-md bg-white p-5 shadow-lg">
-            <h2 className="text-sm font-semibold text-neutral-900">
+        <div
+          className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="report-export-confirm-title"
+        >
+          <div className="w-full max-w-lg border border-neutral-200 bg-white p-5">
+            <h2
+              id="report-export-confirm-title"
+              className="text-base font-semibold text-neutral-900"
+            >
               {exportFindings.length > 0
                 ? "报告中检测到可能的敏感信息，请确认导出方式"
                 : "未检测到明显敏感信息，确认导出"}
             </h2>
             {exportFindings.length > 0 && (
-              <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+              <ul className="mt-3 max-h-48 space-y-1.5 overflow-y-auto border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
                 {exportFindings.map((finding, index) => (
                   <li key={index}>
-                    {sensitiveTypeLabels[finding.type]}：
+                    <span className="font-medium">
+                      {sensitiveTypeLabels[finding.type]}
+                    </span>
+                    ：
                     <span className="font-mono">{finding.value}</span>
                     {" → "}
                     <span className="font-mono">{finding.masked}</span>
@@ -301,10 +319,10 @@ export function PersistedReportEditor({
                 ))}
               </ul>
             )}
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
-                className="rounded border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
+                className={actionClass.secondary}
                 onClick={() => setExportFindings(null)}
               >
                 取消
@@ -312,7 +330,7 @@ export function PersistedReportEditor({
               {exportFindings.length > 0 && (
                 <button
                   type="button"
-                  className="rounded border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
+                  className={actionClass.secondary}
                   onClick={() => void doExport(false)}
                 >
                   保持原值导出
@@ -320,7 +338,7 @@ export function PersistedReportEditor({
               )}
               <button
                 type="button"
-                className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
+                className={actionClass.primary}
                 onClick={() => void doExport(true)}
               >
                 {exportFindings.length > 0 ? "使用脱敏版本导出" : "确认导出"}
@@ -377,13 +395,9 @@ function ReportHeader({
   })();
 
   return (
-    <section className="space-y-3 rounded-md border border-neutral-200 bg-white px-4 py-3">
+    <section className="space-y-3 border-b border-neutral-200 pb-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="text-sm text-slate-600 hover:text-slate-900"
-        >
+        <button type="button" onClick={onBack} className={actionClass.tertiary}>
           ← 返回案件
         </button>
         <div className="flex flex-wrap items-center gap-2">
@@ -400,7 +414,7 @@ function ReportHeader({
             <button
               type="button"
               onClick={onRetry}
-              className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+              className={actionClass.danger}
             >
               重试
             </button>
@@ -408,7 +422,7 @@ function ReportHeader({
           {canWrite ? (
             <button
               type="button"
-              className="rounded border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
+              className={actionClass.secondary}
               onClick={onToggleMode}
             >
               {mode === "edit" ? "预览" : "继续编辑"}
@@ -419,7 +433,7 @@ function ReportHeader({
             disabled={!canExport}
             title={canExport ? "导出 Word 报告" : "当前账号无权限导出报告"}
             aria-disabled={!canExport}
-            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className={actionClass.primary}
             onClick={onExport}
           >
             导出 Word
@@ -428,7 +442,9 @@ function ReportHeader({
       </div>
       <div>
         <div className="font-mono text-xs text-neutral-500">{caseNumber}</div>
-        <h1 className="mt-1 text-xl font-semibold text-neutral-900">{title}</h1>
+        <h1 className="mt-1 text-xl font-semibold tracking-tight text-neutral-900">
+          {title}
+        </h1>
         <p className="mt-1 text-xs text-neutral-500">
           {canWrite ? "报告状态：草稿" : "报告状态：只读查看"}
         </p>
@@ -439,7 +455,7 @@ function ReportHeader({
         ) : null}
       </div>
       {(navigationError || exportError) && (
-        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <div className="border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {navigationError ?? exportError}{" "}
           {canWrite ? (
             <button type="button" onClick={onRetry} className="underline">
@@ -506,14 +522,14 @@ function ReportPreview({
     report.timelineEventIds.includes(event.id),
   );
   return (
-    <div className="rounded-md border border-neutral-200 bg-white px-8 py-6">
-      <h1 className="text-center text-xl font-bold text-neutral-900">
+    <div className="border border-neutral-200 bg-white px-5 py-8 sm:px-10">
+      <h1 className="text-center text-xl font-semibold tracking-tight text-neutral-900">
         数据与网络安全事件调查分析报告
       </h1>
-      <p className="mt-1 text-center text-sm text-neutral-500">
+      <p className="mt-2 text-center font-mono text-sm text-neutral-500">
         {report.caseNumber}
       </p>
-      <h2 className="mt-6 text-base font-semibold">基本信息</h2>
+      <h2 className="mt-8 text-base font-semibold text-neutral-900">基本信息</h2>
       <table className="mt-2 w-full border-collapse text-sm">
         <tbody>
           {report.basicInfo.map((row) => (

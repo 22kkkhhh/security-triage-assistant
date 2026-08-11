@@ -1096,7 +1096,7 @@ export function PersistedCaseWorkbench({
           </div>
         </details>
 
-        <details open data-testid="activity-details">
+        <details data-testid="activity-details">
           <summary className="cursor-pointer text-sm font-medium text-neutral-800">
             操作与审计
           </summary>

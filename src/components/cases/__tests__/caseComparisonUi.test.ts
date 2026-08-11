@@ -27,6 +27,9 @@ describe("Case Comparison UI 契约", () => {
     expect(panel).toContain("COMPARISON_HISTORY_REVIEW_WARNING");
     expect(panel).toContain("当前案件");
     expect(panel).toContain("历史案件");
+    expect(panel).toContain("共同事实");
+    expect(panel).toContain("compare-diff-category");
+    expect(panel).toContain("研判参考");
     expect(panel).toContain("md:grid-cols-2");
     expect(panel).not.toMatch(
       /同一攻击者|同一攻击链|已确认关联攻击|横向移动|campaign|confidence %|92%/,

@@ -1,5 +1,7 @@
 import { ForbiddenPanel } from "@/components/auth/ForbiddenPanel";
 import { NewCaseClient } from "@/components/cases/NewCaseClient";
+import { PageFrame } from "@/components/layout/PageFrame";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { ForbiddenError } from "@/domain/auth";
 import { requirePermission } from "@/services/auth/requirePermission";
 
@@ -23,14 +25,12 @@ export default async function NewCasePage() {
   }
 
   return (
-    <div className="space-y-5">
-      <header>
-        <h1 className="text-2xl font-semibold text-neutral-900">新建研判</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          导入现有安全平台告警或日志摘要，并在确认标准化字段后创建研判案件。
-        </p>
-      </header>
+    <PageFrame width="normal">
+      <PageHeader
+        title="新建研判"
+        description="导入现有安全平台告警或日志摘要，并在确认标准化字段后创建研判案件。"
+      />
       <NewCaseClient />
-    </div>
+    </PageFrame>
   );
 }

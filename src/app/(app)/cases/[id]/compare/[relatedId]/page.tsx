@@ -4,6 +4,8 @@ import {
   CaseComparisonBackLink,
   CaseComparisonPanel,
 } from "@/components/cases/CaseComparisonPanel";
+import { PageFrame } from "@/components/layout/PageFrame";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { ForbiddenError } from "@/domain/auth";
 import { requirePermission } from "@/services/auth/requirePermission";
 import { loadCaseComparison } from "@/services/correlation/loadCaseComparison";
@@ -40,17 +42,13 @@ export default async function CaseComparePage({
   const { comparison } = result;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
-      <CaseComparisonBackLink currentCaseId={id} />
-      <header>
-        <h1 className="text-lg font-semibold text-neutral-900">
-          案件对比调查
-        </h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          只读对比 · 不自动继承历史结论 · 不修改当前案件
-        </p>
-      </header>
+    <PageFrame width="wide">
+      <PageHeader
+        title="案件对比调查"
+        description="只读对比 · 不自动继承历史结论 · 不修改当前案件"
+        back={<CaseComparisonBackLink currentCaseId={id} />}
+      />
       <CaseComparisonPanel comparison={comparison} />
-    </div>
+    </PageFrame>
   );
 }

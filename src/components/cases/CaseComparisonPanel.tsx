@@ -25,10 +25,10 @@ import {
 } from "./caseComparisonLabels";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
 import type { ObservationStatus, RiskLevel } from "@/domain/types";
+import { actionClass } from "@/components/layout/pageChrome";
 
 function displayValue(value: string | null): string {
   if (value == null) return COMPARISON_MISSING_DISPLAY;
-  // Domain enum → 中文（能匹配则替换）
   if (value in riskLevelLabels) {
     return riskLevelLabels[value as RiskLevel];
   }
@@ -53,11 +53,18 @@ function displayValue(value: string | null): string {
     };
     return map[value];
   }
-  // ISO-ish timestamps
   if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
     return formatDateTimeForDisplay(value);
   }
   return value;
+}
+
+function riskCaptionForSide(
+  side: "current" | "historical",
+  humanRiskLevel: RiskLevel | null,
+): string {
+  if (side === "historical") return "历史风险";
+  return humanRiskLevel ? "人工风险" : "系统建议";
 }
 
 function CaseColumnHeader({
@@ -77,14 +84,12 @@ function CaseColumnHeader({
 }) {
   return (
     <div
-      className="rounded border border-neutral-200 bg-neutral-50 px-3 py-3"
+      className="border border-neutral-200 bg-white px-3 py-3"
       data-testid={
         label === "当前案件" ? "compare-current-column" : "compare-historical-column"
       }
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-        {label}
-      </p>
+      <p className="text-xs font-medium text-neutral-500">{label}</p>
       <p className="mt-1 font-mono text-sm text-slate-800">{caseNumber}</p>
       <p className="mt-0.5 text-sm font-medium text-neutral-900">{title}</p>
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -96,10 +101,54 @@ function CaseColumnHeader({
         <span
           className={`rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(riskLabel)}`}
         >
-          {riskCaption}：{riskLabel}
+          {riskCaption} {riskLabel}
         </span>
       </div>
     </div>
+  );
+}
+
+function DiffRows({
+  rows,
+}: {
+  rows: CaseComparisonView["differentFacts"];
+}) {
+  return (
+    <ul className="mt-2 space-y-3" data-testid="compare-diff-mobile">
+      {/* Desktop column headers */}
+      <li
+        className="hidden border-b border-neutral-200 pb-1 text-xs text-neutral-500 md:grid md:grid-cols-3 md:gap-3"
+        aria-hidden
+      >
+        <span>字段</span>
+        <span>当前案件</span>
+        <span>历史案件</span>
+      </li>
+      {rows.map((row) => (
+        <li
+          key={row.fieldCode}
+          className="border-b border-neutral-100 pb-3 last:border-0 md:grid md:grid-cols-3 md:gap-3 md:border-0 md:pb-2"
+          data-testid="compare-diff-row"
+          data-field-code={row.fieldCode}
+        >
+          <p className="text-sm font-medium text-neutral-800 md:font-normal md:text-neutral-700">
+            {comparisonDiffFieldLabels[row.fieldCode]}
+          </p>
+          <div className="mt-1.5 md:mt-0">
+            <p className="text-xs text-neutral-500 md:hidden">当前</p>
+            <p className="break-all font-mono text-sm text-neutral-900">
+              {displayValue(row.currentValue)}
+            </p>
+          </div>
+          <div className="mt-1.5 md:mt-0">
+            <p className="text-xs text-neutral-500 md:hidden">历史</p>
+            <p className="break-all font-mono text-sm text-neutral-900">
+              {displayValue(row.relatedValue)}
+            </p>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -125,7 +174,7 @@ export function CaseComparisonPanel({
   return (
     <div className="space-y-6" data-testid="case-comparison-panel">
       <p
-        className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+        className="border-l-2 border-amber-400 bg-amber-50/50 px-3 py-1.5 text-xs leading-5 text-amber-900"
         data-testid="compare-safety-disclaimer"
       >
         {COMPARISON_SAFETY_DISCLAIMER}
@@ -159,19 +208,27 @@ export function CaseComparisonPanel({
             current.humanRiskLevel,
             current.suggestedRiskLevel,
           )}
-          riskCaption="当前建议/人工风险"
+          riskCaption={riskCaptionForSide("current", current.humanRiskLevel)}
         />
-        <CaseColumnHeader
-          label="历史案件"
-          caseNumber={related.caseNumber}
-          title={related.title}
-          status={related.status}
-          riskLabel={displayCaseListRisk(
-            related.humanRiskLevel,
-            related.suggestedRiskLevel,
-          )}
-          riskCaption="历史风险"
-        />
+        <div className="flex flex-col gap-1 md:contents">
+          <p className="text-center text-xs text-neutral-400 md:hidden" aria-hidden>
+            ↓
+          </p>
+          <CaseColumnHeader
+            label="历史案件"
+            caseNumber={related.caseNumber}
+            title={related.title}
+            status={related.status}
+            riskLabel={displayCaseListRisk(
+              related.humanRiskLevel,
+              related.suggestedRiskLevel,
+            )}
+            riskCaption={riskCaptionForSide(
+              "historical",
+              related.humanRiskLevel,
+            )}
+          />
+        </div>
       </div>
 
       {!comparison.sameCase ? (
@@ -179,9 +236,14 @@ export function CaseComparisonPanel({
           <section aria-labelledby="compare-shared-heading">
             <h2
               id="compare-shared-heading"
-              className="text-sm font-semibold text-neutral-900"
+              className="text-base font-semibold text-neutral-900"
             >
-              共同调查事实
+              共同事实
+              {sharedFacts.length > 0 ? (
+                <span className="ml-2 text-sm font-normal text-neutral-500">
+                  · {sharedFacts.length}
+                </span>
+              ) : null}
             </h2>
             {sharedFacts.length === 0 ? (
               <p className="mt-2 text-sm text-neutral-600">
@@ -189,7 +251,7 @@ export function CaseComparisonPanel({
               </p>
             ) : (
               <ul
-                className="mt-2 space-y-1 text-sm text-neutral-800"
+                className="mt-3 space-y-1.5 text-sm text-neutral-800"
                 data-testid="compare-shared-facts"
               >
                 {sharedFacts.map((fact) => (
@@ -197,9 +259,14 @@ export function CaseComparisonPanel({
                     key={`${fact.code}:${fact.value}`}
                     data-testid="compare-shared-fact"
                     data-fact-code={fact.code}
+                    className="flex flex-wrap gap-x-3 gap-y-0.5"
                   >
-                    · {comparisonSharedFactLabels[fact.code]}{" "}
-                    <span className="font-mono">{displayValue(fact.value)}</span>
+                    <span className="min-w-[5.5rem] text-neutral-500">
+                      {comparisonSharedFactLabels[fact.code]}
+                    </span>
+                    <span className="font-mono break-all">
+                      {displayValue(fact.value)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -211,51 +278,29 @@ export function CaseComparisonPanel({
               id="compare-diff-heading"
               className="text-sm font-semibold text-neutral-900"
             >
-              关键事实对比
+              关键事实
             </h2>
-            <div className="mt-3 space-y-4" data-testid="compare-differences">
+            <div className="mt-2 space-y-2" data-testid="compare-differences">
               {categories.map((category) => {
                 const rows = differentFacts.filter(
                   (d) => d.category === category,
                 );
                 if (rows.length === 0) return null;
                 return (
-                  <div key={category}>
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  <details
+                    key={category}
+                    className="border-b border-neutral-100 pb-2"
+                    data-testid="compare-diff-category"
+                    data-category={category}
+                  >
+                    <summary className="cursor-pointer py-1.5 text-sm text-neutral-800">
                       {comparisonCategoryLabels[category]}
-                    </h3>
-                    <div className="mt-1.5 overflow-x-auto">
-                      <table className="min-w-full text-left text-sm">
-                        <thead>
-                          <tr className="border-b border-neutral-200 text-xs text-neutral-500">
-                            <th className="py-1.5 pr-3 font-medium">字段</th>
-                            <th className="py-1.5 pr-3 font-medium">当前案件</th>
-                            <th className="py-1.5 font-medium">历史案件</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rows.map((row) => (
-                            <tr
-                              key={row.fieldCode}
-                              className="border-b border-neutral-100"
-                              data-testid="compare-diff-row"
-                              data-field-code={row.fieldCode}
-                            >
-                              <td className="py-1.5 pr-3 text-neutral-700">
-                                {comparisonDiffFieldLabels[row.fieldCode]}
-                              </td>
-                              <td className="py-1.5 pr-3 font-mono text-neutral-900">
-                                {displayValue(row.currentValue)}
-                              </td>
-                              <td className="py-1.5 font-mono text-neutral-900">
-                                {displayValue(row.relatedValue)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                      <span className="ml-2 font-normal text-neutral-500">
+                        {rows.length} 项不同
+                      </span>
+                    </summary>
+                    <DiffRows rows={rows} />
+                  </details>
                 );
               })}
               {differentFacts.length === 0 ? (
@@ -272,13 +317,16 @@ export function CaseComparisonPanel({
           >
             <h2
               id="compare-review-heading"
-              className="text-sm font-semibold text-neutral-900"
+              className="text-sm font-semibold text-neutral-500"
             >
-              研判状态
+              研判参考
             </h2>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="rounded border border-neutral-200 px-3 py-3">
-                <p className="text-xs font-semibold text-neutral-500">
+            <p className="mt-1 text-xs text-neutral-500">
+              系统建议与历史结论仅供对照，不构成当前案件结论。
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-4 border-t border-neutral-100 pt-3 md:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium text-neutral-500">
                   当前系统建议
                 </p>
                 <p className="mt-1 text-sm text-neutral-800">
@@ -304,7 +352,7 @@ export function CaseComparisonPanel({
                 ) : (
                   <p className="mt-1 text-sm text-neutral-600">暂缺信息</p>
                 )}
-                <p className="mt-3 text-xs font-semibold text-neutral-500">
+                <p className="mt-3 text-xs font-medium text-neutral-500">
                   当前人工研判
                 </p>
                 <p className="mt-1 text-sm text-neutral-800">
@@ -320,8 +368,8 @@ export function CaseComparisonPanel({
                 </p>
               </div>
 
-              <div className="rounded border border-neutral-200 px-3 py-3">
-                <p className="text-xs font-semibold text-neutral-500">
+              <div>
+                <p className="text-xs font-medium text-neutral-500">
                   历史系统建议
                 </p>
                 <p className="mt-1 text-sm text-neutral-800">
@@ -337,11 +385,11 @@ export function CaseComparisonPanel({
                 ) : (
                   <p className="mt-1 text-sm text-neutral-600">暂缺信息</p>
                 )}
-                <p className="mt-3 text-xs font-semibold text-neutral-500">
+                <p className="mt-3 text-xs font-medium text-neutral-500">
                   历史人工研判
                 </p>
                 <p
-                  className="mt-1 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900"
+                  className="mt-1 border-l-2 border-amber-400 bg-amber-50/60 px-2 py-1.5 text-xs text-amber-900"
                   data-testid="compare-history-review-warning"
                 >
                   {COMPARISON_HISTORY_REVIEW_WARNING}
@@ -363,7 +411,6 @@ export function CaseComparisonPanel({
         </>
       ) : null}
 
-      {/* 断言用：确认未使用禁止措辞常量 */}
       <span className="sr-only" data-missing-label={COMPARISON_MISSING_LABEL}>
         {COMPARISON_MISSING_DISPLAY}
       </span>
@@ -379,7 +426,7 @@ export function CaseComparisonBackLink({
   return (
     <Link
       href={`/cases/${currentCaseId}`}
-      className="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900"
+      className={actionClass.tertiary}
       data-testid="compare-back-to-current"
     >
       ← 返回当前案件

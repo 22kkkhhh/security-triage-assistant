@@ -24,7 +24,16 @@ Human-centered UX
 
 ## M2 — Global UI Consistency
 
-（后续）
+原则同 M1，扩展到主要产品页面。
+
+范围：
+
+- Case List：主列精简；账号/系统并入案件单元格；mobile 紧凑行
+- Intake：3 步 presentation；method segmented；确认步骤强化
+- Comparison：共同事实优先；差异 category disclosure；mobile 可读
+- Report：document-like 编辑；轻量 toolbar；预览阅读宽度
+- Global：PageHeader / page width / button hierarchy / AppShell 调查工作台气质
+- Workbench：仅 Audit 默认 collapsed（Timeline 仍默认 open）
 
 ## M3 — Release
 

@@ -70,6 +70,12 @@ describe("Workbench IA redesign 契约", () => {
     expect(workbench).toContain('title="记录"');
     expect(workbench).toContain("timeline-details");
     expect(workbench).toContain("activity-details");
+    // M2：Timeline 默认 open；Audit 默认 collapsed
+    expect(workbench).toMatch(/<details open data-testid="timeline-details">/);
+    expect(workbench).toMatch(/<details data-testid="activity-details">/);
+    expect(workbench).not.toMatch(
+      /<details open data-testid="activity-details">/,
+    );
   });
 
   it("Checklist-first：证据为 secondary disclosure", () => {
