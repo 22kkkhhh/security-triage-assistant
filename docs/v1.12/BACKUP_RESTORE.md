@@ -42,11 +42,16 @@ npm run db:restore -- --backup /backup/x.db --confirm-restore --skip-safety-back
 默认行为：
 
 1. 校验 backup（SQLite header + integrity + 关键表）
-2. 若 live DB 存在 → 先做 pre-restore safety backup
-3. staging copy → 替换 live → 清理 `-wal`/`-shm`/`-journal`
-4. 再对 live 做 integrity_check
+2. best-effort busy probe（**不能**证明应用已停止；运维必须先停服）
+3. 若 live DB 存在 → 先做 verified pre-restore safety backup（除非 `--skip-safety-backup`）
+4. staging copy → staging integrity
+5. **先**清理 live 旁 stale `-wal`/`-shm`/`-journal`；任一删除失败 → **在替换 live 之前** fail-closed
+6. live → retired → staging → live
+7. 再对 live 做 integrity_check
 
 无 `--confirm-restore`：立即失败，不修改 live DB。
+
+sidecar 语义：不存在 / 删除成功 → OK；`EBUSY` / `EPERM` / `EACCES` / 其它 unlink 错误 → fail-closed。
 
 ## After restore
 

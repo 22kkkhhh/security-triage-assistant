@@ -2,6 +2,38 @@
 
 本项目采用轻量变更记录。版本号遵循语义化约定；未打正式 tag 的条目以 `-rc` 标记。
 
+## v1.12.0 — 2026-08-11
+
+Theme: Deployment & Production Readiness
+
+### Added
+
+- Production startup gate with migrate-before-start
+- Liveness and readiness endpoints
+- Production environment and HTTPS validation
+- Security response headers
+- Single-node login rate limiting
+- Production Docker image and persistent data contract
+- Verified SQLite backup and restore commands
+- Minimal structured operational events
+- Docker CI smoke
+
+### Safety / Operations
+
+- Restore requires explicit confirmation and stopped application
+- Restore rejects corrupt backup before replacement
+- Restore fails closed when stale SQLite sidecars cannot be cleared
+- Docker uses readiness rather than liveness-only health
+- Runtime secrets are injected, not baked into image
+
+### Boundaries
+
+- Single-node SQLite
+- No HA/multi-replica
+- No PostgreSQL migration
+- No distributed rate limiting
+- No Kubernetes/Redis/OTel platform
+
 ## v1.11.0 — 2026-08-11
 
 Theme: Case Operations

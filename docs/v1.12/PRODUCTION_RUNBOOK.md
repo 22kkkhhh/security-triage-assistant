@@ -14,7 +14,7 @@
   - **bare-metal / VM**：`npm ci` → `npm run build` → `npm start`
   - **Docker**：见下文（镜像含 Prisma CLI / tsx，因当前 start gate 需要）
 - 反向代理负责 TLS；非本机 production origin 必须 `https://` BETTER_AUTH_URL
-- Login rate limit：Better Auth 单进程内存限流（无可信 proxy IP 时可能退化为共享 path bucket）
+- Login rate limit：Better Auth **单进程内存**限流（restart 重置；无分布式保证；无可信 proxy IP 时可能退化为共享 path bucket）
 
 ## 必填环境变量
 
@@ -99,10 +99,12 @@ docker run -d --name sta-app \
 
 ```bash
 npm run db:backup -- --output /backup/security-triage-manual.db
-# stop app first
+# MUST stop app / container first（busy probe 仅为 best-effort）
 npm run db:restore -- --backup /backup/security-triage-manual.db --confirm-restore
 npm start
 ```
+
+要点：Docker volume ≠ backup；restore 在无法清除 stale `-wal`/`-shm`/`-journal` 时 **不得** success（于替换 live DB 之前 fail-closed）。
 
 ## Rollback
 
@@ -186,4 +188,5 @@ single-node + 停服备份 / `VACUUM INTO` 为当前合同。
 
 - `docs/v1.12/PLAN.md`
 - `docs/v1.12/BACKUP_RESTORE.md`
+- `docs/v1.12/RELEASE_ACCEPTANCE.md`
 - `docs/v1.5/KNOWN_ENVIRONMENT_ISSUES.md`

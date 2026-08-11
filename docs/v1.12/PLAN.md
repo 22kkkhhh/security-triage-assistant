@@ -29,9 +29,11 @@ Theme: **Deployment & Production Readiness**
 - CI Docker production smoke
 - Rollback / DR runbook + backup appendix
 
-### M3 — Release
+### M3 — Release Readiness + Closeout — COMPLETE
 
-- Release readiness、tag、GitHub Release
+- Restore stale-sidecar cleanup fail-closed（替换 live 前）
+- Release docs / Acceptance / CHANGELOG / README → v1.12.0
+- Promote `main` + annotated tag `v1.12.0` + GitHub Release + freeze
 
 ## Explicit non-goals (v1.12)
 

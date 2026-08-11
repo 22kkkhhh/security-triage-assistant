@@ -17,9 +17,6 @@ import {
 } from "@/services/runtime/sqliteAdminClient";
 import { backupSqliteDatabase } from "@/services/runtime/sqliteBackup";
 
-// Re-export suffix list access — envConfig exports the helper but suffixes are private.
-// We resolve sidecars via resolveSqliteDatabaseFilePaths().sidecarPaths.
-
 export type RestoreSqliteOptions = {
   databaseUrl?: string;
   backupPath: string;
@@ -61,6 +58,19 @@ async function assertBackupReadableAndCompatible(
   });
 }
 
+async function assertSqliteFileIntegrity(dbPath: string): Promise<void> {
+  await withSqliteAdminClient(toFileUrl(dbPath), async (client) => {
+    const integrity = await pragmaIntegrityCheck(client);
+    if (integrity !== "ok") {
+      throw new Error("restore failed: staging database integrity check failed");
+    }
+  });
+}
+
+/**
+ * Best-effort busy probe only — cannot prove the application is stopped on every OS.
+ * Operator MUST stop the application / container before restore.
+ */
 function assertNotBusy(livePath: string, fsImpl: typeof fs): void {
   if (!fsImpl.existsSync(livePath)) return;
   const probe = `${livePath}.replace-probe-${process.pid}`;
@@ -78,6 +88,34 @@ function assertNotBusy(livePath: string, fsImpl: typeof fs): void {
       );
     }
     throw new Error("restore failed: cannot replace live database file");
+  }
+}
+
+/**
+ * Clear stale SQLite sidecars before replacing the live DB.
+ * Missing sidecars are OK. Any unlink failure fails closed.
+ */
+function clearStaleSidecars(
+  sidecarPaths: readonly string[],
+  livePath: string,
+  fsImpl: typeof fs,
+): void {
+  for (const sidecar of sidecarPaths) {
+    if (sidecar === livePath) continue;
+    if (!fsImpl.existsSync(sidecar)) continue;
+    try {
+      fsImpl.unlinkSync(sidecar);
+    } catch (error) {
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? String((error as { code?: string }).code)
+          : "";
+      // Race: file disappeared between exists and unlink — treat as cleared.
+      if (code === "ENOENT") continue;
+      throw new Error(
+        "restore failed: failed to clear SQLite sidecar; ensure application is stopped",
+      );
+    }
   }
 }
 
@@ -173,6 +211,7 @@ export async function restoreSqliteDatabase(
     throw new Error("restore failed: backup path must differ from live database");
   }
 
+  // Best-effort only — not a process detector.
   assertNotBusy(livePath, fsImpl);
 
   let safetyBackupPath: string | null = null;
@@ -202,8 +241,23 @@ export async function restoreSqliteDatabase(
 
   try {
     fsImpl.copyFileSync(backupPath, stagingPath);
+    await assertSqliteFileIntegrity(stagingPath);
 
-    // Replace live only after staging copy succeeds.
+    // Fail closed BEFORE replacing live DB if stale sidecars cannot be cleared.
+    try {
+      clearStaleSidecars(resolved.sidecarPaths, livePath, fsImpl);
+    } catch (error) {
+      logOperationalEvent({
+        level: "error",
+        event: "restore_failed",
+        component: "restore",
+        status: "failed",
+        reason: "sidecar_cleanup_failed",
+      });
+      throw error;
+    }
+
+    // Replace live only after staging verified and sidecars cleared.
     if (fsImpl.existsSync(livePath)) {
       const retired = `${livePath}.retired-${Date.now()}`;
       fsImpl.renameSync(livePath, retired);
@@ -217,24 +271,12 @@ export async function restoreSqliteDatabase(
             fsImpl.renameSync(retired, livePath);
           }
         } catch {
-          // ignore
+          // ignore recovery secondary errors
         }
         throw error;
       }
     } else {
       fsImpl.renameSync(stagingPath, livePath);
-    }
-
-    // Remove stale sidecars that belonged to the previous live DB.
-    for (const sidecar of resolved.sidecarPaths) {
-      if (sidecar === livePath) continue;
-      if (fsImpl.existsSync(sidecar)) {
-        try {
-          fsImpl.unlinkSync(sidecar);
-        } catch {
-          // ignore individual sidecar cleanup errors after replace
-        }
-      }
     }
 
     await withSqliteAdminClient(toFileUrl(livePath), async (client) => {
@@ -260,15 +302,22 @@ export async function restoreSqliteDatabase(
     try {
       if (fsImpl.existsSync(stagingPath)) fsImpl.unlinkSync(stagingPath);
     } catch {
-      // ignore
+      // ignore staging cleanup
     }
-    logOperationalEvent({
-      level: "error",
-      event: "restore_failed",
-      component: "restore",
-      status: "failed",
-      reason: "replace_failed",
-    });
+    if (
+      !(
+        error instanceof Error &&
+        error.message.includes("failed to clear SQLite sidecar")
+      )
+    ) {
+      logOperationalEvent({
+        level: "error",
+        event: "restore_failed",
+        component: "restore",
+        status: "failed",
+        reason: "replace_failed",
+      });
+    }
     if (error instanceof Error && error.message.startsWith("restore failed:")) {
       throw error;
     }

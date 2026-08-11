@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@/generated/prisma/client";
 import { runPrismaMigrateDeploy } from "@/test-utils/runPrismaMigrateDeploy";
@@ -208,5 +208,85 @@ describe("sqlite backup / restore", () => {
     await expect(
       backupSqliteDatabase({ databaseUrl: url, outputPath: dbPath }),
     ).rejects.toThrow(/differ/);
+  });
+
+  it("fails closed when stale sidecar cannot be cleared before live replacement", async () => {
+    const dir = makeTempDir();
+    const dbPath = path.join(dir, "live.db");
+    const url = `file:${dbPath.replace(/\\/g, "/")}`;
+    await runPrismaMigrateDeploy({ databaseUrl: url });
+    await seedRepresentative(dbPath);
+
+    const backup = await backupSqliteDatabase({
+      databaseUrl: url,
+      outputPath: path.join(dir, "backup.db"),
+      clock: () => new Date("2026-08-11T13:00:00.000Z"),
+    });
+
+    await withClient(dbPath, async (prisma) => {
+      await prisma.caseRecord.update({
+        where: { id: "case-m2-1" },
+        data: { title: "MUTATED-BEFORE-RESTORE" },
+      });
+    });
+
+    const beforeBytes = fs.readFileSync(dbPath);
+    const walPath = `${dbPath}-wal`;
+    fs.writeFileSync(walPath, "stale-wal-bytes");
+
+    const fsImpl = {
+      ...fs,
+      unlinkSync(target: fs.PathLike) {
+        const asString = String(target);
+        if (asString === walPath || asString.endsWith("live.db-wal")) {
+          const err = new Error("permission denied") as NodeJS.ErrnoException;
+          err.code = "EPERM";
+          throw err;
+        }
+        return fs.unlinkSync(target);
+      },
+    } as typeof fs;
+
+    const logLines: string[] = [];
+    const logSpy = vi.spyOn(console, "log").mockImplementation((line) => {
+      logLines.push(String(line));
+    });
+    const errSpy = vi.spyOn(console, "error").mockImplementation((line) => {
+      logLines.push(String(line));
+    });
+
+    try {
+      await expect(
+        restoreSqliteDatabase({
+          databaseUrl: url,
+          backupPath: backup.outputPath,
+          confirmRestore: true,
+          skipSafetyBackup: true,
+          fsImpl,
+        }),
+      ).rejects.toThrow(/failed to clear SQLite sidecar/i);
+
+      expect(fs.readFileSync(dbPath)).toEqual(beforeBytes);
+      await withClient(dbPath, async (prisma) => {
+        const row = await prisma.caseRecord.findUnique({
+          where: { id: "case-m2-1" },
+        });
+        expect(row?.title).toBe("MUTATED-BEFORE-RESTORE");
+      });
+
+      expect(
+        logLines.some((line) => line.includes('"event":"restore_success"')),
+      ).toBe(false);
+      expect(
+        logLines.some(
+          (line) =>
+            line.includes('"event":"restore_failed"') &&
+            line.includes("sidecar_cleanup_failed"),
+        ),
+      ).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+      errSpy.mockRestore();
+    }
   });
 });

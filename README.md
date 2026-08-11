@@ -2,20 +2,28 @@
 
 数据与网络安全联合研判及案件运营助手。
 
-当前稳定版本：**v1.11.0**（本地可运行的安全研判与案件运营 **MVP / Prototype**）。
+当前稳定版本：**v1.12.0**（**hardened single-node deployment MVP**）。
 
-**v1.11** 聚焦 Case Operations：案件负责人（Case Ownership）、我的 / 未分配队列、Analyst 自助接手与释放、Admin 指派、运营截止时间（operational due dates）、逾期 / 今日到期可见性、确定性「截止优先」队列排序，以及配套 Audit 与 stale / 幂等保护。
+**v1.12** 主题：**Deployment & Production Readiness**（部署 / 运行时工程，不是新的安全检测引擎）。
 
-v1.11 明确语义边界：
+Highlights：
 
-- 案件负责人是**运营责任**，**不是** Case ACL，不改变案件可见性
-- 案件负责人与 **HumanReview 责任人**保持分离
-- 截止时间是**运营元数据**，**不是**安全风险等级、**不是** SLA、**不是**合规/法定期限
-- **无**自动优先级评分（no automatic priority score）
-- **无**自动分配、**无**自动升级（no automatic assignment / escalation）
+- 可靠的 migrate-before-start 生产启动门禁
+- `/api/health`（存活）与 `/api/ready`（DB/schema 就绪）
+- 生产环境校验与响应头安全基线
+- 单节点登录限流（Better Auth 进程内）
+- 非 root 生产 Docker 镜像与持久化 SQLite volume（`/data`）
+- 已校验的 SQLite 备份 / 恢复（`VACUUM INTO` + integrity）
+- Rollback / DR 运维指引与最小结构化运维日志
+- Docker CI smoke
 
-在既有身份认证、Case 合规知识、告警导入、Investigation Workbench、关联历史案件、Investigation Leads、Case Comparison 与 Analyst opt-in Checklist 之上交付。
-不是 Production-ready 企业平台 / Enterprise IAM；**不是**法律意见或合规认证系统。
+v1.12 明确边界：
+
+- **不是** fully production-ready enterprise platform
+- **不是** HA / multi-replica / PostgreSQL / Kubernetes / Redis / 分布式限流
+- **不改变**确定性安全分析、HumanReview、Case Operations、风险、Checklist 或报告语义
+
+产品能力叠于 v1.11 Case Operations 与既有认证、合规知识、告警导入、Investigation Workbench、关联历史、Leads、Comparison 与 Checklist 之上。
 
 ## 一、项目是什么
 
@@ -144,7 +152,7 @@ v1.3 已具备：认证、三角色 Server Authorization、Trusted USER Case Aud
 - 单实例所有 authenticated users 可查看全部 Case；v1.11 的 Case Ownership 是运营责任，
   **不是** Case ACL / 行级可见性隔离
 - 无 MFA / SSO / SystemAuditLog；Login / User Admin / Password 无全局审计
-- SQLite 本地持久化；非 PostgreSQL 生产就绪 / HA
+- single-node SQLite 部署；非 PostgreSQL / HA / multi-replica
 - username / email 创建后不可改；无首次强制改密 / forgot-password
 - Better Auth 技术面可能含 email sign-in；产品 UI 仅 username login
 - Legacy MANUAL Audit 保留；Legacy HumanReview reviewer 可无 `reviewedByUserId`
@@ -158,8 +166,8 @@ Demo 凭据仅限 Development/Test；**不得**用于 production。
 - Demo **全部使用虚构 Mock 数据**（私网 / 测试 IP，虚构账号与人员）
 - Seed 中所有人员均为虚构 Demo 数据
 - **不得**导入真实客户或生产安全日志
-- SQLite 仅用于本地 Demo；真实生产需要权限、审计、备份、高可用、
-  企业数据库与安全部署评审，不在本 MVP 范围内
+- v1.12 提供 hardened single-node 部署合同（Docker / 备份恢复 / 启动门禁）；
+  **不**等同企业 HA、多副本或 PostgreSQL 迁移
 
 ## 九、启动方法
 
@@ -185,6 +193,8 @@ npm run generate:samples # 重新生成 samples/ DOCX
 npm run db:seed          # 幂等写入 Case A / Case B（含 Audit）
 npm run db:reset-demo    # 清空本地 Demo DB 并重新 migrate + seed（仅本地）
 npm run user:bootstrap-admin  # 无 enabled ADMIN 时创建首个生产管理员（需 BOOTSTRAP_* 环境变量）
+npm run db:backup             # 一致性 SQLite 备份（需 DATABASE_URL）
+npm run db:restore            # 破坏性恢复（需 --confirm-restore；先停应用）
 ```
 
 > `db:reset-demo` 是本地开发复位工具，**不会**在 Web UI 中提供。
@@ -231,6 +241,8 @@ Seed 使用固定 `id`（`demo-case-a` / `demo-case-b`）、固定案件编号�
 | --- | --- |
 | [`docs/PRODUCT_BOUNDARY.md`](./docs/PRODUCT_BOUNDARY.md) | 产品边界 |
 | [`docs/v1.12/PRODUCTION_RUNBOOK.md`](./docs/v1.12/PRODUCTION_RUNBOOK.md) | single-node 部署 / 备份恢复（v1.12） |
+| [`docs/v1.12/RELEASE_ACCEPTANCE.md`](./docs/v1.12/RELEASE_ACCEPTANCE.md) | v1.12 发布验收 |
+| [`docs/v1.12/BACKUP_RESTORE.md`](./docs/v1.12/BACKUP_RESTORE.md) | SQLite 备份 / 恢复附录 |
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | 架构 |
 | [`docs/DOMAIN_MODEL.md`](./docs/DOMAIN_MODEL.md) | 领域模型 |
 | [`docs/COMPLIANCE.md`](./docs/COMPLIANCE.md) | 合规 |
