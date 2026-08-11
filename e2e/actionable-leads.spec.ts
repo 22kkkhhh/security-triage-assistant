@@ -7,6 +7,8 @@ import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
  */
 
 const CASE_B_ID = "demo-case-b";
+const LEAD_CHECKLIST_LABEL =
+  "对比关联案件在共同业务系统中的访问时间、操作范围与上下文";
 
 test("历史线索加入核查清单：持久化、badge、完成/重开，不改研判", async ({
   page,
@@ -30,30 +32,35 @@ test("历史线索加入核查清单：持久化、badge、完成/重开，不�
     timeout: 15_000,
   });
 
-  const checklistItem = page
-    .locator('[data-testid="checklist-badge-investigation-lead"]')
-    .first();
-  await expect(checklistItem).toBeVisible();
-  await expect(page.getByText("历史线索").first()).toBeVisible();
+  const checklist = page.getByTestId("evidence-checklist-workspace");
   await expect(
-    page.getByText("对比关联案件在共同业务系统中的访问时间、操作范围与上下文"),
+    checklist.getByTestId("checklist-badge-investigation-lead").first(),
+  ).toBeVisible();
+  await expect(checklist.getByText("历史线索").first()).toBeVisible();
+  await expect(
+    checklist.getByText(LEAD_CHECKLIST_LABEL, { exact: true }),
   ).toBeVisible();
 
   await page.reload();
   await expect(
-    page.locator(
-      '[data-testid="investigation-lead-item"][data-lead-code="COMPARE_SHARED_SYSTEM_ACTIVITY"]',
-    ).getByTestId("investigation-lead-added"),
+    page
+      .locator(
+        '[data-testid="investigation-lead-item"][data-lead-code="COMPARE_SHARED_SYSTEM_ACTIVITY"]',
+      )
+      .getByTestId("investigation-lead-added"),
   ).toBeVisible();
   await expect(
-    page.getByTestId("checklist-badge-investigation-lead").first(),
+    page
+      .getByTestId("evidence-checklist-workspace")
+      .getByTestId("checklist-badge-investigation-lead")
+      .first(),
   ).toBeVisible();
 
   // complete then reopen via checklist checkbox
-  const leadLabel = page.getByText(
-    "对比关联案件在共同业务系统中的访问时间、操作范围与上下文",
-  );
-  const row = leadLabel.locator("xpath=ancestor::li[1]");
+  const row = page
+    .getByTestId("evidence-checklist-workspace")
+    .getByText(LEAD_CHECKLIST_LABEL, { exact: true })
+    .locator("xpath=ancestor::li[1]");
   const checkbox = row.getByRole("checkbox");
   await expect(checkbox).toBeVisible();
   await checkbox.check();
