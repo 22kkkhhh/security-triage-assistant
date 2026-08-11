@@ -9,6 +9,9 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
+# postinstall runs `prisma generate` — schema/config must be present for npm ci.
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 RUN npm ci
 
 FROM node:22-bookworm-slim AS builder
@@ -20,6 +23,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build-time dummy values for Next compile only — NOT production runtime secrets.
+# These are overwritten/ignored at runtime; containers without real env fail closed via M1 gate.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     BETTER_AUTH_SECRET=build-time-dummy-secret-not-for-runtime-use-32 \
@@ -36,6 +40,11 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
+
+# Clear any build-time dummy auth/db values from the final image environment.
+ENV BETTER_AUTH_SECRET= \
+    BETTER_AUTH_URL= \
+    DATABASE_URL=
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
