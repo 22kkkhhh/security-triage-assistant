@@ -685,7 +685,10 @@ export function PersistedCaseWorkbench({
         onGoToReport={() => void goToReport()}
       />
 
-      <RelatedCasesPanel intelligence={investigationIntelligence} />
+      <RelatedCasesPanel
+        intelligence={investigationIntelligence}
+        currentCaseId={initial.caseId}
+      />
 
       <details
         className="rounded-md border border-neutral-200 bg-white px-4 py-2"

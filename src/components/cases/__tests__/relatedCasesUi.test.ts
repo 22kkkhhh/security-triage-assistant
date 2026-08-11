@@ -51,12 +51,14 @@ describe("Historical Intelligence / Related Cases UI 契约", () => {
     expect(panel).not.toContain("确认无关联");
   });
 
-  it("标题升级为历史调查线索；保留关联案件 cards", () => {
+  it("标题升级为历史调查线索；保留关联案件 cards + 对比入口", () => {
     expect(panel).toContain("历史调查线索");
     expect(panel).toContain('data-testid="related-cases-list"');
     expect(panel).toContain('data-testid="historical-signals"');
     expect(panel).toContain('data-testid="investigation-leads"');
     expect(panel).toContain("href={`/cases/${item.caseId}`}");
+    expect(panel).toContain("对比调查");
+    expect(workbench).toContain("currentCaseId={initial.caseId}");
   });
 
   it("导航含历史线索锚点", () => {

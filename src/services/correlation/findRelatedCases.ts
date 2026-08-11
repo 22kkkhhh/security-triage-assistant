@@ -112,6 +112,26 @@ function buildReasons(
   return reasons;
 }
 
+/**
+ * 两案 pair 级关联：复用同一套 reason 规则，不扫描窗口内其他 Case。
+ */
+export function correlateCasePair(
+  current: CorrelationCaseFacts,
+  candidate: CorrelationCaseFacts,
+): {
+  reasons: RelatedCaseReason[];
+  stronglyRelated: boolean;
+} {
+  if (current.caseId === candidate.caseId) {
+    return { reasons: [], stronglyRelated: false };
+  }
+  const reasons = buildReasons(current, candidate);
+  return {
+    reasons,
+    stronglyRelated: isEligible(reasons),
+  };
+}
+
 /** 确定性排序权重：多字段 > username/IP > external id > systems > alert source 附加 */
 export function rankRelatedCaseScore(reasons: readonly RelatedCaseReason[]): number {
   let score = 0;

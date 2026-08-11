@@ -26,8 +26,10 @@ import {
  */
 export function RelatedCasesPanel({
   intelligence,
+  currentCaseId,
 }: {
   intelligence: InvestigationIntelligenceView;
+  currentCaseId: string;
 }) {
   const { relatedCases, relatedCaseCount, signals, leads } = intelligence;
   const relatedListId = "related-cases-list-anchor";
@@ -188,6 +190,13 @@ export function RelatedCasesPanel({
                         >
                           {riskLabel}
                         </span>
+                        <Link
+                          href={`/cases/${currentCaseId}/compare/${item.caseId}`}
+                          className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                          data-testid="related-case-compare-link"
+                        >
+                          对比调查
+                        </Link>
                       </div>
                     </div>
 
