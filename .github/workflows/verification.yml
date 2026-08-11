@@ -36,3 +36,12 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run test:e2e
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: []
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker production smoke
+        run: bash scripts/ci-docker-smoke.sh

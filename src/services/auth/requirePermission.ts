@@ -14,6 +14,25 @@ import {
 } from "@/domain/auth";
 import { requireAuthenticatedUser } from "@/services/auth/currentUser";
 import { resolveVitestAuthOverride } from "@/services/auth/testAuthContext";
+import { logOperationalEvent } from "@/services/runtime/operationalLogger";
+
+function authorizeWithDenyLog(user: AuthUser, permission: Permission): AuthUser {
+  try {
+    return authorize(user, permission);
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      logOperationalEvent({
+        level: "warn",
+        event: "authz_denied",
+        component: "authz",
+        status: "denied",
+        permission,
+        role: user.role,
+      });
+    }
+    throw error;
+  }
+}
 
 /**
  * Server Action / Page 统一授权入口。
@@ -28,11 +47,11 @@ export async function requirePermission(
     throw new UnauthenticatedError();
   }
   if (override?.kind === "user") {
-    return authorize(override.user, permission);
+    return authorizeWithDenyLog(override.user, permission);
   }
 
   const user = await requireAuthenticatedUser(incomingHeaders);
-  return authorize(user, permission);
+  return authorizeWithDenyLog(user, permission);
 }
 
 export type AuthActionFailure = {

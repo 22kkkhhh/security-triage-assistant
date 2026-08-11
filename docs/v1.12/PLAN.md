@@ -2,27 +2,32 @@
 
 Theme: **Deployment & Production Readiness**
 
-产品定位保持：**single-node deployment-ready MVP**（不是 Production-ready Enterprise）。
+产品定位保持：**hardened single-node deployment MVP**（不是 Production-ready Enterprise）。
 
 ## Milestones
 
-### M1 — Runtime Safety & Reliable Startup
+### M1 — Runtime Safety & Reliable Startup — COMPLETE
 
 - Unified production env validation
 - Migration-before-start gate（`npm start`）
-- `/api/health`（liveness）+ `/api/ready`（readiness）
+- `/api/health` + `/api/ready`
 - Minimum security headers
-- Production HTTPS / secure-session posture（Better Auth 库默认 + URL 校验）
-- Login rate limiting（Better Auth 1.6.26 native）
+- Production HTTPS / secure-session posture
+- Login rate limiting（Better Auth native）
 - `main` branch Verification trigger
 - Production runbook v1.12
 
-### M2 — Deployment & Operational Recovery
+### M2 — Deployment & Operational Recovery — COMPLETE
 
-- Docker / 数据卷约定
-- Backup / restore scripts
-- Structured operational logging（最小 JSON stdout）
-- CSP / 其它运维增强（按证据）
+- Production Dockerfile（non-root、`/data`、复用 `npm start` gate、ready healthcheck）
+- Persistent SQLite volume contract
+- `VACUUM INTO` backup + integrity check
+- Destructive restore（`--confirm-restore`、safety backup、sidecar cleanup）
+- Minimal structured operational JSON logs（allowlisted）
+- Client import file/text size caps（JSON/CSV/Text）
+- WAL/busy_timeout：**documented / deferred**（证据不足不强行 PRAGMA）
+- CI Docker production smoke
+- Rollback / DR runbook + backup appendix
 
 ### M3 — Release
 
@@ -30,4 +35,4 @@ Theme: **Deployment & Production Readiness**
 
 ## Explicit non-goals (v1.12)
 
-Kubernetes、微服务、Redis、Kafka、SIEM、Elasticsearch、OpenTelemetry 平台、PostgreSQL 迁移、多租户、企业 IAM、WAF。
+Kubernetes、Compose 编排平台、微服务、Redis、Kafka、SIEM、Elasticsearch、OpenTelemetry 平台、PostgreSQL 迁移、多租户、企业 IAM、WAF、image registry 自动发布。

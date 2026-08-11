@@ -230,6 +230,7 @@ Seed 使用固定 `id`（`demo-case-a` / `demo-case-b`）、固定案件编号�
 | 文档 | 作用 |
 | --- | --- |
 | [`docs/PRODUCT_BOUNDARY.md`](./docs/PRODUCT_BOUNDARY.md) | 产品边界 |
+| [`docs/v1.12/PRODUCTION_RUNBOOK.md`](./docs/v1.12/PRODUCTION_RUNBOOK.md) | single-node 部署 / 备份恢复（v1.12） |
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | 架构 |
 | [`docs/DOMAIN_MODEL.md`](./docs/DOMAIN_MODEL.md) | 领域模型 |
 | [`docs/COMPLIANCE.md`](./docs/COMPLIANCE.md) | 合规 |

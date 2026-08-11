@@ -9,6 +9,7 @@ import {
   validateProductionEnvironment,
   type ValidateProductionEnvironmentInput,
 } from "@/lib/envConfig";
+import { logOperationalEvent } from "@/services/runtime/operationalLogger";
 import {
   checkApplicationReadiness,
   formatReadinessFailureMessage,
@@ -68,10 +69,30 @@ export async function runProductionStartGate(
     deps.checkReadiness ?? (() => checkApplicationReadiness());
   const startNext = deps.startNext;
 
+  logOperationalEvent({
+    level: "info",
+    event: "production_start_begin",
+    component: "production_start",
+    status: "ok",
+  });
+
   try {
     validateEnv(env);
+    logOperationalEvent({
+      level: "info",
+      event: "production_env_validated",
+      component: "production_start",
+      status: "ok",
+    });
   } catch {
     logError("production env validation failed");
+    logOperationalEvent({
+      level: "error",
+      event: "production_start_failed",
+      component: "production_start",
+      status: "failed",
+      stage: "env",
+    });
     return { exitCode: 1, stage: "env", nextStarted: false };
   }
 
@@ -79,18 +100,51 @@ export async function runProductionStartGate(
     preflightFilesystem(env);
   } catch {
     logError("database filesystem preflight failed");
+    logOperationalEvent({
+      level: "error",
+      event: "production_start_failed",
+      component: "production_start",
+      status: "failed",
+      stage: "filesystem",
+    });
     return { exitCode: 1, stage: "filesystem", nextStarted: false };
   }
 
   if (!migrateDeploy) {
     logError("database migration failed");
+    logOperationalEvent({
+      level: "error",
+      event: "production_start_failed",
+      component: "production_start",
+      status: "failed",
+      stage: "migrate",
+    });
     return { exitCode: 1, stage: "migrate", nextStarted: false };
   }
 
   try {
+    logOperationalEvent({
+      level: "info",
+      event: "migration_begin",
+      component: "production_start",
+      status: "ok",
+    });
     await migrateDeploy();
+    logOperationalEvent({
+      level: "info",
+      event: "migration_success",
+      component: "production_start",
+      status: "ok",
+    });
   } catch {
     logError("database migration failed");
+    logOperationalEvent({
+      level: "error",
+      event: "production_start_failed",
+      component: "production_start",
+      status: "failed",
+      stage: "migrate",
+    });
     return { exitCode: 1, stage: "migrate", nextStarted: false };
   }
 
@@ -99,16 +153,43 @@ export async function runProductionStartGate(
     readiness = await checkReadiness();
   } catch {
     logError("readiness failed: application is not ready");
+    logOperationalEvent({
+      level: "error",
+      event: "readiness_failed",
+      component: "readiness",
+      status: "failed",
+    });
     return { exitCode: 1, stage: "readiness", nextStarted: false };
   }
 
   if (!readiness.ready) {
     logError(formatReadinessFailureMessage(readiness.category));
+    logOperationalEvent({
+      level: "error",
+      event: "readiness_failed",
+      component: "readiness",
+      status: "failed",
+      reason: readiness.category,
+    });
     return { exitCode: 1, stage: "readiness", nextStarted: false };
   }
 
+  logOperationalEvent({
+    level: "info",
+    event: "readiness_success",
+    component: "readiness",
+    status: "ok",
+  });
+
   if (!startNext) {
     logError("next start failed");
+    logOperationalEvent({
+      level: "error",
+      event: "production_start_failed",
+      component: "production_start",
+      status: "failed",
+      stage: "next",
+    });
     return { exitCode: 1, stage: "next", nextStarted: false };
   }
 
@@ -116,11 +197,25 @@ export async function runProductionStartGate(
     const code = await startNext();
     if (code !== 0) {
       logError("next start failed");
+      logOperationalEvent({
+        level: "error",
+        event: "production_start_failed",
+        component: "production_start",
+        status: "failed",
+        stage: "next",
+      });
       return { exitCode: code || 1, stage: "next", nextStarted: true };
     }
     return { exitCode: 0, stage: "complete", nextStarted: true };
   } catch {
     logError("next start failed");
+    logOperationalEvent({
+      level: "error",
+      event: "production_start_failed",
+      component: "production_start",
+      status: "failed",
+      stage: "next",
+    });
     return { exitCode: 1, stage: "next", nextStarted: false };
   }
 }

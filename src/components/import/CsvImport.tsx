@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { assertImportFileSize } from "@/components/import/importFileLimits";
 import {
   applyFieldMapping,
   parseCsv,
@@ -24,11 +25,23 @@ export function CsvImport({
   const [parsed, setParsed] = useState<CsvParseResult | null>(null);
   const [mapping, setMapping] = useState<FieldMappingSuggestion[]>([]);
 
+  const [fileError, setFileError] = useState<string | null>(null);
+
   const handleFile = async (file: File) => {
-    const text = await file.text();
-    const result = parseCsv(text);
-    setParsed(result);
-    setMapping(suggestFieldMapping(result.headers));
+    try {
+      assertImportFileSize(file.size, "CSV 文件");
+      setFileError(null);
+      const text = await file.text();
+      const result = parseCsv(text);
+      setParsed(result);
+      setMapping(suggestFieldMapping(result.headers));
+    } catch (error) {
+      setParsed(null);
+      setMapping([]);
+      setFileError(
+        error instanceof Error ? error.message : "CSV 文件读取失败，请重试。",
+      );
+    }
   };
 
   const updateMapping = (header: string, fieldKey: string | null) => {
@@ -59,6 +72,12 @@ export function CsvImport({
           }}
         />
       </label>
+
+      {fileError && (
+        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          {fileError}
+        </p>
+      )}
 
       {parsed && (
         <>

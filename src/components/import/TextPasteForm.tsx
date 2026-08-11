@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { assertImportTextLength } from "@/components/import/importFileLimits";
 import { parsePastedText } from "@/services/normalization/textParser";
 import type { ImportSourceType, NormalizeResult } from "@/services/normalization/types";
 
@@ -16,6 +17,17 @@ export function TextPasteForm({
   onSubmit: (result: NormalizeResult) => void;
 }) {
   const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = () => {
+    try {
+      assertImportTextLength(text);
+      setError(null);
+      onSubmit(parsePastedText(text, sourceType));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "文本处理失败，请重试。");
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -30,12 +42,17 @@ export function TextPasteForm({
           onChange={(e) => setText(e.target.value)}
         />
       </label>
+      {error && (
+        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          {error}
+        </p>
+      )}
       <div className="flex justify-end">
         <button
           type="button"
           className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
           disabled={!text.trim()}
-          onClick={() => onSubmit(parsePastedText(text, sourceType))}
+          onClick={handleSubmit}
         >
           下一步：导入确认
         </button>

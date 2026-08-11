@@ -19,6 +19,8 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:reset-demo": "tsx scripts/reset-demo.ts",
+    "db:backup": "tsx scripts/backup-sqlite.ts",
+    "db:restore": "tsx scripts/restore-sqlite.ts",
     "user:bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
     "postinstall": "prisma generate"
   },

@@ -13,9 +13,10 @@ import type {
   RawKeyValue,
   UnrecognizedItem,
 } from "@/services/normalization/types";
+import { MAX_IMPORT_FILE_BYTES } from "@/components/import/importFileLimits";
 
-/** 浏览器侧单文件上限：1 MiB */
-export const MAX_JSON_ALERT_FILE_BYTES = 1_048_576;
+/** 浏览器侧单文件上限：1 MiB（与 CSV/文本导入共享） */
+export const MAX_JSON_ALERT_FILE_BYTES = MAX_IMPORT_FILE_BYTES;
 
 export const JSON_ALERT_FILE_TOO_LARGE_MESSAGE =
   "JSON 文件过大，请上传不超过 1 MB 的单条告警文件。";

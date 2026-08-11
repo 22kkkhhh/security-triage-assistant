@@ -1,177 +1,189 @@
 # v1.12 Production Deployment Runbook
 
-本 runbook 描述 **Security Triage Assistant** 的 **single-node deployment-ready MVP** 边界。  
-当前版本使用 **SQLite + better-sqlite3**，适合单实例私有化长期运行；**不是**高可用或多实例生产数据库方案。
+本 runbook 描述 **Security Triage Assistant** 的 **hardened single-node deployment MVP** 边界。
+当前版本使用 **SQLite + better-sqlite3**，适合单实例私有化长期运行；**不是**高可用 / 多实例 / Enterprise production-ready 平台。
 
 > 旧文档 `docs/v1.5/PRODUCTION_RUNBOOK.md` 已弃用；请以本文件为准。
+> Backup/restore 细节：[`BACKUP_RESTORE.md`](./BACKUP_RESTORE.md)
 
 ## Runtime boundary
 
-- 单 Node 进程：`npm start`（内含 migration gate → `next start`）
-- 单文件 SQLite（`DATABASE_URL=file:...`）
-- 部署方式：**bare-metal / VM**，使用 `npm ci`（本版本 Prisma CLI 来自 `node_modules`）
-- 反向代理负责 TLS 终止与对外 HTTPS；应用侧要求非本机 production origin 使用 `https://` 的 `BETTER_AUTH_URL`
-- Login rate limit：Better Auth **单进程内存**限流（重启清零；非分布式）
+- 单 Node 进程：`npm start`（env → filesystem → migrate → ready → Next）
+- 单文件 SQLite（推荐 `DATABASE_URL=file:/data/security-triage.db`）
+- 部署方式：
+  - **bare-metal / VM**：`npm ci` → `npm run build` → `npm start`
+  - **Docker**：见下文（镜像含 Prisma CLI / tsx，因当前 start gate 需要）
+- 反向代理负责 TLS；非本机 production origin 必须 `https://` BETTER_AUTH_URL
+- Login rate limit：Better Auth 单进程内存限流（无可信 proxy IP 时可能退化为共享 path bucket）
 
 ## 必填环境变量
 
 | 变量 | 说明 |
 |---|---|
-| `NODE_ENV` | 必须为 `production`（`npm start` 会确保） |
-| `BETTER_AUTH_SECRET` | 高熵随机密钥，**至少 32 字符**；不得使用 `.env.example` 占位值 |
-| `BETTER_AUTH_URL` | 对外可访问的完整站点 URL（绝对 URL，http/https） |
-| `DATABASE_URL` | SQLite `file:` URL；**禁止**省略后回退到 `file:./prisma/dev.db` |
+| `NODE_ENV` | `production`（`npm start` 会确保） |
+| `BETTER_AUTH_SECRET` | ≥32 字符高熵；禁止 `.env.example` 占位值 |
+| `BETTER_AUTH_URL` | 绝对 URL；非 loopback production 必须 https |
+| `DATABASE_URL` | SQLite `file:`；禁止省略后回退 `dev.db` |
 
-### HTTPS 要求
+### Secret recovery
 
-- 非 loopback production origin：**必须** `https://...`
-- 允许本机 smoke / CI：`http://localhost`、`http://127.0.0.1`、`http://[::1]`
-- **无** `ALLOW_INSECURE_PRODUCTION` 逃生开关
-- HSTS 由反向代理在 TLS 终止处设置（应用不在 HTTP/localhost 上强制 HSTS）
+`BETTER_AUTH_SECRET` 是 deployment secret，**不会**写入 DB backup。
+完整 DR 需要：DB backup **+** 外部保管的 secret。丢失 secret 可能影响既有 session 行为。
 
-### DATABASE_URL（SQLite）
-
-- production 仅支持 `file:`（当前产品边界；未承诺 PostgreSQL）
-- 首次部署允许数据库文件尚不存在：`prisma migrate deploy` 会创建
-- 父目录必须存在（或可创建）且可写
-
-### 禁止提交 Secret
-
-- 真实 `BETTER_AUTH_SECRET`、数据库路径、bootstrap 口令 **不得** 进入 Git
-- 生产 secret 通过部署平台密钥管理注入
-
-## 部署步骤
-
-### 1. 安装依赖
+## Bare-metal deploy
 
 ```bash
 npm ci
-```
-
-v1.12 single-node bare-metal deployment uses `npm ci`（含 Prisma CLI）。
-
-### 2. 配置环境变量
-
-按上表注入；确认 `BETTER_AUTH_URL` 与浏览器访问 origin 一致。
-
-### 3. Build
-
-```bash
 npm run build
-```
-
-### 4. Start（含 migration gate）
-
-```bash
+# 注入生产 env
 npm start
+npm run user:bootstrap-admin   # 仅空实例；显式一步，非自动
 ```
 
-正式启动路径（不可跳过）：
+v1.12 single-node deployment intentionally uses `npm ci`（含 migration/start tooling）。
 
-```text
-validate production env
-→ SQLite filesystem preflight
-→ prisma migrate deploy
-→ schema readiness probe
-→ next start
-```
+## Docker deploy
 
-任一步失败：stderr 输出 **sanitized** 运维信息，`exit code != 0`，Next **不会**启动。
-
-内部等价命令（勿作为正式运维入口）：`npm run start:next`（绕过 gate，仅调试）。
-
-运维人员 **不必** 记忆「先 migrate 再 start」两条命令。
-
-### 5. Bootstrap 首个 ADMIN
-
-空实例 **不会** 自动创建 Demo 用户：
+### Build
 
 ```bash
-npm run user:bootstrap-admin
+docker build -t security-triage-assistant:local .
 ```
 
-需配置（见 `.env.example`）：`BOOTSTRAP_ADMIN_*`。若已存在 enabled ADMIN，脚本拒绝重复 bootstrap。
+Build 阶段仅使用 **dummy** auth/db 值编译 Next；**不得**把真实 secret 作为 ARG/ENV 烘焙进镜像。
+
+### Run
+
+```bash
+docker volume create sta-data
+docker volume create sta-backup
+
+docker run -d --name sta-app \
+  -p 3000:3000 \
+  -e NODE_ENV=production \
+  -e BETTER_AUTH_SECRET='<high-entropy-secret>' \
+  -e BETTER_AUTH_URL='https://triage.example.com' \
+  -e DATABASE_URL='file:/data/security-triage.db' \
+  -v sta-data:/data \
+  -v sta-backup:/backup \
+  security-triage-assistant:local
+```
+
+合同：
+
+- 非 root 用户运行
+- 持久化目录：`/data`（DB）、`/backup`（备份）
+- `CMD` = `npm start`（复用 M1 gate，禁止绕过为 `next start`）
+- `HEALTHCHECK` → `GET /api/ready`
+- **不**自动创建 ADMIN；bootstrap 仍为显式 operator 步骤
+- Docker volume **≠** backup；卷存活不能替代备份
+
+### Invalid env
+
+缺少/非法 env 时容器必须非零退出（M1 fail-closed）。
 
 ## Health / Ready
 
-| Endpoint | 含义 | 成功 | 失败 |
-|---|---|---|---|
-| `GET /api/health` | Liveness：进程能响应 | `200 {"status":"ok"}` | — |
-| `GET /api/ready` | Readiness：DB + 关键 Case schema | `200 {"status":"ready"}` | `503 {"status":"not_ready"}` |
+| Endpoint | 含义 |
+|---|---|
+| `GET /api/health` | Liveness |
+| `GET /api/ready` | Readiness（DB + 关键 Case schema） |
 
-- `Cache-Control: no-store`
-- **不要求登录**
-- 响应 **不包含** version SHA、DB path、SQL、env、stack
-- 进程管理器：liveness → `/api/health`；readiness → `/api/ready`
+容器健康以 **/api/ready** 为准。
+
+## Backup / Restore
+
+见 [`BACKUP_RESTORE.md`](./BACKUP_RESTORE.md)。
+
+摘要：
+
+```bash
+npm run db:backup -- --output /backup/security-triage-manual.db
+# stop app first
+npm run db:restore -- --backup /backup/security-triage-manual.db --confirm-restore
+npm start
+```
+
+## Rollback
+
+**before deploy**
+
+1. 停止写入 / 停应用（推荐）
+2. `npm run db:backup` → 记录 backup 路径
+3. 记录当前 image tag / git SHA
+
+**deploy**
+
+1. 部署新 image/tag
+2. `npm start`（含 migrate）
+3. 确认 `/api/ready`
+
+**failure before migration**
+
+- 切回上一 image/tag 启动即可
+
+**failure after schema migration**
+
+1. 停止应用
+2. restore **升级前** DB backup（`--confirm-restore`）
+3. 切回上一 image/tag
+4. `npm start` → `/api/ready`
+
+禁止：回退应用代码却继续使用已 forward-migrated DB 并假装一定安全。
+
+## Disaster recovery checklist
+
+- [ ] 最新 known-good backup + integrity ok
+- [ ] 应用 image/tag 已知
+- [ ] `BETTER_AUTH_SECRET` 可从外部 secret store 取回
+- [ ] `DATABASE_URL` / `/data` 目标正确
+- [ ] bootstrap 凭据 **不能**替代 DB 内用户/会话数据
+
+恢复顺序：restore DB → 正确 app 版本 → `npm start`（必要时 forward migrate）→ ready → 登录 → Case / Report / Audit 抽查。
 
 ## Security baseline
 
-应用响应头（`next.config.ts`）：
+- Headers：nosniff / Referrer-Policy / X-Frame-Options DENY / Permissions-Policy
+- CSP / HSTS：CSP 未强制；HSTS 由反向代理设置
+- 不信任未配置的 `X-Forwarded-For`（M1）；公网需反代/网络层 abuse 防护
+- 当前内存登录限流在无可信 IP 时可能共享 bucket → 临时全局限流；**不**通过盲目信任转发头“修复”；WAF DEFER
 
-- `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `X-Frame-Options: DENY`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+## Operational logs
 
-CSP：本版本未启用严格 CSP（避免破坏 Next App Router）；可在反向代理或后续里程碑评估。  
-Session cookie：Better Auth 默认 `httpOnly` + `SameSite=Lax`；`Secure` 随 `https://` baseURL。
+启动/备份/恢复/限流/授权拒绝输出 **一行 JSON**（stdout/stderr），allowlisted 字段：
 
-### Login rate limit
+`timestamp` / `level` / `event` / `component` / `status` + 少量可选 `permission`/`role`/`stage`/`reason`
 
-- Better Auth 原生限流；production 默认启用；内存存储
-- `/sign-in*` 等敏感路径使用库内特殊规则（短窗口、低次数）
-- **不信任**未配置信任的 `X-Forwarded-For`（避免伪造 IP 绕过）
-- 单进程；重启清零；非分布式
-- UI 继续使用通用登录失败文案，不泄漏账号是否存在
+不记录：secret、DATABASE_URL、username/password、caseState、告警原文。
 
-## 禁止在生产使用
+`/api/ready` 成功不刷日志；启动 gate 记录一次 readiness_success。
 
-- `npm run db:reset-demo`（production 立即拒绝）
-- `.env.example` 占位 secret / Demo 口令作为真实凭据
-- 依赖 localhost fallback 的对外 `BETTER_AUTH_URL`
-- 多实例写同一 SQLite 文件
+## SQLite WAL / busy_timeout
 
-## SQLite 运营边界
+证据（M2）：默认 `journal_mode` / `busy_timeout` 在当前 Prisma adapter + 既有并发测试下可工作。
+**本轮不强制** `PRAGMA journal_mode=WAL` / `busy_timeout`（DOCUMENT / DEFER），避免未充分验证的备份兼容性风险。
+single-node + 停服备份 / `VACUUM INTO` 为当前合同。
 
-- 单文件、单节点；无主从
-- 备份（M1 仅流程，脚本见 M2）：**升级前停止写入并备份 DB 文件**（及 `-wal`/`-shm` 若存在）
-- 恢复：停止服务 → 替换文件 → 启动 → 检查 `/api/ready`
+## Import resource caps
 
-## Startup failure 排查顺序
+浏览器侧 JSON / CSV / 文本粘贴共享约 1 MiB 上限。Server Action 仍接收结构化字段（非 raw multipart upload）；未新增假的 server raw-CSV 限制。
 
-`npm start` 非零退出时，按顺序检查：
+## Startup failure 排查
 
-1. **env** — `NODE_ENV` / secret / URL / `DATABASE_URL`
-2. **filesystem** — SQLite 父目录存在且可写
-3. **migrate deploy** — migration 失败或 Prisma CLI 不可用
-4. **DB/schema readiness** — schema 陈旧或数据库不可用
+1. env
+2. filesystem（`/data` 可写）
+3. migrate deploy
+4. readiness
 
-常见 sanitized 信息：
+## 禁止生产使用
 
-- `production env validation failed`
-- `database filesystem preflight failed`
-- `database migration failed`
-- `readiness failed: ...`
-
-不以 Prisma 原始异常作为唯一运维指导；响应与 stderr 不打印 secret / 完整 `DATABASE_URL` / 案件正文。
-
-## Rollback skeleton（M1 文档；备份脚本 M2）
-
-1. 升级前：停止应用 → 备份 SQLite 文件  
-2. 部署新版本 → `npm ci` → `npm run build` → `npm start`  
-3. 确认 `/api/ready` = ready  
-4. 失败：停止应用 → 还原 DB 备份 → 切回上一 tag 构建产物 → `npm start` → 再验 ready  
-
-## 验证清单
-
-1. `/api/health` → 200 ok  
-2. `/api/ready` → 200 ready  
-3. `/login` 可访问；bootstrap ADMIN 可登录  
-4. Case list / detail 可加载  
-5. 错误 env / 不可写目录时 `npm start` 非零退出且 Next 未监听  
-6. `BETTER_AUTH_URL` 与浏览器 origin 一致  
+- `db:reset-demo`
+- Demo 口令 / placeholder secret
+- 多实例共写同一 SQLite 文件
+- 把 ephemeral 容器层当作唯一 backup 位置
 
 ## 相关文档
 
 - `docs/v1.12/PLAN.md`
-- `docs/v1.5/KNOWN_ENVIRONMENT_ISSUES.md` — Windows Prisma 本地已知问题（CI 为准）
+- `docs/v1.12/BACKUP_RESTORE.md`
+- `docs/v1.5/KNOWN_ENVIRONMENT_ISSUES.md`
