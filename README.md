@@ -2,8 +2,8 @@
 
 数据与网络安全联合研判及案件运营助手。
 
-当前稳定版本：**v1.8.0**（本地可运行的安全研判与案件运营 **MVP / Prototype**）。
-在身份认证、Case 合规知识、告警导入与 Investigation Workbench 之上，已具备 **关联历史案件**、**Historical Signals** 与 **Investigation Leads**（确定性只读辅助）。
+当前稳定版本：**v1.9.0**（本地可运行的安全研判与案件运营 **MVP / Prototype**）。
+在身份认证、Case 合规知识、告警导入与 Investigation Workbench 之上，已具备 **关联历史案件**、**Historical Signals**、**Investigation Leads**，以及 **Case Comparison Workspace** 与 **Analyst opt-in Checklist**（确定性辅助；非自动合并/非自动升风险）。
 不是 Production-ready 企业平台 / Enterprise IAM；**不是**法律意见或合规认证系统。
 
 ## 一、项目是什么
@@ -31,7 +31,9 @@
 - 数据 / 网络 / 身份联合辅助研判（含 Golden Case 规则基线）
 - Case Investigation Workbench（概览 / 下一步 / 证据与核查 / 人工研判）
 - 关联历史案件（确定性共同调查事实；30 天窗口 / 最多 5 条）
-- Historical Signals + Investigation Leads（重复事实汇总与建议核查；只读）
+- Historical Signals + Investigation Leads（重复事实汇总与建议核查）
+- Case Comparison Workspace（双案对比：共享/差异事实；历史研判只读参考）
+- Investigation Lead → Analyst opt-in Checklist（provenance / dedup / Audit）
 - 业务合理性核查（工单 / 负责人确认）
 - Evidence / Checklist / Timeline
 - 人工最终结论（HumanReview）
@@ -39,7 +41,7 @@
 - 操作审计、最近活动与交接说明
 - 报告草稿持久化与 DOCX 导出
 
-**v1.8 明确不做：** AI 关联、概率相关分、自动合并案件、自动提升当前风险。
+**v1.9 明确不做：** AI / 概率关联、自动合并案件、自动写入 Checklist、自动提升当前风险、攻击归因。
 
 ## 三、v1.2 新增
 

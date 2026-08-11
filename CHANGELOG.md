@@ -2,6 +2,32 @@
 
 本项目采用轻量变更记录。版本号遵循语义化约定；未打正式 tag 的条目以 `-rc` 标记。
 
+## v1.9.0 — 2026-08-11
+
+Theme: Comparative Investigation
+
+Added:
+- two-case Comparative Investigation workspace
+- deterministic shared/different fact comparison
+- historical/current judgment separation
+- Investigation Lead analyst opt-in
+- persisted Checklist provenance（`sourceKind=INVESTIGATION_LEAD`）
+- semantic dedup + Audit（复用既有 Checklist Semantic Command）
+
+Safety:
+- comparison is read-only
+- related ≠ same incident
+- leads require analyst opt-in
+- historical judgment/risk is not inherited
+- no automatic risk/status/HumanReview changes
+
+Deferred / Known Limitations:
+- Case merge / incident graph / attack chain / timeline merge / report comparison
+- MITRE ATT&CK / threat intelligence / IOC reputation
+- AI / LLM / embeddings / vector DB / probability scoring
+- automatic risk escalation / automatic checklist creation
+- assignment / owner / due date / notifications / SLA
+
 ## v1.8.0 — 2026-08-11
 
 Theme: Investigation Intelligence（历史关联 + 调查线索）

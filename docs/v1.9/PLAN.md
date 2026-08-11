@@ -21,6 +21,8 @@ Comparative Investigation
 - 可 complete / reopen / delete；accepted item 冻结
 - 不自动加入 Checklist；不改 risk / HumanReview / CaseStatus
 
-## M3 — Release
+## M3 — Release Readiness
 
-（后续）
+- Docs-only closeout：README / CHANGELOG / `RELEASE_ACCEPTANCE.md`
+- Promote `integration/v1.9` → `main`；annotated tag `v1.9.0`
+- No product feature work in M3
