@@ -325,12 +325,10 @@ describe("Security evidence actionId — regression", () => {
     const items = generateChecklist(analyzed.analysisResults);
     expect(items.some((i) => i.sourceKind === "SECURITY_VERIFICATION")).toBe(true);
     for (const item of items.filter((i) => i.sourceKind === "SECURITY_VERIFICATION")) {
-      expect(item.sourceRef?.suggestionKey).toMatch(
-        /^EVIDENCE:security:[^:]+:[^:]+$/,
-      );
-      expect(isLegacyIndexSecurityProvenance(item.sourceRef!.suggestionKey)).toBe(
-        false,
-      );
+      const suggestionKey = item.sourceRef?.suggestionKey;
+      expect(suggestionKey).toMatch(/^EVIDENCE:security:[^:]+:[^:]+$/);
+      expect(typeof suggestionKey).toBe("string");
+      expect(isLegacyIndexSecurityProvenance(suggestionKey as string)).toBe(false);
     }
   });
 

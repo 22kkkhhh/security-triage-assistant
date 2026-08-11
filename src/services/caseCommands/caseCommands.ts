@@ -458,6 +458,21 @@ export async function applyChecklistCommand(
         return { ok: true, alreadyApplied: true, case: existing, audit: null };
       }
     }
+    const leadKey = nextItem.sourceRef?.leadKey;
+    if (
+      nextItem.sourceKind === "INVESTIGATION_LEAD" &&
+      typeof leadKey === "string" &&
+      leadKey.length > 0
+    ) {
+      const dup = oldItems.find(
+        (item) =>
+          item.sourceKind === "INVESTIGATION_LEAD" &&
+          item.sourceRef?.leadKey === leadKey,
+      );
+      if (dup) {
+        return { ok: true, alreadyApplied: true, case: existing, audit: null };
+      }
+    }
     built = buildChecklistAddedAudit({
       itemId: nextItem.id,
       label: nextItem.label,
@@ -473,11 +488,15 @@ export async function applyChecklistCommand(
           ? {
               sourceKind: nextItem.sourceKind,
               suggestionKey: nextItem.sourceRef?.suggestionKey ?? null,
+              leadKey: nextItem.sourceRef?.leadKey ?? null,
+              leadCode: nextItem.sourceRef?.leadCode ?? null,
             }
           : {}),
       },
       metadata:
-        nextItem.sourceKind === "KNOWLEDGE_SUGGESTED" && nextItem.sourceRef
+        (nextItem.sourceKind === "KNOWLEDGE_SUGGESTED" ||
+          nextItem.sourceKind === "INVESTIGATION_LEAD") &&
+        nextItem.sourceRef
           ? {
               sourceKind: nextItem.sourceKind,
               sourceRef: nextItem.sourceRef,

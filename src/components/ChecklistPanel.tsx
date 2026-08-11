@@ -74,6 +74,13 @@ function ChecklistItemRow({
             <span className="rounded bg-teal-50 px-1.5 py-0.5 text-xs text-teal-800">
               合规建议
             </span>
+          ) : item.sourceKind === "INVESTIGATION_LEAD" ? (
+            <span
+              className="rounded bg-sky-50 px-1.5 py-0.5 text-xs text-sky-800"
+              data-testid="checklist-badge-investigation-lead"
+            >
+              历史线索
+            </span>
           ) : (
             <span className="rounded bg-purple-50 px-1.5 py-0.5 text-xs text-purple-700">
               人工新增

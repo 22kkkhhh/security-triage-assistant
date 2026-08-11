@@ -40,6 +40,13 @@ export function checklistAddSemanticIntent(
       sourceRef: item.sourceRef,
     };
   }
+  if (item.sourceKind === "INVESTIGATION_LEAD" && item.sourceRef) {
+    return {
+      ...intent,
+      sourceKind: "INVESTIGATION_LEAD",
+      sourceRef: item.sourceRef,
+    };
+  }
   return intent;
 }
 

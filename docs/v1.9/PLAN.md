@@ -14,7 +14,12 @@ Comparative Investigation
 
 ## M2 — Actionable Investigation Leads
 
-（后续）
+- Analyst opt-in：「加入核查清单」
+- Server 重算 intelligence 校验 leadCode；专用 Server Action
+- `origin=MANUAL` + `sourceKind=INVESTIGATION_LEAD` + leadKey provenance
+- Semantic dedup + operationId 幂等；复用 `applyChecklistCommand` / Audit
+- 可 complete / reopen / delete；accepted item 冻结
+- 不自动加入 Checklist；不改 risk / HumanReview / CaseStatus
 
 ## M3 — Release
 

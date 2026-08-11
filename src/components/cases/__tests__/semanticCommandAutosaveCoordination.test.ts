@@ -23,10 +23,11 @@ const SEMANTIC_ACTIONS = [
   "applyChecklistCommandAction",
   "updateHumanReviewAction",
   "addTimelineEventAction",
+  "addInvestigationLeadToChecklistAction",
 ] as const;
 
 describe("Semantic Command 与 Snapshot autosave 协调", () => {
-  it("五个语义命令都先 beginSemanticCommand 再发送", () => {
+  it("语义命令都先 beginSemanticCommand 再发送", () => {
     for (const action of SEMANTIC_ACTIONS) {
       const pattern = new RegExp(
         `const lease = await beginSemanticCommand\\(\\);[\\s\\S]{0,600}?${action}\\(`,

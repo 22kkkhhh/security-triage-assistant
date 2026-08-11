@@ -190,18 +190,32 @@ export interface Evidence {
 /** Checklist 来源标记（可选；存在 caseState JSON，无 Prisma 表变更） */
 export type ChecklistSourceKind =
   | "KNOWLEDGE_SUGGESTED"
-  | "SECURITY_VERIFICATION";
+  | "SECURITY_VERIFICATION"
+  | "INVESTIGATION_LEAD";
 
+/**
+ * Checklist provenance 引用（caseState JSON，无 Prisma migration）。
+ * Knowledge / Security 使用 suggestionKey 路径；Investigation Lead 使用 leadKey 路径。
+ * 字段均为可选以保持历史反序列化兼容。
+ */
 export type ChecklistSourceRef = {
-  /** CaseComplianceChecklistItem.key，如 CONTEXT:destinationRegion */
-  suggestionKey: string;
-  kind: "CONTEXT" | "EVIDENCE" | "CHECKLIST";
-  controlCodes: string[];
-  clauseRefs: Array<{
+  /** CaseComplianceChecklistItem.key / security suggestionKey */
+  suggestionKey?: string;
+  kind?: "CONTEXT" | "EVIDENCE" | "CHECKLIST";
+  controlCodes?: string[];
+  clauseRefs?: Array<{
     clauseKey: string;
     documentCanonicalCode: string;
   }>;
-  relevance: string;
+  relevance?: string;
+  /** INVESTIGATION_LEAD：稳定去重 key，如 INVESTIGATION_LEAD:VERIFY_RECURRING_ACCOUNT */
+  leadKey?: string;
+  /** INVESTIGATION_LEAD：稳定 lead code */
+  leadCode?: string;
+  /** 添加时固化的关联案件 id 快照 */
+  relatedCaseIds?: string[];
+  /** 添加时固化的 Historical Signal code 快照 */
+  signalCodes?: string[];
 };
 
 /** 人工核查清单项 */

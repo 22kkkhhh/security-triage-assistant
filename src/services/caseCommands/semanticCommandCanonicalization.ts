@@ -33,7 +33,8 @@ export type ChecklistAddSemanticIntent = {
   category: SecurityDomain;
   label: string;
   note?: string | null;
-  sourceKind?: "KNOWLEDGE_SUGGESTED";
+  /** 仅允许 Server 可信路径设置；generic browser parse 不得接受 INVESTIGATION_LEAD */
+  sourceKind?: "KNOWLEDGE_SUGGESTED" | "INVESTIGATION_LEAD";
   sourceRef?: ChecklistSourceRef;
 };
 
@@ -67,6 +68,17 @@ export function buildChecklistItemFromAddIntent(
     return {
       ...base,
       sourceKind: "KNOWLEDGE_SUGGESTED",
+      sourceRef: intent.sourceRef,
+    };
+  }
+  if (
+    intent.sourceKind === "INVESTIGATION_LEAD" &&
+    intent.sourceRef?.leadKey &&
+    intent.sourceRef.leadCode
+  ) {
+    return {
+      ...base,
+      sourceKind: "INVESTIGATION_LEAD",
       sourceRef: intent.sourceRef,
     };
   }

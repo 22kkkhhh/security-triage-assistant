@@ -27,9 +27,17 @@ import {
 export function RelatedCasesPanel({
   intelligence,
   currentCaseId,
+  canWriteChecklist = false,
+  acceptedLeadKeys = new Set<string>(),
+  pendingLeadKey = null,
+  onAddLeadToChecklist,
 }: {
   intelligence: InvestigationIntelligenceView;
   currentCaseId: string;
+  canWriteChecklist?: boolean;
+  acceptedLeadKeys?: ReadonlySet<string>;
+  pendingLeadKey?: string | null;
+  onAddLeadToChecklist?: (leadCode: string) => void;
 }) {
   const { relatedCases, relatedCaseCount, signals, leads } = intelligence;
   const relatedListId = "related-cases-list-anchor";
@@ -98,16 +106,44 @@ export function RelatedCasesPanel({
               <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 建议核查
               </h3>
-              <ul className="mt-1.5 space-y-1 text-sm text-neutral-800">
-                {leads.map((lead) => (
-                  <li
-                    key={lead.code}
-                    data-testid="investigation-lead-item"
-                    data-lead-code={lead.code}
-                  >
-                    · {formatInvestigationLead(lead.code)}
-                  </li>
-                ))}
+              <ul className="mt-1.5 space-y-2 text-sm text-neutral-800">
+                {leads.map((lead) => {
+                  const leadKey = `INVESTIGATION_LEAD:${lead.code}`;
+                  const accepted = acceptedLeadKeys.has(leadKey);
+                  const pending = pendingLeadKey === leadKey;
+                  return (
+                    <li
+                      key={lead.code}
+                      className="flex flex-wrap items-start justify-between gap-2"
+                      data-testid="investigation-lead-item"
+                      data-lead-code={lead.code}
+                    >
+                      <span>
+                        · {formatInvestigationLead(lead.code)}
+                      </span>
+                      {canWriteChecklist ? (
+                        accepted ? (
+                          <span
+                            className="shrink-0 text-xs font-medium text-emerald-700"
+                            data-testid="investigation-lead-added"
+                          >
+                            已加入核查清单
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="shrink-0 rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                            data-testid="investigation-lead-add-button"
+                            disabled={pending || Boolean(pendingLeadKey)}
+                            onClick={() => onAddLeadToChecklist?.(lead.code)}
+                          >
+                            {pending ? "加入中…" : "加入核查清单"}
+                          </button>
+                        )
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button

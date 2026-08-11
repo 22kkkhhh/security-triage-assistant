@@ -138,6 +138,7 @@ export function mergeChecklistOnRestore(
           item.label === fresh.label &&
           item.origin === "SYSTEM" &&
           item.sourceKind !== "KNOWLEDGE_SUGGESTED" &&
+          item.sourceKind !== "INVESTIGATION_LEAD" &&
           !seen.has(checklistMergeKey(item)),
       );
       if (byLabel) {
@@ -160,8 +161,11 @@ export function mergeChecklistOnRestore(
     const key = checklistMergeKey(item);
     if (seen.has(key)) continue;
     if (merged.some((m) => m.id === item.id)) continue;
-    // 合规建议项：即使 label 与系统项相同也必须保留
-    if (item.sourceKind === "KNOWLEDGE_SUGGESTED") {
+    // 合规建议 / 历史线索 opt-in：即使 label 与系统项相同也必须保留
+    if (
+      item.sourceKind === "KNOWLEDGE_SUGGESTED" ||
+      item.sourceKind === "INVESTIGATION_LEAD"
+    ) {
       merged.push(item);
       continue;
     }

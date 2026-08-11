@@ -10,6 +10,7 @@ import type {
   TimelineEvent,
 } from "@/domain/types";
 import {
+  addInvestigationLeadToChecklistAction,
   addTimelineEventAction,
   applyChecklistCommandAction,
   changeCaseStatusAction,
@@ -33,6 +34,13 @@ import {
   createChecklistItemFromComplianceSuggestion,
   hasSuggestionInChecklist,
 } from "@/services/checklist/fromComplianceSuggestion";
+import {
+  hasInvestigationLeadInChecklist,
+} from "@/services/checklist/fromInvestigationLead";
+import {
+  investigationLeadKey,
+  isInvestigationLeadCode,
+} from "@/services/checklist/investigationLeadCanonical";
 import { useCaseAutosave } from "@/hooks/useCaseAutosave";
 import { BusinessContextPanel } from "@/components/BusinessContextPanel";
 import { ChecklistPanel } from "@/components/ChecklistPanel";
@@ -153,6 +161,7 @@ export function PersistedCaseWorkbench({
   const [pendingSuggestionKey, setPendingSuggestionKey] = useState<
     string | null
   >(null);
+  const [pendingLeadKey, setPendingLeadKey] = useState<string | null>(null);
   /** 语义命令飞行中（与 Snapshot autosave 状态分离） */
   const [commandPending, setCommandPending] = useState(false);
   const activityPanelRef = useRef<CaseActivityPanelHandle>(null);
@@ -527,6 +536,61 @@ export function PersistedCaseWorkbench({
     return keys;
   }, [checklist]);
 
+  const acceptedLeadKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const item of checklist) {
+      const key = item.sourceRef?.leadKey;
+      if (item.sourceKind === "INVESTIGATION_LEAD" && key) {
+        keys.add(key);
+      }
+    }
+    return keys;
+  }, [checklist]);
+
+  const addInvestigationLeadToChecklist = (leadCode: string) => {
+    if (!isInvestigationLeadCode(leadCode)) return;
+    const leadKey = investigationLeadKey(leadCode);
+    if (hasInvestigationLeadInChecklist(checklist, leadKey)) return;
+    setPendingLeadKey(leadKey);
+    setCommandError(null);
+    setCommandPending(true);
+    const operationId = crypto.randomUUID();
+    void (async () => {
+      const lease = await beginSemanticCommand();
+      if (!lease.ok) {
+        setPendingLeadKey(null);
+        setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
+        setCommandPending(false);
+        return;
+      }
+      try {
+        const result = await addInvestigationLeadToChecklistAction(
+          initial.caseId,
+          leadCode,
+          operationId,
+          lease.baseUpdatedAt,
+        );
+        if (!result.ok) {
+          if (applyCommandStale(result)) return;
+          setCommandError(
+            actionErrorMessage(result, "加入核查清单失败，请重试。"),
+          );
+          return;
+        }
+        if (result.caseState?.checklist) {
+          setChecklistBase(result.caseState.checklist);
+        }
+        commitExternalSave(result.updatedAt);
+        mergeReturnedAudit(result.audit);
+        refreshComplianceAfterContextPersist();
+      } finally {
+        endSemanticCommand();
+        setPendingLeadKey(null);
+        setCommandPending(false);
+      }
+    })();
+  };
+
   /** M3C：Server Progress DTO → 展示模型（不做 Client 侧 OPEN/RESOLVED 推导） */
   const investigationProgressView = useMemo(
     () => toInvestigationProgressPanelView(investigationProgress),
@@ -688,6 +752,10 @@ export function PersistedCaseWorkbench({
       <RelatedCasesPanel
         intelligence={investigationIntelligence}
         currentCaseId={initial.caseId}
+        canWriteChecklist={capabilities.canWriteChecklist}
+        acceptedLeadKeys={acceptedLeadKeys}
+        pendingLeadKey={pendingLeadKey}
+        onAddLeadToChecklist={addInvestigationLeadToChecklist}
       />
 
       <details

@@ -252,11 +252,16 @@ function collectChecklistProgressItems(
       label: item.label,
       sourceRefs: [
         {
-          ref: item.sourceRef?.suggestionKey ?? `checklist:${item.id}`,
+          ref:
+            item.sourceRef?.leadKey ??
+            item.sourceRef?.suggestionKey ??
+            `checklist:${item.id}`,
           label:
             item.sourceKind === "KNOWLEDGE_SUGGESTED"
               ? "KNOWLEDGE_SUGGESTED"
-              : item.origin,
+              : item.sourceKind === "INVESTIGATION_LEAD"
+                ? "INVESTIGATION_LEAD"
+                : item.origin,
         },
       ],
       relatedRuleIds: item.relatedRuleId ? [item.relatedRuleId] : [],

@@ -32,6 +32,13 @@ import {
   requirePermission,
   toAuthActionFailure,
 } from "@/services/auth/requirePermission";
+import { analyzePersistedCase } from "@/services/analysis/analyzePersistedCase";
+import { buildInvestigationIntelligence } from "@/services/correlation/buildInvestigationIntelligence";
+import { toCurrentAnalysisHints } from "@/services/correlation/currentAnalysisHints";
+import { loadRelatedCasesForCase } from "@/services/correlation/loadRelatedCases";
+import { createChecklistItemFromInvestigationLead } from "@/services/checklist/fromInvestigationLead";
+import { isInvestigationLeadCode } from "@/services/checklist/investigationLeadCanonical";
+import { getCaseById } from "@/services/persistence/caseRepository";
 import {
   listCaseAuditLogs,
   type CaseAuditLogView,
@@ -159,7 +166,7 @@ function parseChecklistSourceRef(raw: unknown): ChecklistSourceRef | null {
     return null;
   }
   if (!Array.isArray(raw.clauseRefs)) return null;
-  const clauseRefs: ChecklistSourceRef["clauseRefs"] = [];
+  const clauseRefs: NonNullable<ChecklistSourceRef["clauseRefs"]> = [];
   for (const ref of raw.clauseRefs) {
     if (!isObject(ref)) return null;
     if (
@@ -585,4 +592,70 @@ export async function loadMoreCaseAuditLogsAction(
   } catch {
     return { ok: false, error: unknownActionErrorMessage(ACTIVITY_FALLBACK) };
   }
+}
+
+/**
+ * Investigation Lead → Checklist opt-in。
+ * Server 重新计算 intelligence 并校验 leadCode；不信任 Client provenance。
+ */
+export async function addInvestigationLeadToChecklistAction(
+  caseId: string,
+  leadCode: unknown,
+  operationId: unknown,
+  baseUpdatedAt: unknown,
+): Promise<SemanticCommandActionResult> {
+  let user;
+  try {
+    user = await requirePermission("CHECKLIST_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
+  if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
+  if (typeof leadCode !== "string" || !isInvestigationLeadCode(leadCode)) {
+    return { ok: false, error: "调查建议代码无效" };
+  }
+  if (typeof operationId !== "string" || !operationId.trim()) {
+    return { ok: false, error: "operationId 无效" };
+  }
+  const base = parseBaseUpdatedAt(baseUpdatedAt);
+  if (!base) return { ok: false, error: "baseUpdatedAt 无效" };
+
+  const record = await getCaseById(caseId.trim());
+  if (!record) return { ok: false, error: "案件不存在" };
+
+  const relatedCases = await loadRelatedCasesForCase(record);
+  const { analyzed } = analyzePersistedCase(record);
+  const intelligence = buildInvestigationIntelligence({
+    relatedCases,
+    currentAnalysis: toCurrentAnalysisHints(analyzed.analysisResults),
+  });
+
+  if (!intelligence.leads.some((lead) => lead.code === leadCode)) {
+    return { ok: false, error: "当前案件不存在该调查建议" };
+  }
+
+  const item = createChecklistItemFromInvestigationLead({
+    leadCode,
+    relatedCaseIds: intelligence.relatedCases.map((c) => c.caseId),
+    signals: intelligence.signals,
+  });
+
+  return toResult(
+    await applyChecklistCommand({
+      caseId: caseId.trim(),
+      action: "add",
+      itemId: item.id,
+      operationId: operationId.trim(),
+      baseUpdatedAt: base,
+      actor: userActor(user),
+      itemIntent: {
+        id: item.id,
+        category: item.category,
+        label: item.label,
+        note: null,
+        sourceKind: "INVESTIGATION_LEAD",
+        sourceRef: item.sourceRef,
+      },
+    }),
+  );
 }
