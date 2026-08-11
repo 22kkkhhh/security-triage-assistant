@@ -139,7 +139,8 @@ export function formatAuditChangesForDisplay(
       break;
     }
     case "CASE_ASSIGNED":
-    case "CASE_UNASSIGNED": {
+    case "CASE_UNASSIGNED":
+    case "CASE_DUE_DATE_CHANGED": {
       if (log.summary) lines.push(log.summary);
       break;
     }

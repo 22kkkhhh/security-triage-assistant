@@ -17,6 +17,12 @@ test.describe("Case Ownership & My Queue", () => {
 
     await page.goto(`/cases/${CASE_B_ID}`);
     await expect(page.getByTestId("case-ownership")).toBeVisible();
+
+    // 若被先前用例接手，先释放再验证未分配路径
+    const releaseFirst = page.getByTestId("case-ownership-release");
+    if (await releaseFirst.count()) {
+      await releaseFirst.click();
+    }
     await expect(page.getByTestId("case-ownership-label")).toContainText("未分配");
 
     await page.getByTestId("case-ownership-claim").click();

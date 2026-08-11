@@ -25,6 +25,8 @@ export interface RestoredWorkbenchView {
   updatedAt: string;
   /** 运营负责人（与 HumanReview reviewer 分离） */
   ownership: CaseOwnership;
+  /** 运营截止时间 ISO；null = 未设置 */
+  dueAt: string | null;
   /** 含持久化 businessContext / humanReview / timeline */
   draft: SecurityCaseDraft;
   /** 已与当前规则合并后的 checklist */
@@ -56,6 +58,7 @@ export function restoreWorkbenchFromAnalyzed(
     status: record.status,
     updatedAt: record.updatedAt,
     ownership: record.ownership,
+    dueAt: record.dueAt,
     caseState: record.caseState,
     draft,
     analyzed,
@@ -68,6 +71,7 @@ export function restoreWorkbenchFromState(input: {
   status: CaseStatus;
   updatedAt: string;
   ownership?: CaseOwnership;
+  dueAt?: string | null;
   caseState: PersistedCaseState;
   /** 已计算的分析结果；省略时现场 analyze 一次。 */
   draft?: SecurityCaseDraft;
@@ -88,6 +92,7 @@ export function restoreWorkbenchFromState(input: {
     status: input.status,
     updatedAt: input.updatedAt,
     ownership: input.ownership ?? emptyCaseOwnership(),
+    dueAt: input.dueAt ?? null,
     draft,
     initialChecklist,
     suggestedRiskLevel:

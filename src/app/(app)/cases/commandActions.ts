@@ -20,6 +20,7 @@ import {
   applyChecklistCommand,
   assignCaseCommand,
   changeCaseStatusCommand,
+  setCaseDueAtCommand,
   updateBusinessContextCommand,
   updateHumanReviewCommand,
   type BusinessContextSemanticPatch,
@@ -27,6 +28,7 @@ import {
   type ChecklistCommandAction,
   type TimelineEventSemanticIntent,
 } from "@/services/caseCommands";
+import { parseDueAtInput } from "@/domain/caseDueDate";
 import type { CaseOwnership } from "@/domain/caseOwnership";
 import { listEligibleAssignees } from "@/services/caseOwnership/eligibleAssignees";
 import type { CaseAssigneeSummary } from "@/domain/caseOwnership";
@@ -72,6 +74,8 @@ export type SemanticCommandActionResult =
       caseState: PersistedCaseState;
       /** 运营负责人（与 HumanReview reviewer 分离） */
       ownership: CaseOwnership;
+      /** 运营截止时间 ISO；null = 未设置 */
+      dueAt: string | null;
       /** 本次新产生或幂等命中的 Audit；无实际变化时为 null */
       audit: CaseAuditLogView | null;
     }
@@ -84,6 +88,7 @@ export type SemanticCommandActionResult =
       status?: CaseStatus;
       caseState?: PersistedCaseState;
       ownership?: CaseOwnership;
+      dueAt?: string | null;
     };
 
 const CHECKLIST_ACTIONS: ChecklistCommandAction[] = [
@@ -270,6 +275,7 @@ function toResult(
         status: result.case.status,
         caseState: result.case.caseState,
         ownership: result.case.ownership,
+        dueAt: result.case.dueAt,
       };
     }
     if (result.code === "FORBIDDEN") {
@@ -295,6 +301,7 @@ function toResult(
     status: result.case.status,
     caseState: result.case.caseState,
     ownership: result.case.ownership,
+    dueAt: result.case.dueAt,
     audit: result.audit,
   };
 }
@@ -356,6 +363,43 @@ export async function listEligibleAssigneesAction(): Promise<
   } catch {
     return { ok: false, error: COMMAND_FALLBACK };
   }
+}
+
+/** 设置 / 修改 / 清除案件运营截止时间（独立 semantic command） */
+export async function setCaseDueAtAction(
+  caseId: string,
+  dueAtIso: unknown,
+  operationId: unknown,
+  baseUpdatedAt: unknown,
+): Promise<SemanticCommandActionResult> {
+  let user;
+  try {
+    user = await requirePermission("CASE_DUE_DATE_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
+  if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
+  if (typeof operationId !== "string" || !operationId.trim()) {
+    return { ok: false, error: "operationId 无效" };
+  }
+  const base = parseBaseUpdatedAt(baseUpdatedAt);
+  if (!base) return { ok: false, error: "baseUpdatedAt 无效" };
+
+  const parsed = parseDueAtInput(dueAtIso);
+  if (parsed && typeof parsed === "object" && "error" in parsed) {
+    return { ok: false, error: parsed.error };
+  }
+
+  return toResult(
+    await setCaseDueAtCommand({
+      caseId,
+      dueAtIso: parsed as string | null,
+      operationId: operationId.trim(),
+      baseUpdatedAt: base,
+      actor: userActor(user),
+      actorRole: user.role,
+    }),
+  );
 }
 
 /** 状态变更：只发送 nextStatus，不构造任何 case state */

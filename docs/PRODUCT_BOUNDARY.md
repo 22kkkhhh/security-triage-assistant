@@ -112,7 +112,7 @@ Security Triage Assistant 用于解决上述问题。
 
 - Enterprise IAM / SSO / MFA / OIDC / LDAP / 多租户
 - Case ACL / 行级可见性隔离 / 自定义角色 / Permission Editor
-  （v1.11 起支持运营级 Case Ownership / My Queue；Ownership ≠ ACL）
+  （v1.11 起支持运营级 Case Ownership / My Queue 与运营截止时间；Ownership ≠ ACL；dueAt ≠ SLA / Priority Score）
 - SystemAuditLog / Login Audit / User Admin Audit
 - 用户物理删除 / impersonation / ban 产品状态机
 - username / email 修改；forgot-password；首次登录强制改密

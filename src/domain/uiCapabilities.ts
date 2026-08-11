@@ -14,6 +14,7 @@ export type CaseWorkbenchCapabilities = {
   canSnapshotWrite: boolean;
   canChangeStatus: boolean;
   canAssignCase: boolean;
+  canWriteDueDate: boolean;
   canWriteChecklist: boolean;
   canWriteBusinessContext: boolean;
   canWriteHumanReview: boolean;
@@ -47,6 +48,7 @@ export function buildCaseWorkbenchCapabilities(
     canSnapshotWrite: hasPermission(user, "CASE_SNAPSHOT_WRITE"),
     canChangeStatus: hasPermission(user, "CASE_STATUS_CHANGE"),
     canAssignCase: hasPermission(user, "CASE_ASSIGN"),
+    canWriteDueDate: hasPermission(user, "CASE_DUE_DATE_WRITE"),
     canWriteChecklist: hasPermission(user, "CHECKLIST_WRITE"),
     canWriteBusinessContext: hasPermission(user, "BUSINESS_CONTEXT_WRITE"),
     canWriteHumanReview: hasPermission(user, "HUMAN_REVIEW_WRITE"),

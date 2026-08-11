@@ -361,6 +361,7 @@ describe("Security evidence actionId — regression", () => {
         assignedAt: null,
         assignee: null,
       },
+      dueAt: null,
       caseState: {
         caseData: {
           name: analyzedB.name,

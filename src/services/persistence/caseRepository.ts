@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
+import {
+  dueSortBucket,
+  resolveOperationalDueState,
+} from "@/domain/caseDueDate";
 import type { CaseStatus, ReportData } from "@/domain/types";
 import {
   buildSystemsSearchText,
@@ -353,6 +357,52 @@ export async function assignCaseOwnershipIfVersionMatches(
 }
 
 /**
+ * 条件更新运营截止时间（不改 caseState / ownership）。
+ * 仅当 updatedAt 仍等于 expectedUpdatedAt；与 Audit 同事务提交。
+ */
+export async function setCaseDueAtIfVersionMatches(
+  id: string,
+  input: {
+    dueAt: Date | null;
+  },
+  expectedUpdatedAt: string,
+  client: CaseDbClient = prisma,
+): Promise<PersistedCase> {
+  const expected = new Date(expectedUpdatedAt);
+  if (!Number.isFinite(expected.getTime())) {
+    throw new Error("baseUpdatedAt 无效");
+  }
+
+  const existing = await client.caseRecord.findUnique({ where: { id } });
+  if (!existing) throw new Error(`案件不存在：${id}`);
+
+  const result = await client.caseRecord.updateMany({
+    where: {
+      id,
+      updatedAt: expected,
+    },
+    data: {
+      dueAt: input.dueAt,
+    },
+  });
+
+  if (result.count !== 1) {
+    const current = await getCaseById(id, client);
+    throw new StaleCaseStateError(
+      "案件已发生更新，已刷新到最新状态。",
+      current,
+    );
+  }
+
+  const row = await client.caseRecord.findUnique({
+    where: { id },
+    include: CASE_WITH_ASSIGNEE,
+  });
+  if (!row) throw new Error(`案件不存在：${id}`);
+  return rowToPersistedCase(row);
+}
+
+/**
  * Snapshot Autosave：仅应用 allowlisted CaseSnapshotPatch。
  * - 从 canonical case 合并，禁止客户端提交完整状态
  * - 空 patch / 无实际变化：NO-OP（不抬升 updatedAt）
@@ -520,7 +570,42 @@ export async function listCases(
     include: CASE_WITH_ASSIGNEE,
     orderBy: [{ lastActivityAt: "desc" }, { updatedAt: "desc" }],
   });
-  return rows.map(rowToListItem);
+  const items = rows.map(rowToListItem);
+  if (query.sort === "due") {
+    return sortCasesByDuePriority(items, query.now ?? new Date());
+  }
+  return items;
+}
+
+/** sort=due：确定性桶序（Server-side；不使用 risk/checklist 参与公式） */
+export function sortCasesByDuePriority(
+  items: CaseListItem[],
+  now: Date,
+): CaseListItem[] {
+  return [...items].sort((a, b) => {
+    const stateA = resolveOperationalDueState({
+      dueAt: a.dueAt,
+      status: a.status,
+      now,
+    });
+    const stateB = resolveOperationalDueState({
+      dueAt: b.dueAt,
+      status: b.status,
+      now,
+    });
+    const bucket = dueSortBucket(stateA) - dueSortBucket(stateB);
+    if (bucket !== 0) return bucket;
+
+    const dueA = a.dueAt ? new Date(a.dueAt).getTime() : Number.POSITIVE_INFINITY;
+    const dueB = b.dueAt ? new Date(b.dueAt).getTime() : Number.POSITIVE_INFINITY;
+    if (dueA !== dueB) return dueA - dueB;
+
+    const actA = new Date(a.lastActivityAt).getTime();
+    const actB = new Date(b.lastActivityAt).getTime();
+    if (actA !== actB) return actB - actA;
+
+    return a.caseNumber.localeCompare(b.caseNumber);
+  });
 }
 
 export async function listReportCases(): Promise<CaseListItem[]> {

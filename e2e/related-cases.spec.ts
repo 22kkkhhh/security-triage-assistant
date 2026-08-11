@@ -65,8 +65,8 @@ test("历史调查线索：Signals / Leads 可见，关联可点，风险与 Hum
   const suggestedAfter = (
     await page.getByTestId("suggested-assessment-bar").innerText()
   ).trim();
-  // innerText 空白可能随折叠/重排变化；比对时折叠空白
-  const collapseWs = (value: string) => value.replace(/\s+/g, " ").trim();
+  // innerText 空白可能随折叠/重排/块级节点拼接变化；比对时去掉全部空白
+  const collapseWs = (value: string) => value.replace(/\s+/g, "").trim();
   expect(collapseWs(suggestedAfter)).toBe(collapseWs(suggestedBefore));
   await expect(page.getByLabel("最终结论")).toHaveValue(conclusionBefore);
   await expect(page.getByLabel("人工风险等级")).toHaveValue(humanRiskBefore);

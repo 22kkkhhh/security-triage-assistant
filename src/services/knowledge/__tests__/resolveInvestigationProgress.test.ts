@@ -36,6 +36,7 @@ function toRecord(draft: SecurityCaseDraft) {
       assignedAt: null,
       assignee: null,
     },
+    dueAt: null,
     caseState: {
       caseData: {
         name: draft.name,

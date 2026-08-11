@@ -3,6 +3,7 @@ export {
   buildBusinessContextUpdatedAudit,
   buildCaseAssignedAudit,
   buildCaseCreatedAudit,
+  buildCaseDueDateChangedAudit,
   buildCaseUnassignedAudit,
   buildChecklistAddedAudit,
   buildChecklistCompletedAudit,

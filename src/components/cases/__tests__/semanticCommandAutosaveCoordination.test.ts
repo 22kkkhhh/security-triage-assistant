@@ -21,6 +21,7 @@ const SEMANTIC_ACTIONS = [
   "updateBusinessContextAction",
   "changeCaseStatusAction",
   "assignCaseAction",
+  "setCaseDueAtAction",
   "applyChecklistCommandAction",
   "updateHumanReviewAction",
   "addTimelineEventAction",

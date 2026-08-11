@@ -54,6 +54,7 @@ export type CaseRecordMinAggregateOutputType = {
   lastActivityAt: Date | null
   assignedToUserId: string | null
   assignedAt: Date | null
+  dueAt: Date | null
 }
 
 export type CaseRecordMaxAggregateOutputType = {
@@ -76,6 +77,7 @@ export type CaseRecordMaxAggregateOutputType = {
   lastActivityAt: Date | null
   assignedToUserId: string | null
   assignedAt: Date | null
+  dueAt: Date | null
 }
 
 export type CaseRecordCountAggregateOutputType = {
@@ -100,6 +102,7 @@ export type CaseRecordCountAggregateOutputType = {
   lastActivityAt: number
   assignedToUserId: number
   assignedAt: number
+  dueAt: number
   _all: number
 }
 
@@ -132,6 +135,7 @@ export type CaseRecordMinAggregateInputType = {
   lastActivityAt?: true
   assignedToUserId?: true
   assignedAt?: true
+  dueAt?: true
 }
 
 export type CaseRecordMaxAggregateInputType = {
@@ -154,6 +158,7 @@ export type CaseRecordMaxAggregateInputType = {
   lastActivityAt?: true
   assignedToUserId?: true
   assignedAt?: true
+  dueAt?: true
 }
 
 export type CaseRecordCountAggregateInputType = {
@@ -178,6 +183,7 @@ export type CaseRecordCountAggregateInputType = {
   lastActivityAt?: true
   assignedToUserId?: true
   assignedAt?: true
+  dueAt?: true
   _all?: true
 }
 
@@ -289,6 +295,7 @@ export type CaseRecordGroupByOutputType = {
   lastActivityAt: Date
   assignedToUserId: string | null
   assignedAt: Date | null
+  dueAt: Date | null
   _count: CaseRecordCountAggregateOutputType | null
   _avg: CaseRecordAvgAggregateOutputType | null
   _sum: CaseRecordSumAggregateOutputType | null
@@ -336,6 +343,7 @@ export type CaseRecordWhereInput = {
   lastActivityAt?: Prisma.DateTimeFilter<"CaseRecord"> | Date | string
   assignedToUserId?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
   assignedAt?: Prisma.DateTimeNullableFilter<"CaseRecord"> | Date | string | null
+  dueAt?: Prisma.DateTimeNullableFilter<"CaseRecord"> | Date | string | null
   assignedTo?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   auditLogs?: Prisma.CaseAuditLogListRelationFilter
 }
@@ -362,6 +370,7 @@ export type CaseRecordOrderByWithRelationInput = {
   lastActivityAt?: Prisma.SortOrder
   assignedToUserId?: Prisma.SortOrderInput | Prisma.SortOrder
   assignedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  dueAt?: Prisma.SortOrderInput | Prisma.SortOrder
   assignedTo?: Prisma.UserOrderByWithRelationInput
   auditLogs?: Prisma.CaseAuditLogOrderByRelationAggregateInput
 }
@@ -391,6 +400,7 @@ export type CaseRecordWhereUniqueInput = Prisma.AtLeast<{
   lastActivityAt?: Prisma.DateTimeFilter<"CaseRecord"> | Date | string
   assignedToUserId?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
   assignedAt?: Prisma.DateTimeNullableFilter<"CaseRecord"> | Date | string | null
+  dueAt?: Prisma.DateTimeNullableFilter<"CaseRecord"> | Date | string | null
   assignedTo?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   auditLogs?: Prisma.CaseAuditLogListRelationFilter
 }, "id" | "caseNumber">
@@ -417,6 +427,7 @@ export type CaseRecordOrderByWithAggregationInput = {
   lastActivityAt?: Prisma.SortOrder
   assignedToUserId?: Prisma.SortOrderInput | Prisma.SortOrder
   assignedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  dueAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.CaseRecordCountOrderByAggregateInput
   _avg?: Prisma.CaseRecordAvgOrderByAggregateInput
   _max?: Prisma.CaseRecordMaxOrderByAggregateInput
@@ -449,6 +460,7 @@ export type CaseRecordScalarWhereWithAggregatesInput = {
   lastActivityAt?: Prisma.DateTimeWithAggregatesFilter<"CaseRecord"> | Date | string
   assignedToUserId?: Prisma.StringNullableWithAggregatesFilter<"CaseRecord"> | string | null
   assignedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"CaseRecord"> | Date | string | null
+  dueAt?: Prisma.DateTimeNullableWithAggregatesFilter<"CaseRecord"> | Date | string | null
 }
 
 export type CaseRecordCreateInput = {
@@ -472,6 +484,7 @@ export type CaseRecordCreateInput = {
   closedAt?: Date | string | null
   lastActivityAt?: Date | string
   assignedAt?: Date | string | null
+  dueAt?: Date | string | null
   assignedTo?: Prisma.UserCreateNestedOneWithoutAssignedCasesInput
   auditLogs?: Prisma.CaseAuditLogCreateNestedManyWithoutCaseInput
 }
@@ -498,6 +511,7 @@ export type CaseRecordUncheckedCreateInput = {
   lastActivityAt?: Date | string
   assignedToUserId?: string | null
   assignedAt?: Date | string | null
+  dueAt?: Date | string | null
   auditLogs?: Prisma.CaseAuditLogUncheckedCreateNestedManyWithoutCaseInput
 }
 
@@ -522,6 +536,7 @@ export type CaseRecordUpdateInput = {
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastActivityAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   assignedTo?: Prisma.UserUpdateOneWithoutAssignedCasesNestedInput
   auditLogs?: Prisma.CaseAuditLogUpdateManyWithoutCaseNestedInput
 }
@@ -548,6 +563,7 @@ export type CaseRecordUncheckedUpdateInput = {
   lastActivityAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedToUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   auditLogs?: Prisma.CaseAuditLogUncheckedUpdateManyWithoutCaseNestedInput
 }
 
@@ -573,6 +589,7 @@ export type CaseRecordCreateManyInput = {
   lastActivityAt?: Date | string
   assignedToUserId?: string | null
   assignedAt?: Date | string | null
+  dueAt?: Date | string | null
 }
 
 export type CaseRecordUpdateManyMutationInput = {
@@ -596,6 +613,7 @@ export type CaseRecordUpdateManyMutationInput = {
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastActivityAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type CaseRecordUncheckedUpdateManyInput = {
@@ -620,6 +638,7 @@ export type CaseRecordUncheckedUpdateManyInput = {
   lastActivityAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedToUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type CaseRecordCountOrderByAggregateInput = {
@@ -644,6 +663,7 @@ export type CaseRecordCountOrderByAggregateInput = {
   lastActivityAt?: Prisma.SortOrder
   assignedToUserId?: Prisma.SortOrder
   assignedAt?: Prisma.SortOrder
+  dueAt?: Prisma.SortOrder
 }
 
 export type CaseRecordAvgOrderByAggregateInput = {
@@ -670,6 +690,7 @@ export type CaseRecordMaxOrderByAggregateInput = {
   lastActivityAt?: Prisma.SortOrder
   assignedToUserId?: Prisma.SortOrder
   assignedAt?: Prisma.SortOrder
+  dueAt?: Prisma.SortOrder
 }
 
 export type CaseRecordMinOrderByAggregateInput = {
@@ -692,6 +713,7 @@ export type CaseRecordMinOrderByAggregateInput = {
   lastActivityAt?: Prisma.SortOrder
   assignedToUserId?: Prisma.SortOrder
   assignedAt?: Prisma.SortOrder
+  dueAt?: Prisma.SortOrder
 }
 
 export type CaseRecordSumOrderByAggregateInput = {
@@ -818,6 +840,7 @@ export type CaseRecordCreateWithoutAuditLogsInput = {
   closedAt?: Date | string | null
   lastActivityAt?: Date | string
   assignedAt?: Date | string | null
+  dueAt?: Date | string | null
   assignedTo?: Prisma.UserCreateNestedOneWithoutAssignedCasesInput
 }
 
@@ -843,6 +866,7 @@ export type CaseRecordUncheckedCreateWithoutAuditLogsInput = {
   lastActivityAt?: Date | string
   assignedToUserId?: string | null
   assignedAt?: Date | string | null
+  dueAt?: Date | string | null
 }
 
 export type CaseRecordCreateOrConnectWithoutAuditLogsInput = {
@@ -882,6 +906,7 @@ export type CaseRecordUpdateWithoutAuditLogsInput = {
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastActivityAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   assignedTo?: Prisma.UserUpdateOneWithoutAssignedCasesNestedInput
 }
 
@@ -907,6 +932,7 @@ export type CaseRecordUncheckedUpdateWithoutAuditLogsInput = {
   lastActivityAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedToUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type CaseRecordCreateWithoutAssignedToInput = {
@@ -930,6 +956,7 @@ export type CaseRecordCreateWithoutAssignedToInput = {
   closedAt?: Date | string | null
   lastActivityAt?: Date | string
   assignedAt?: Date | string | null
+  dueAt?: Date | string | null
   auditLogs?: Prisma.CaseAuditLogCreateNestedManyWithoutCaseInput
 }
 
@@ -954,6 +981,7 @@ export type CaseRecordUncheckedCreateWithoutAssignedToInput = {
   closedAt?: Date | string | null
   lastActivityAt?: Date | string
   assignedAt?: Date | string | null
+  dueAt?: Date | string | null
   auditLogs?: Prisma.CaseAuditLogUncheckedCreateNestedManyWithoutCaseInput
 }
 
@@ -1007,6 +1035,7 @@ export type CaseRecordScalarWhereInput = {
   lastActivityAt?: Prisma.DateTimeFilter<"CaseRecord"> | Date | string
   assignedToUserId?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
   assignedAt?: Prisma.DateTimeNullableFilter<"CaseRecord"> | Date | string | null
+  dueAt?: Prisma.DateTimeNullableFilter<"CaseRecord"> | Date | string | null
 }
 
 export type CaseRecordCreateManyAssignedToInput = {
@@ -1030,6 +1059,7 @@ export type CaseRecordCreateManyAssignedToInput = {
   closedAt?: Date | string | null
   lastActivityAt?: Date | string
   assignedAt?: Date | string | null
+  dueAt?: Date | string | null
 }
 
 export type CaseRecordUpdateWithoutAssignedToInput = {
@@ -1053,6 +1083,7 @@ export type CaseRecordUpdateWithoutAssignedToInput = {
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastActivityAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   auditLogs?: Prisma.CaseAuditLogUpdateManyWithoutCaseNestedInput
 }
 
@@ -1077,6 +1108,7 @@ export type CaseRecordUncheckedUpdateWithoutAssignedToInput = {
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastActivityAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   auditLogs?: Prisma.CaseAuditLogUncheckedUpdateManyWithoutCaseNestedInput
 }
 
@@ -1101,6 +1133,7 @@ export type CaseRecordUncheckedUpdateManyWithoutAssignedToInput = {
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastActivityAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 
@@ -1156,6 +1189,7 @@ export type CaseRecordSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   lastActivityAt?: boolean
   assignedToUserId?: boolean
   assignedAt?: boolean
+  dueAt?: boolean
   assignedTo?: boolean | Prisma.CaseRecord$assignedToArgs<ExtArgs>
   auditLogs?: boolean | Prisma.CaseRecord$auditLogsArgs<ExtArgs>
   _count?: boolean | Prisma.CaseRecordCountOutputTypeDefaultArgs<ExtArgs>
@@ -1183,6 +1217,7 @@ export type CaseRecordSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   lastActivityAt?: boolean
   assignedToUserId?: boolean
   assignedAt?: boolean
+  dueAt?: boolean
   assignedTo?: boolean | Prisma.CaseRecord$assignedToArgs<ExtArgs>
 }, ExtArgs["result"]["caseRecord"]>
 
@@ -1208,6 +1243,7 @@ export type CaseRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   lastActivityAt?: boolean
   assignedToUserId?: boolean
   assignedAt?: boolean
+  dueAt?: boolean
   assignedTo?: boolean | Prisma.CaseRecord$assignedToArgs<ExtArgs>
 }, ExtArgs["result"]["caseRecord"]>
 
@@ -1233,9 +1269,10 @@ export type CaseRecordSelectScalar = {
   lastActivityAt?: boolean
   assignedToUserId?: boolean
   assignedAt?: boolean
+  dueAt?: boolean
 }
 
-export type CaseRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "caseNumber" | "title" | "status" | "suggestedRiskLevel" | "humanRiskLevel" | "humanConclusion" | "username" | "sourceIp" | "systemsSearchText" | "pendingChecklistCount" | "hasReport" | "reportUpdatedAt" | "caseState" | "reportDraft" | "createdAt" | "updatedAt" | "closedAt" | "lastActivityAt" | "assignedToUserId" | "assignedAt", ExtArgs["result"]["caseRecord"]>
+export type CaseRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "caseNumber" | "title" | "status" | "suggestedRiskLevel" | "humanRiskLevel" | "humanConclusion" | "username" | "sourceIp" | "systemsSearchText" | "pendingChecklistCount" | "hasReport" | "reportUpdatedAt" | "caseState" | "reportDraft" | "createdAt" | "updatedAt" | "closedAt" | "lastActivityAt" | "assignedToUserId" | "assignedAt" | "dueAt", ExtArgs["result"]["caseRecord"]>
 export type CaseRecordInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   assignedTo?: boolean | Prisma.CaseRecord$assignedToArgs<ExtArgs>
   auditLogs?: boolean | Prisma.CaseRecord$auditLogsArgs<ExtArgs>
@@ -1303,6 +1340,10 @@ export type $CaseRecordPayload<ExtArgs extends runtime.Types.Extensions.Internal
      */
     assignedToUserId: string | null
     assignedAt: Date | null
+    /**
+     * 运营截止时间（非安全事件时间 / 非 SLA）；null = 未设置
+     */
+    dueAt: Date | null
   }, ExtArgs["result"]["caseRecord"]>
   composites: {}
 }
@@ -1749,6 +1790,7 @@ export interface CaseRecordFieldRefs {
   readonly lastActivityAt: Prisma.FieldRef<"CaseRecord", 'DateTime'>
   readonly assignedToUserId: Prisma.FieldRef<"CaseRecord", 'String'>
   readonly assignedAt: Prisma.FieldRef<"CaseRecord", 'DateTime'>
+  readonly dueAt: Prisma.FieldRef<"CaseRecord", 'DateTime'>
 }
     
 

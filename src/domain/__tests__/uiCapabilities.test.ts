@@ -26,6 +26,7 @@ describe("UI capabilities from Permission SoT", () => {
       canSnapshotWrite: false,
       canChangeStatus: false,
       canAssignCase: false,
+      canWriteDueDate: false,
       canWriteChecklist: false,
       canWriteBusinessContext: false,
       canWriteHumanReview: false,
@@ -52,6 +53,7 @@ describe("UI capabilities from Permission SoT", () => {
     expect(caseCaps.canSnapshotWrite).toBe(true);
     expect(caseCaps.canChangeStatus).toBe(true);
     expect(caseCaps.canAssignCase).toBe(true);
+    expect(caseCaps.canWriteDueDate).toBe(true);
     expect(caseCaps.canWriteChecklist).toBe(true);
     expect(caseCaps.canWriteBusinessContext).toBe(true);
     expect(caseCaps.canWriteHumanReview).toBe(true);

@@ -1373,7 +1373,8 @@ export const CaseRecordScalarFieldEnum = {
   closedAt: 'closedAt',
   lastActivityAt: 'lastActivityAt',
   assignedToUserId: 'assignedToUserId',
-  assignedAt: 'assignedAt'
+  assignedAt: 'assignedAt',
+  dueAt: 'dueAt'
 } as const
 
 export type CaseRecordScalarFieldEnum = (typeof CaseRecordScalarFieldEnum)[keyof typeof CaseRecordScalarFieldEnum]

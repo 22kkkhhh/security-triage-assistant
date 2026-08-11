@@ -15,6 +15,11 @@ import { PageFrame } from "@/components/layout/PageFrame";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ForbiddenError, hasPermission } from "@/domain/auth";
 import {
+  formatOperationalDueLabel,
+  isCaseQueueSort,
+  type CaseQueueSort,
+} from "@/domain/caseDueDate";
+import {
   formatCaseAssigneeLabel,
   isCaseQueueScope,
   type CaseQueueScope,
@@ -30,18 +35,22 @@ type SearchParams = Promise<{
   status?: string;
   risk?: string;
   scope?: string;
+  sort?: string;
 }>;
 
 const statusOptions = Object.entries(caseStatusLabels) as [CaseStatus, string][];
 const riskOptions = Object.entries(riskLevelLabels) as [RiskLevel, string][];
 
-function scopeHref(scope: CaseQueueScope, params: {
+function queueHref(params: {
+  scope: CaseQueueScope;
+  sort: CaseQueueSort;
   q: string;
   status?: CaseStatus;
   risk?: RiskLevel;
 }): string {
   const sp = new URLSearchParams();
-  if (scope !== "all") sp.set("scope", scope);
+  if (params.scope !== "all") sp.set("scope", params.scope);
+  if (params.sort !== "recent") sp.set("sort", params.sort);
   if (params.q) sp.set("q", params.q);
   if (params.status) sp.set("status", params.status);
   if (params.risk) sp.set("risk", params.risk);
@@ -51,7 +60,7 @@ function scopeHref(scope: CaseQueueScope, params: {
 
 /**
  * 案件队列（Server Component）。
- * 搜索 / 筛选 / scope 通过 GET searchParams 传给 listCases，不在客户端过滤。
+ * 搜索 / 筛选 / scope / sort 通过 GET searchParams 传给 listCases，不在客户端过滤。
  * Ownership ≠ ACL：CASE_READ 仍可查看全部可见案件。
  */
 export default async function CasesPage({
@@ -79,7 +88,9 @@ export default async function CasesPage({
   /** 无 CASE_ASSIGN 时不展示「我的/未分配」（避免永远为空的无效 scope） */
   const canUseQueueScopes = hasPermission(user, "CASE_ASSIGN");
   const scope: CaseQueueScope = canUseQueueScopes ? requestedScope : "all";
+  const sort: CaseQueueSort = isCaseQueueSort(params.sort) ? params.sort : "recent";
   const { canCreateCase } = buildNavigationCapabilities(user);
+  const now = new Date();
 
   const cases = await listCases({
     search: q || undefined,
@@ -87,6 +98,8 @@ export default async function CasesPage({
     riskLevel: risk,
     scope,
     trustedCurrentUserId: scope === "mine" ? user.id : undefined,
+    sort,
+    now,
   });
 
   const emptyMessage =
@@ -97,6 +110,8 @@ export default async function CasesPage({
         : canCreateCase
           ? "创建第一个研判案件后，可在这里继续处理。"
           : "当前账号为只读访问，暂无可见案件。";
+
+  const filterBase = { scope, sort, q, status, risk };
 
   return (
     <PageFrame width="normal">
@@ -133,7 +148,7 @@ export default async function CasesPage({
             return (
               <Link
                 key={value}
-                href={scopeHref(value, { q, status, risk })}
+                href={queueHref({ ...filterBase, scope: value })}
                 data-testid={`case-queue-scope-${value}`}
                 className={
                   active
@@ -148,6 +163,35 @@ export default async function CasesPage({
         </nav>
       ) : null}
 
+      <nav
+        className="mb-3 flex gap-1 overflow-x-auto pb-1"
+        aria-label="案件队列排序"
+        data-testid="case-queue-sorts"
+      >
+        {(
+          [
+            ["recent", "最近活动"],
+            ["due", "截止优先"],
+          ] as const
+        ).map(([value, label]) => {
+          const active = sort === value;
+          return (
+            <Link
+              key={value}
+              href={queueHref({ ...filterBase, sort: value })}
+              data-testid={`case-queue-sort-${value}`}
+              className={
+                active
+                  ? "shrink-0 rounded border border-slate-700 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-900"
+                  : "shrink-0 rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+              }
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+
       <form
         method="get"
         className="flex flex-col gap-3 border-b border-neutral-200 pb-4 sm:flex-row sm:flex-wrap sm:items-end"
@@ -155,6 +199,9 @@ export default async function CasesPage({
       >
         {scope !== "all" ? (
           <input type="hidden" name="scope" value={scope} />
+        ) : null}
+        {sort !== "recent" ? (
+          <input type="hidden" name="sort" value={sort} />
         ) : null}
         <label className="min-w-0 flex-1 text-sm sm:min-w-[240px]">
           <span className="text-xs font-medium text-neutral-600">搜索</span>
@@ -224,7 +271,7 @@ export default async function CasesPage({
                   <th className="px-4 py-3">案件</th>
                   <th className="px-4 py-3">风险</th>
                   <th className="px-4 py-3">状态</th>
-                  <th className="px-4 py-3">待核查</th>
+                  <th className="px-4 py-3">处理</th>
                   <th className="px-4 py-3">最近活动</th>
                 </tr>
               </thead>
@@ -237,6 +284,11 @@ export default async function CasesPage({
                   const systems = displaySystems(item.systemsSearchText);
                   const ownerLabel = formatCaseAssigneeLabel(item.ownership.assignee, {
                     currentUserId: user.id,
+                  });
+                  const dueLabel = formatOperationalDueLabel({
+                    dueAt: item.dueAt,
+                    status: item.status,
+                    now,
                   });
                   const pending =
                     item.pendingChecklistCount > 0
@@ -267,7 +319,6 @@ export default async function CasesPage({
                             data-testid="case-list-owner"
                           >
                             负责人：{ownerLabel}
-                            {pending ? ` · ${pending}` : ""}
                           </span>
                           {secondary ? (
                             <span className="mt-0.5 block truncate text-xs text-neutral-500">
@@ -292,10 +343,19 @@ export default async function CasesPage({
                           {displayCaseStatus(item.status)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 tabular-nums text-neutral-700">
-                        {item.pendingChecklistCount > 0
-                          ? `${item.pendingChecklistCount} 待核查`
-                          : "—"}
+                      <td
+                        className="px-4 py-3 text-neutral-700"
+                        data-testid="case-list-handling"
+                      >
+                        <div className="tabular-nums text-xs">
+                          {pending ?? "无待核查"}
+                        </div>
+                        <div
+                          className="mt-0.5 text-xs text-neutral-600"
+                          data-testid="case-list-due"
+                        >
+                          {dueLabel}
+                        </div>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-600">
                         {displayUpdatedAt(item.lastActivityAt)}
@@ -320,9 +380,18 @@ export default async function CasesPage({
               const ownerLabel = formatCaseAssigneeLabel(item.ownership.assignee, {
                 currentUserId: user.id,
               });
+              const dueLabel = formatOperationalDueLabel({
+                dueAt: item.dueAt,
+                status: item.status,
+                now,
+              });
               const secondary = [item.username, systems]
                 .filter((part) => part && part !== "—")
                 .join(" · ");
+              const pendingText =
+                item.pendingChecklistCount > 0
+                  ? `${item.pendingChecklistCount} 待核查`
+                  : "无待核查";
               return (
                 <li key={item.id}>
                   <Link
@@ -356,12 +425,13 @@ export default async function CasesPage({
                     >
                       负责人：{ownerLabel}
                     </div>
-                    <div className="mt-0.5 text-xs text-neutral-500">
-                      {item.pendingChecklistCount > 0
-                        ? `${item.pendingChecklistCount} 待核查`
-                        : "无待核查"}
+                    <div
+                      className="mt-0.5 text-xs text-neutral-500"
+                      data-testid="case-list-handling"
+                    >
+                      {pendingText}
                       {" · "}
-                      最近 {displayUpdatedAt(item.lastActivityAt)}
+                      <span data-testid="case-list-due">{dueLabel}</span>
                     </div>
                     {secondary ? (
                       <div className="mt-0.5 truncate text-xs text-neutral-500">

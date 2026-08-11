@@ -219,6 +219,7 @@ describe("Investigation Context Catalog", () => {
         assignedAt: null,
         assignee: null,
       },
+      dueAt: null,
       caseState: {
         caseData: {
           name: caseB.name,

@@ -15,6 +15,7 @@ import {
   applyChecklistCommandAction,
   assignCaseAction,
   changeCaseStatusAction,
+  setCaseDueAtAction,
   updateBusinessContextAction,
   updateHumanReviewAction,
 } from "@/app/(app)/cases/commandActions";
@@ -176,6 +177,7 @@ export function PersistedCaseWorkbench({
 
   const [status, setStatus] = useState<CaseStatus>(initial.status);
   const [ownership, setOwnership] = useState<CaseOwnership>(initial.ownership);
+  const [dueAt, setDueAt] = useState<string | null>(initial.dueAt);
   const [businessContext, setBusinessContext] = useState<BusinessContext>(
     initial.draft.businessContext,
   );
@@ -233,6 +235,7 @@ export function PersistedCaseWorkbench({
         timeline: TimelineEvent[];
       };
       ownership?: CaseOwnership;
+      dueAt?: string | null;
     }) => {
       setStatus(payload.status);
       setBusinessContext(payload.caseState.businessContext);
@@ -240,6 +243,7 @@ export function PersistedCaseWorkbench({
       setChecklistBase(payload.caseState.checklist);
       setTimeline(payload.caseState.timeline);
       if (payload.ownership) setOwnership(payload.ownership);
+      if (payload.dueAt !== undefined) setDueAt(payload.dueAt);
     },
     [],
   );
@@ -306,6 +310,7 @@ export function PersistedCaseWorkbench({
       status: result.status,
       caseState: result.caseState,
       ownership: result.ownership,
+      dueAt: result.dueAt,
     });
     commitExternalSave(result.updatedAt);
     setStaleNotice("案件已发生更新，已刷新到最新状态。");
@@ -513,6 +518,47 @@ export function PersistedCaseWorkbench({
           return;
         }
         setOwnership(result.ownership);
+        if (result.dueAt !== undefined) setDueAt(result.dueAt);
+        commitExternalSave(result.updatedAt);
+        mergeReturnedAudit(result.audit);
+      } finally {
+        endSemanticCommand();
+        setCommandPending(false);
+      }
+    })();
+  };
+
+  const handleSetDueAt = (nextDueAt: string | null) => {
+    if (!capabilities.canWriteDueDate) return;
+    if (dueAt === nextDueAt) return;
+    const prev = dueAt;
+    const operationId = crypto.randomUUID();
+    setCommandError(null);
+    setCommandPending(true);
+    void (async () => {
+      const lease = await beginSemanticCommand();
+      if (!lease.ok) {
+        setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
+        setCommandPending(false);
+        return;
+      }
+      try {
+        const result = await setCaseDueAtAction(
+          initial.caseId,
+          nextDueAt,
+          operationId,
+          lease.baseUpdatedAt,
+        );
+        if (!result.ok) {
+          if (applyCommandStale(result)) return;
+          setDueAt(prev);
+          setCommandError(
+            actionErrorMessage(result, "截止时间更新失败，请重试。"),
+          );
+          return;
+        }
+        setDueAt(result.dueAt);
+        if (result.ownership) setOwnership(result.ownership);
         commitExternalSave(result.updatedAt);
         mergeReturnedAudit(result.audit);
       } finally {
@@ -775,11 +821,14 @@ export function PersistedCaseWorkbench({
         canChangeStatus={capabilities.canChangeStatus}
         readOnly={readOnly}
         ownership={ownership}
+        dueAt={dueAt}
         currentUserId={currentUserId}
         currentUserRole={currentUserRole}
         canAssignCase={capabilities.canAssignCase}
+        canWriteDueDate={capabilities.canWriteDueDate}
         eligibleAssignees={eligibleAssignees}
         onAssign={handleAssign}
+        onSetDueAt={handleSetDueAt}
         onStatusChange={handleStatusChange}
         onRetry={() => {
           setNavigationError(null);

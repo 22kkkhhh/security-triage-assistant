@@ -9,6 +9,7 @@ import type {
 import { caseStatusLabels, riskLevelLabels } from "@/domain/labels";
 import type { CaseStatus } from "@/domain/types";
 import { statusBadgeClass } from "@/components/cases/caseDisplay";
+import { CaseDueDateControls } from "@/components/cases/CaseDueDateControls";
 import { CaseOwnershipControls } from "@/components/cases/CaseOwnershipControls";
 import type { AutosaveState } from "@/hooks/autosaveState";
 import type { RiskLevel } from "@/domain/types";
@@ -83,8 +84,11 @@ export function CaseHeader({
   currentUserId,
   currentUserRole,
   canAssignCase,
+  canWriteDueDate,
+  dueAt,
   eligibleAssignees = [],
   onAssign,
+  onSetDueAt,
   onStatusChange,
   onRetry,
   onBack,
@@ -100,11 +104,14 @@ export function CaseHeader({
   canChangeStatus: boolean;
   readOnly?: boolean;
   ownership: CaseOwnership;
+  dueAt: string | null;
   currentUserId: string;
   currentUserRole: UserRole;
   canAssignCase: boolean;
+  canWriteDueDate: boolean;
   eligibleAssignees?: CaseAssigneeSummary[];
   onAssign: (targetUserId: string | null) => void;
+  onSetDueAt: (dueAtIso: string | null) => void;
   onStatusChange: (status: CaseStatus) => void;
   onRetry: () => void;
   onBack: () => void;
@@ -194,15 +201,30 @@ export function CaseHeader({
         </div>
       </div>
 
-      <CaseOwnershipControls
-        ownership={ownership}
-        currentUserId={currentUserId}
-        currentUserRole={currentUserRole}
-        canAssign={canAssignCase}
-        commandPending={commandPending}
-        eligibleAssignees={eligibleAssignees}
-        onAssign={onAssign}
-      />
+      <div
+        className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2"
+        data-testid="case-operational-meta"
+      >
+        <CaseOwnershipControls
+          ownership={ownership}
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          canAssign={canAssignCase}
+          commandPending={commandPending}
+          eligibleAssignees={eligibleAssignees}
+          onAssign={onAssign}
+        />
+        <CaseDueDateControls
+          dueAt={dueAt}
+          status={status}
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          assignedToUserId={ownership.assignedToUserId}
+          canWriteDueDate={canWriteDueDate}
+          commandPending={commandPending}
+          onSetDueAt={onSetDueAt}
+        />
+      </div>
 
       {navigationError && (
         <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">

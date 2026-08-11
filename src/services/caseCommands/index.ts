@@ -9,6 +9,7 @@ export {
 } from "./caseCommands";
 
 export { assignCaseCommand } from "./assignCaseCommand";
+export { setCaseDueAtCommand } from "./setCaseDueAtCommand";
 
 export {
   createReportDraftCommand,

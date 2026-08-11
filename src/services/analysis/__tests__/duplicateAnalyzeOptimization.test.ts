@@ -81,6 +81,7 @@ function buildPersistedCase(): PersistedCase {
       assignedAt: null,
       assignee: null,
     },
+    dueAt: null,
     createdAt: caseB.createdAt,
     updatedAt: caseB.createdAt,
     closedAt: null,

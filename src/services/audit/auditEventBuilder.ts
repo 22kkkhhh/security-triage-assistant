@@ -477,3 +477,43 @@ export function buildCaseUnassignedAudit(input: {
     operationId: input.operationId ?? null,
   });
 }
+
+function dueAtSummaryLabel(iso: string | null): string {
+  if (!iso) return "未设置";
+  // 审计摘要用紧凑 UTC+8 墙钟，避免把 ISO 原样塞进文案
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const cn = new Date(date.getTime() + 8 * 3600 * 1000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${cn.getUTCFullYear()}-${pad(cn.getUTCMonth() + 1)}-${pad(cn.getUTCDate())} ${pad(cn.getUTCHours())}:${pad(cn.getUTCMinutes())}`;
+}
+
+/** 设置 / 修改 / 清除案件运营截止时间 */
+export function buildCaseDueDateChangedAudit(input: {
+  previousDueAt: string | null;
+  newDueAt: string | null;
+  actorName: string;
+  actor: AuditActor;
+  operationId?: string | null;
+}): BuiltAuditEvent {
+  const actorName = input.actorName.trim() || "用户";
+  let summary: string;
+  if (input.previousDueAt == null && input.newDueAt != null) {
+    summary = `${actorName}将案件截止时间设置为 ${dueAtSummaryLabel(input.newDueAt)}`;
+  } else if (input.previousDueAt != null && input.newDueAt == null) {
+    summary = `${actorName}清除了案件截止时间`;
+  } else {
+    summary = `${actorName}将案件截止时间从 ${dueAtSummaryLabel(input.previousDueAt)} 调整为 ${dueAtSummaryLabel(input.newDueAt)}`;
+  }
+
+  return withActor(input.actor, {
+    actionType: "CASE_DUE_DATE_CHANGED",
+    summary: truncateSummary(summary),
+    changes: {
+      previousDueAt: input.previousDueAt,
+      newDueAt: input.newDueAt,
+    },
+    metadata: null,
+    operationId: input.operationId ?? null,
+  });
+}

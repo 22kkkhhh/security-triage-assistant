@@ -25,6 +25,7 @@ import {
   assignCaseAction,
   changeCaseStatusAction,
   loadMoreCaseAuditLogsAction,
+  setCaseDueAtAction,
   updateBusinessContextAction,
   updateHumanReviewAction,
 } from "@/app/(app)/cases/commandActions";
@@ -660,6 +661,13 @@ describe("Permission 入口覆盖", () => {
         assignCaseAction(
           created.id,
           VITEST_ANALYST_USER.id,
+          randomUUID(),
+          latest!.updatedAt,
+        ),
+      CASE_DUE_DATE_WRITE: () =>
+        setCaseDueAtAction(
+          created.id,
+          "2026-08-12T10:00:00.000Z",
           randomUUID(),
           latest!.updatedAt,
         ),

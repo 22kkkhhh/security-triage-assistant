@@ -17,6 +17,7 @@ import type {
   CaseOwnership,
   CaseQueueScope,
 } from "@/domain/caseOwnership";
+import type { CaseQueueSort } from "@/domain/caseDueDate";
 
 /**
  * 案件可恢复状态（单一 Source of Truth）。
@@ -92,6 +93,8 @@ export interface PersistedCase {
   lastActivityAt: string;
   /** 运营负责人（SoT：CaseRecord 列；非 ACL） */
   ownership: CaseOwnership;
+  /** 运营截止时间（SoT：CaseRecord.dueAt；非 caseState） */
+  dueAt: string | null;
   caseState: PersistedCaseState;
   reportDraft: ReportData | null;
   createdAt: string;
@@ -117,6 +120,8 @@ export interface CaseListItem {
   /** 最后一次有意义的运营活动时间 */
   lastActivityAt: string;
   ownership: CaseOwnership;
+  /** 运营截止时间 ISO；null = 未设置 */
+  dueAt: string | null;
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;
@@ -135,6 +140,11 @@ export interface ListCasesQuery {
   scope?: CaseQueueScope;
   /** scope=mine 时的可信当前用户 ID */
   trustedCurrentUserId?: string;
+  /** recent（默认）| due（截止优先，确定性桶序） */
+  sort?: CaseQueueSort;
+  /** sort=due 时用于 due-state 判定；缺省为当前时刻 */
+  now?: Date;
 }
 
 export type { CaseAssigneeSummary, CaseOwnership, CaseQueueScope };
+export type { CaseQueueSort };

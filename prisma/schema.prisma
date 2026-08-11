@@ -51,6 +51,9 @@ model CaseRecord {
   assignedAt       DateTime?
   assignedTo       User?     @relation("CaseAssignee", fields: [assignedToUserId], references: [id], onDelete: Restrict)
 
+  /// 运营截止时间（非安全事件时间 / 非 SLA）；null = 未设置
+  dueAt DateTime?
+
   /// 操作审计（append-only）；删除策略 Restrict，禁止静默级联删除
   auditLogs CaseAuditLog[]
 
@@ -60,6 +63,7 @@ model CaseRecord {
   @@index([username])
   @@index([sourceIp])
   @@index([assignedToUserId])
+  @@index([dueAt])
 }
 
 /// 案件操作审计日志（与 Timeline 分离：记录研判人员/系统对案件的操作）

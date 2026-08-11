@@ -42,6 +42,7 @@ export interface CaseRecordRow {
     role: string | null;
     enabled: boolean;
   } | null;
+  dueAt?: Date | null;
   caseState: unknown;
   reportDraft: unknown;
   createdAt: Date;
@@ -249,6 +250,7 @@ export function rowToPersistedCase(row: CaseRecordRow): PersistedCase {
       : null,
     lastActivityAt: row.lastActivityAt.toISOString(),
     ownership: ownershipFromRow(row),
+    dueAt: row.dueAt ? row.dueAt.toISOString() : null,
     caseState: row.caseState as PersistedCaseState,
     reportDraft: (row.reportDraft as PersistedCase["reportDraft"]) ?? null,
     createdAt: row.createdAt.toISOString(),
@@ -276,6 +278,7 @@ export function rowToListItem(row: CaseRecordRow): CaseListItem {
       : null,
     lastActivityAt: row.lastActivityAt.toISOString(),
     ownership: ownershipFromRow(row),
+    dueAt: row.dueAt ? row.dueAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     closedAt: row.closedAt ? row.closedAt.toISOString() : null,
