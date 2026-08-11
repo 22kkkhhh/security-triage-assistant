@@ -45,8 +45,8 @@ describe("历史案件展示工具", () => {
     expect(page).toContain("case-list-row");
     expect(page).toContain("case-list-mobile");
     expect(page).toContain("case-list-risk");
-    expect(page).toContain("risk.text");
-    expect(page).toContain("riskBadgeClass(risk.riskLabel)");
+    expect(page).toContain("riskDisplay.text");
+    expect(page).toContain("riskBadgeClass(riskDisplay.riskLabel)");
     expect(page).not.toContain("displayCaseListRisk(");
   });
 

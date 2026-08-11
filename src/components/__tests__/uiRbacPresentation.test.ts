@@ -31,10 +31,11 @@ describe("AppShell / Navigation", () => {
     expect(src).not.toContain('role === "ADMIN"');
   });
 
-  it("历史案件列表新建入口受 canCreateCase 控制", () => {
+  it("案件队列新建入口受 canCreateCase 控制；scope 受 CASE_ASSIGN 能力控制", () => {
     const page = readSrc("app/(app)/cases/page.tsx");
     expect(page).toContain("buildNavigationCapabilities");
     expect(page).toContain("canCreateCase");
+    expect(page).toContain('hasPermission(user, "CASE_ASSIGN")');
     expect(page).not.toContain('role === "VIEWER"');
   });
 });

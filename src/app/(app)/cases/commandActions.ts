@@ -18,6 +18,7 @@ import {
   addHandoffNoteCommand,
   addTimelineEventCommand,
   applyChecklistCommand,
+  assignCaseCommand,
   changeCaseStatusCommand,
   updateBusinessContextCommand,
   updateHumanReviewCommand,
@@ -26,6 +27,9 @@ import {
   type ChecklistCommandAction,
   type TimelineEventSemanticIntent,
 } from "@/services/caseCommands";
+import type { CaseOwnership } from "@/domain/caseOwnership";
+import { listEligibleAssignees } from "@/services/caseOwnership/eligibleAssignees";
+import type { CaseAssigneeSummary } from "@/domain/caseOwnership";
 import { parseHumanReviewSemanticInput } from "@/services/caseCommands/humanReviewSemantic";
 import { userActor } from "@/services/audit/auditEventBuilder";
 import {
@@ -66,6 +70,8 @@ export type SemanticCommandActionResult =
       status: CaseStatus;
       /** 成功后的 canonical caseState（含 Server-owned HumanReview 责任人） */
       caseState: PersistedCaseState;
+      /** 运营负责人（与 HumanReview reviewer 分离） */
+      ownership: CaseOwnership;
       /** 本次新产生或幂等命中的 Audit；无实际变化时为 null */
       audit: CaseAuditLogView | null;
     }
@@ -77,6 +83,7 @@ export type SemanticCommandActionResult =
       lastActivityAt?: string;
       status?: CaseStatus;
       caseState?: PersistedCaseState;
+      ownership?: CaseOwnership;
     };
 
 const CHECKLIST_ACTIONS: ChecklistCommandAction[] = [
@@ -262,6 +269,7 @@ function toResult(
         lastActivityAt: result.case.lastActivityAt,
         status: result.case.status,
         caseState: result.case.caseState,
+        ownership: result.case.ownership,
       };
     }
     if (result.code === "FORBIDDEN") {
@@ -286,8 +294,68 @@ function toResult(
     lastActivityAt: result.case.lastActivityAt,
     status: result.case.status,
     caseState: result.case.caseState,
+    ownership: result.case.ownership,
     audit: result.audit,
   };
+}
+
+/** 案件负责人分配 / 释放 */
+export async function assignCaseAction(
+  caseId: string,
+  targetUserId: unknown,
+  operationId: unknown,
+  baseUpdatedAt: unknown,
+): Promise<SemanticCommandActionResult> {
+  let user;
+  try {
+    user = await requirePermission("CASE_ASSIGN");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
+  if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
+  if (typeof operationId !== "string" || !operationId.trim()) {
+    return { ok: false, error: "operationId 无效" };
+  }
+  const base = parseBaseUpdatedAt(baseUpdatedAt);
+  if (!base) return { ok: false, error: "baseUpdatedAt 无效" };
+
+  let parsedTarget: string | null;
+  if (targetUserId === null || targetUserId === undefined || targetUserId === "") {
+    parsedTarget = null;
+  } else if (typeof targetUserId === "string" && targetUserId.trim()) {
+    parsedTarget = targetUserId.trim();
+  } else {
+    return { ok: false, error: "指派目标无效" };
+  }
+
+  return toResult(
+    await assignCaseCommand({
+      caseId,
+      targetUserId: parsedTarget,
+      operationId: operationId.trim(),
+      baseUpdatedAt: base,
+      actor: userActor(user),
+      actorRole: user.role,
+    }),
+  );
+}
+
+/** 可指派负责人列表（最小 DTO；Server 查询） */
+export async function listEligibleAssigneesAction(): Promise<
+  | { ok: true; items: CaseAssigneeSummary[] }
+  | { ok: false; error: string; code?: "UNAUTHENTICATED" | "FORBIDDEN" }
+> {
+  try {
+    await requirePermission("CASE_ASSIGN");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
+  try {
+    const items = await listEligibleAssignees();
+    return { ok: true, items };
+  } catch {
+    return { ok: false, error: COMMAND_FALLBACK };
+  }
 }
 
 /** 状态变更：只发送 nextStatus，不构造任何 case state */

@@ -5,6 +5,12 @@ import type {
   RiskLevel,
   SecurityCaseDraft,
 } from "@/domain/types";
+import type { UserRole } from "@/domain/auth";
+import {
+  emptyCaseOwnership,
+  type CaseAssigneeSummary,
+  type CaseOwnership,
+} from "@/domain/caseOwnership";
 import type {
   CaseListItem,
   PersistedCase,
@@ -27,11 +33,54 @@ export interface CaseRecordRow {
   hasReport: boolean;
   reportUpdatedAt: Date | null;
   lastActivityAt: Date;
+  assignedToUserId?: string | null;
+  assignedAt?: Date | null;
+  assignedTo?: {
+    id: string;
+    name: string;
+    username: string | null;
+    role: string | null;
+    enabled: boolean;
+  } | null;
   caseState: unknown;
   reportDraft: unknown;
   createdAt: Date;
   updatedAt: Date;
   closedAt: Date | null;
+}
+
+function mapAssigneeSummary(
+  row: NonNullable<CaseRecordRow["assignedTo"]>,
+): CaseAssigneeSummary | null {
+  const role = row.role;
+  if (role !== "ADMIN" && role !== "ANALYST" && role !== "VIEWER") {
+    return {
+      id: row.id,
+      displayName: row.name,
+      username: row.username ?? "",
+      role: "VIEWER",
+      enabled: row.enabled,
+    };
+  }
+  return {
+    id: row.id,
+    displayName: row.name,
+    username: row.username ?? "",
+    role: role as UserRole,
+    enabled: row.enabled,
+  };
+}
+
+export function ownershipFromRow(row: CaseRecordRow): CaseOwnership {
+  const assignedToUserId = row.assignedToUserId ?? null;
+  if (!assignedToUserId) {
+    return emptyCaseOwnership();
+  }
+  return {
+    assignedToUserId,
+    assignedAt: row.assignedAt ? row.assignedAt.toISOString() : null,
+    assignee: row.assignedTo ? mapAssigneeSummary(row.assignedTo) : null,
+  };
 }
 
 export function buildSystemsSearchText(systems: string[]): string | null {
@@ -199,6 +248,7 @@ export function rowToPersistedCase(row: CaseRecordRow): PersistedCase {
       ? row.reportUpdatedAt.toISOString()
       : null,
     lastActivityAt: row.lastActivityAt.toISOString(),
+    ownership: ownershipFromRow(row),
     caseState: row.caseState as PersistedCaseState,
     reportDraft: (row.reportDraft as PersistedCase["reportDraft"]) ?? null,
     createdAt: row.createdAt.toISOString(),
@@ -225,6 +275,7 @@ export function rowToListItem(row: CaseRecordRow): CaseListItem {
       ? row.reportUpdatedAt.toISOString()
       : null,
     lastActivityAt: row.lastActivityAt.toISOString(),
+    ownership: ownershipFromRow(row),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     closedAt: row.closedAt ? row.closedAt.toISOString() : null,

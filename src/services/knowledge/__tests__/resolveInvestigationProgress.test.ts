@@ -31,6 +31,11 @@ function toRecord(draft: SecurityCaseDraft) {
     hasReport: false,
     reportUpdatedAt: null,
     lastActivityAt: "2026-08-09T12:00:00.000Z",
+    ownership: {
+      assignedToUserId: null,
+      assignedAt: null,
+      assignee: null,
+    },
     caseState: {
       caseData: {
         name: draft.name,

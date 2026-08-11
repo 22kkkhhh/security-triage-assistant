@@ -13,10 +13,16 @@ import {
   addInvestigationLeadToChecklistAction,
   addTimelineEventAction,
   applyChecklistCommandAction,
+  assignCaseAction,
   changeCaseStatusAction,
   updateBusinessContextAction,
   updateHumanReviewAction,
 } from "@/app/(app)/cases/commandActions";
+import type { UserRole } from "@/domain/auth";
+import type {
+  CaseAssigneeSummary,
+  CaseOwnership,
+} from "@/domain/caseOwnership";
 import { createReportDraftAction } from "@/app/(app)/cases/reportActions";
 import { analyzeSecurityCase } from "@/services/analysis/analyzeSecurityCase";
 import {
@@ -116,6 +122,9 @@ export function PersistedCaseWorkbench({
   hasReport = false,
   initialAudit,
   capabilities,
+  currentUserId,
+  currentUserRole,
+  eligibleAssignees = [],
   compliancePanel,
   complianceChecklist,
   complianceResolutionStatus,
@@ -136,6 +145,9 @@ export function PersistedCaseWorkbench({
     latestHandoff: CaseAuditLogView | null;
   };
   capabilities: CaseWorkbenchCapabilities;
+  currentUserId: string;
+  currentUserRole: UserRole;
+  eligibleAssignees?: CaseAssigneeSummary[];
   /** 服务端已解析的合规参考视图；前端只读展示 */
   compliancePanel: CaseCompliancePanelView;
   /** 服务端聚合的建议核查事项；只读，不写回 ChecklistItem */
@@ -163,6 +175,7 @@ export function PersistedCaseWorkbench({
   }, [router]);
 
   const [status, setStatus] = useState<CaseStatus>(initial.status);
+  const [ownership, setOwnership] = useState<CaseOwnership>(initial.ownership);
   const [businessContext, setBusinessContext] = useState<BusinessContext>(
     initial.draft.businessContext,
   );
@@ -219,12 +232,14 @@ export function PersistedCaseWorkbench({
         checklist: ChecklistItem[];
         timeline: TimelineEvent[];
       };
+      ownership?: CaseOwnership;
     }) => {
       setStatus(payload.status);
       setBusinessContext(payload.caseState.businessContext);
       setHumanReview(payload.caseState.humanReview ?? emptyHumanReview());
       setChecklistBase(payload.caseState.checklist);
       setTimeline(payload.caseState.timeline);
+      if (payload.ownership) setOwnership(payload.ownership);
     },
     [],
   );
@@ -290,6 +305,7 @@ export function PersistedCaseWorkbench({
     applyCanonicalState({
       status: result.status,
       caseState: result.caseState,
+      ownership: result.ownership,
     });
     commitExternalSave(result.updatedAt);
     setStaleNotice("案件已发生更新，已刷新到最新状态。");
@@ -457,6 +473,46 @@ export function PersistedCaseWorkbench({
           setCommandError(actionErrorMessage(result, "状态修改失败，请重试。"));
           return;
         }
+        if (result.ownership) setOwnership(result.ownership);
+        commitExternalSave(result.updatedAt);
+        mergeReturnedAudit(result.audit);
+      } finally {
+        endSemanticCommand();
+        setCommandPending(false);
+      }
+    })();
+  };
+
+  const handleAssign = (targetUserId: string | null) => {
+    if (!capabilities.canAssignCase) return;
+    if (ownership.assignedToUserId === targetUserId) return;
+    const prev = ownership;
+    const operationId = crypto.randomUUID();
+    setCommandError(null);
+    setCommandPending(true);
+    void (async () => {
+      const lease = await beginSemanticCommand();
+      if (!lease.ok) {
+        setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
+        setCommandPending(false);
+        return;
+      }
+      try {
+        const result = await assignCaseAction(
+          initial.caseId,
+          targetUserId,
+          operationId,
+          lease.baseUpdatedAt,
+        );
+        if (!result.ok) {
+          if (applyCommandStale(result)) return;
+          setOwnership(prev);
+          setCommandError(
+            actionErrorMessage(result, "案件负责人更新失败，请重试。"),
+          );
+          return;
+        }
+        setOwnership(result.ownership);
         commitExternalSave(result.updatedAt);
         mergeReturnedAudit(result.audit);
       } finally {
@@ -652,7 +708,7 @@ export function PersistedCaseWorkbench({
     if (capabilities.canSnapshotWrite) {
       const ok = await flushSave();
       if (!ok) {
-        setNavigationError("保存失败，请重试后返回历史案件。");
+        setNavigationError("保存失败，请重试后返回案件队列。");
         return;
       }
     }
@@ -718,6 +774,12 @@ export function PersistedCaseWorkbench({
         navigationError={navigationError}
         canChangeStatus={capabilities.canChangeStatus}
         readOnly={readOnly}
+        ownership={ownership}
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        canAssignCase={capabilities.canAssignCase}
+        eligibleAssignees={eligibleAssignees}
+        onAssign={handleAssign}
         onStatusChange={handleStatusChange}
         onRetry={() => {
           setNavigationError(null);

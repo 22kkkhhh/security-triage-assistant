@@ -22,6 +22,7 @@ import {
   addHandoffNoteAction,
   addTimelineEventAction,
   applyChecklistCommandAction,
+  assignCaseAction,
   changeCaseStatusAction,
   loadMoreCaseAuditLogsAction,
   updateBusinessContextAction,
@@ -652,6 +653,13 @@ describe("Permission 入口覆盖", () => {
         changeCaseStatusAction(
           created.id,
           "CLOSED",
+          randomUUID(),
+          latest!.updatedAt,
+        ),
+      CASE_ASSIGN: () =>
+        assignCaseAction(
+          created.id,
+          VITEST_ANALYST_USER.id,
           randomUUID(),
           latest!.updatedAt,
         ),

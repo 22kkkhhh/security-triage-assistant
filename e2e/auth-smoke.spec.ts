@@ -11,6 +11,6 @@ import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
 test("demo-analyst 可通过真实登录表单进入 authenticated app", async ({ page }) => {
   await loginAsDemoUser(page, DEMO_USERS.analyst);
   await expect(
-    page.getByRole("heading", { name: "历史案件" }),
+    page.getByRole("heading", { name: "案件队列" }),
   ).toBeVisible();
 });

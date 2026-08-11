@@ -25,6 +25,7 @@ describe("UI capabilities from Permission SoT", () => {
     expect(caseCaps).toEqual({
       canSnapshotWrite: false,
       canChangeStatus: false,
+      canAssignCase: false,
       canWriteChecklist: false,
       canWriteBusinessContext: false,
       canWriteHumanReview: false,
@@ -50,6 +51,7 @@ describe("UI capabilities from Permission SoT", () => {
     const caseCaps = buildCaseWorkbenchCapabilities(user("ANALYST"));
     expect(caseCaps.canSnapshotWrite).toBe(true);
     expect(caseCaps.canChangeStatus).toBe(true);
+    expect(caseCaps.canAssignCase).toBe(true);
     expect(caseCaps.canWriteChecklist).toBe(true);
     expect(caseCaps.canWriteBusinessContext).toBe(true);
     expect(caseCaps.canWriteHumanReview).toBe(true);

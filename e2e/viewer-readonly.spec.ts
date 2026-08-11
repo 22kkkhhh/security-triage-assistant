@@ -38,7 +38,7 @@ test("demo-viewer 在 Case Workbench 与 Report 中仅可读，无任何可编�
   // 1. VIEWER 登录：真实 Better Auth，登录后进入 authenticated /cases
   await loginAsDemoUser(page, DEMO_USERS.viewer);
   await expect(
-    page.getByRole("heading", { name: "历史案件" }),
+    page.getByRole("heading", { name: "案件队列" }),
   ).toBeVisible();
 
   // 2. Case Workbench 可读：只验证页面能正常读取，不依赖具体业务字段值

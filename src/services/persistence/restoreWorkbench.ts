@@ -12,6 +12,8 @@ import {
   mergeChecklistOnRestore,
   toSecurityCaseDraft,
 } from "./caseMapper";
+import type { CaseOwnership } from "@/domain/caseOwnership";
+import { emptyCaseOwnership } from "@/domain/caseOwnership";
 import type { PersistedCase, PersistedCaseState } from "./types";
 
 /** 恢复到 Workbench 的初始视图（分析结果为现场派生） */
@@ -21,6 +23,8 @@ export interface RestoredWorkbenchView {
   title: string;
   status: CaseStatus;
   updatedAt: string;
+  /** 运营负责人（与 HumanReview reviewer 分离） */
+  ownership: CaseOwnership;
   /** 含持久化 businessContext / humanReview / timeline */
   draft: SecurityCaseDraft;
   /** 已与当前规则合并后的 checklist */
@@ -51,6 +55,7 @@ export function restoreWorkbenchFromAnalyzed(
     caseNumber: record.caseNumber,
     status: record.status,
     updatedAt: record.updatedAt,
+    ownership: record.ownership,
     caseState: record.caseState,
     draft,
     analyzed,
@@ -62,6 +67,7 @@ export function restoreWorkbenchFromState(input: {
   caseNumber: string;
   status: CaseStatus;
   updatedAt: string;
+  ownership?: CaseOwnership;
   caseState: PersistedCaseState;
   /** 已计算的分析结果；省略时现场 analyze 一次。 */
   draft?: SecurityCaseDraft;
@@ -81,6 +87,7 @@ export function restoreWorkbenchFromState(input: {
     title: draft.name,
     status: input.status,
     updatedAt: input.updatedAt,
+    ownership: input.ownership ?? emptyCaseOwnership(),
     draft,
     initialChecklist,
     suggestedRiskLevel:

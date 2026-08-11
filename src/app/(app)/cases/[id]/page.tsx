@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ForbiddenPanel } from "@/components/auth/ForbiddenPanel";
 import { PersistedCaseWorkbench } from "@/components/cases/PersistedCaseWorkbench";
-import { ForbiddenError } from "@/domain/auth";
+import { ForbiddenError, hasPermission } from "@/domain/auth";
 import { buildCaseWorkbenchCapabilities } from "@/domain/uiCapabilities";
 import { requirePermission } from "@/services/auth/requirePermission";
 import {
@@ -12,6 +12,7 @@ import { loadCaseDetailPageData } from "@/app/(app)/cases/loadCaseDetailPageData
 import { buildInvestigationIntelligence } from "@/services/correlation/buildInvestigationIntelligence";
 import { toCurrentAnalysisHints } from "@/services/correlation/currentAnalysisHints";
 import { loadRelatedCasesForCase } from "@/services/correlation/loadRelatedCases";
+import { listEligibleAssignees } from "@/services/caseOwnership/eligibleAssignees";
 import { getCaseById } from "@/services/persistence/caseRepository";
 
 export const dynamic = "force-dynamic";
@@ -57,12 +58,19 @@ export default async function CaseDetailPage({
     currentAnalysis: toCurrentAnalysisHints(analyzed.analysisResults),
   });
   const capabilities = buildCaseWorkbenchCapabilities(user);
+  const eligibleAssignees =
+    user.role === "ADMIN" && hasPermission(user, "CASE_ASSIGN")
+      ? await listEligibleAssignees()
+      : [];
 
   return (
     <PersistedCaseWorkbench
       initial={initial}
       hasReport={record.hasReport}
       capabilities={capabilities}
+      currentUserId={user.id}
+      currentUserRole={user.role}
+      eligibleAssignees={eligibleAssignees}
       compliancePanel={runtimeViews.compliance.panel}
       complianceChecklist={runtimeViews.compliance.checklist}
       complianceResolutionStatus={runtimeViews.complianceResolutionStatus}

@@ -66,6 +66,11 @@ function toPersistedCase(
     hasReport: false,
     reportUpdatedAt: null,
     lastActivityAt: CAPTURED,
+    ownership: {
+      assignedToUserId: null,
+      assignedAt: null,
+      assignee: null,
+    },
     caseState: {
       caseData: {
         name: draft.name,

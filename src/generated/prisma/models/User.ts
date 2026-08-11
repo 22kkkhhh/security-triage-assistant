@@ -257,6 +257,7 @@ export type UserWhereInput = {
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
   caseAuditLogs?: Prisma.CaseAuditLogListRelationFilter
+  assignedCases?: Prisma.CaseRecordListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -277,6 +278,7 @@ export type UserOrderByWithRelationInput = {
   sessions?: Prisma.SessionOrderByRelationAggregateInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
   caseAuditLogs?: Prisma.CaseAuditLogOrderByRelationAggregateInput
+  assignedCases?: Prisma.CaseRecordOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -300,6 +302,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
   caseAuditLogs?: Prisma.CaseAuditLogListRelationFilter
+  assignedCases?: Prisma.CaseRecordListRelationFilter
 }, "id" | "email" | "username">
 
 export type UserOrderByWithAggregationInput = {
@@ -360,6 +363,7 @@ export type UserCreateInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
   caseAuditLogs?: Prisma.CaseAuditLogCreateNestedManyWithoutActorInput
+  assignedCases?: Prisma.CaseRecordCreateNestedManyWithoutAssignedToInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -380,6 +384,7 @@ export type UserUncheckedCreateInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
   caseAuditLogs?: Prisma.CaseAuditLogUncheckedCreateNestedManyWithoutActorInput
+  assignedCases?: Prisma.CaseRecordUncheckedCreateNestedManyWithoutAssignedToInput
 }
 
 export type UserUpdateInput = {
@@ -400,6 +405,7 @@ export type UserUpdateInput = {
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
   caseAuditLogs?: Prisma.CaseAuditLogUpdateManyWithoutActorNestedInput
+  assignedCases?: Prisma.CaseRecordUpdateManyWithoutAssignedToNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -420,6 +426,7 @@ export type UserUncheckedUpdateInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
   caseAuditLogs?: Prisma.CaseAuditLogUncheckedUpdateManyWithoutActorNestedInput
+  assignedCases?: Prisma.CaseRecordUncheckedUpdateManyWithoutAssignedToNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -534,6 +541,22 @@ export type UserScalarRelationFilter = {
   isNot?: Prisma.UserWhereInput
 }
 
+export type UserCreateNestedOneWithoutAssignedCasesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAssignedCasesInput, Prisma.UserUncheckedCreateWithoutAssignedCasesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAssignedCasesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutAssignedCasesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAssignedCasesInput, Prisma.UserUncheckedCreateWithoutAssignedCasesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAssignedCasesInput
+  upsert?: Prisma.UserUpsertWithoutAssignedCasesInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAssignedCasesInput, Prisma.UserUpdateWithoutAssignedCasesInput>, Prisma.UserUncheckedUpdateWithoutAssignedCasesInput>
+}
+
 export type UserCreateNestedOneWithoutCaseAuditLogsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutCaseAuditLogsInput, Prisma.UserUncheckedCreateWithoutCaseAuditLogsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutCaseAuditLogsInput
@@ -582,6 +605,102 @@ export type UserUpdateOneRequiredWithoutAccountsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAccountsInput, Prisma.UserUpdateWithoutAccountsInput>, Prisma.UserUncheckedUpdateWithoutAccountsInput>
 }
 
+export type UserCreateWithoutAssignedCasesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  username?: string | null
+  displayUsername?: string | null
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  enabled?: boolean
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  caseAuditLogs?: Prisma.CaseAuditLogCreateNestedManyWithoutActorInput
+}
+
+export type UserUncheckedCreateWithoutAssignedCasesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  username?: string | null
+  displayUsername?: string | null
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  enabled?: boolean
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  caseAuditLogs?: Prisma.CaseAuditLogUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type UserCreateOrConnectWithoutAssignedCasesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAssignedCasesInput, Prisma.UserUncheckedCreateWithoutAssignedCasesInput>
+}
+
+export type UserUpsertWithoutAssignedCasesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAssignedCasesInput, Prisma.UserUncheckedUpdateWithoutAssignedCasesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAssignedCasesInput, Prisma.UserUncheckedCreateWithoutAssignedCasesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAssignedCasesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAssignedCasesInput, Prisma.UserUncheckedUpdateWithoutAssignedCasesInput>
+}
+
+export type UserUpdateWithoutAssignedCasesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  displayUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  caseAuditLogs?: Prisma.CaseAuditLogUpdateManyWithoutActorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAssignedCasesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  displayUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  caseAuditLogs?: Prisma.CaseAuditLogUncheckedUpdateManyWithoutActorNestedInput
+}
+
 export type UserCreateWithoutCaseAuditLogsInput = {
   id: string
   name: string
@@ -599,6 +718,7 @@ export type UserCreateWithoutCaseAuditLogsInput = {
   enabled?: boolean
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  assignedCases?: Prisma.CaseRecordCreateNestedManyWithoutAssignedToInput
 }
 
 export type UserUncheckedCreateWithoutCaseAuditLogsInput = {
@@ -618,6 +738,7 @@ export type UserUncheckedCreateWithoutCaseAuditLogsInput = {
   enabled?: boolean
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  assignedCases?: Prisma.CaseRecordUncheckedCreateNestedManyWithoutAssignedToInput
 }
 
 export type UserCreateOrConnectWithoutCaseAuditLogsInput = {
@@ -653,6 +774,7 @@ export type UserUpdateWithoutCaseAuditLogsInput = {
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  assignedCases?: Prisma.CaseRecordUpdateManyWithoutAssignedToNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCaseAuditLogsInput = {
@@ -672,6 +794,7 @@ export type UserUncheckedUpdateWithoutCaseAuditLogsInput = {
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  assignedCases?: Prisma.CaseRecordUncheckedUpdateManyWithoutAssignedToNestedInput
 }
 
 export type UserCreateWithoutSessionsInput = {
@@ -691,6 +814,7 @@ export type UserCreateWithoutSessionsInput = {
   enabled?: boolean
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
   caseAuditLogs?: Prisma.CaseAuditLogCreateNestedManyWithoutActorInput
+  assignedCases?: Prisma.CaseRecordCreateNestedManyWithoutAssignedToInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -710,6 +834,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   enabled?: boolean
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
   caseAuditLogs?: Prisma.CaseAuditLogUncheckedCreateNestedManyWithoutActorInput
+  assignedCases?: Prisma.CaseRecordUncheckedCreateNestedManyWithoutAssignedToInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -745,6 +870,7 @@ export type UserUpdateWithoutSessionsInput = {
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
   caseAuditLogs?: Prisma.CaseAuditLogUpdateManyWithoutActorNestedInput
+  assignedCases?: Prisma.CaseRecordUpdateManyWithoutAssignedToNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -764,6 +890,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
   caseAuditLogs?: Prisma.CaseAuditLogUncheckedUpdateManyWithoutActorNestedInput
+  assignedCases?: Prisma.CaseRecordUncheckedUpdateManyWithoutAssignedToNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -783,6 +910,7 @@ export type UserCreateWithoutAccountsInput = {
   enabled?: boolean
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   caseAuditLogs?: Prisma.CaseAuditLogCreateNestedManyWithoutActorInput
+  assignedCases?: Prisma.CaseRecordCreateNestedManyWithoutAssignedToInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -802,6 +930,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   enabled?: boolean
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   caseAuditLogs?: Prisma.CaseAuditLogUncheckedCreateNestedManyWithoutActorInput
+  assignedCases?: Prisma.CaseRecordUncheckedCreateNestedManyWithoutAssignedToInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -837,6 +966,7 @@ export type UserUpdateWithoutAccountsInput = {
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   caseAuditLogs?: Prisma.CaseAuditLogUpdateManyWithoutActorNestedInput
+  assignedCases?: Prisma.CaseRecordUpdateManyWithoutAssignedToNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -856,6 +986,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   caseAuditLogs?: Prisma.CaseAuditLogUncheckedUpdateManyWithoutActorNestedInput
+  assignedCases?: Prisma.CaseRecordUncheckedUpdateManyWithoutAssignedToNestedInput
 }
 
 
@@ -867,12 +998,14 @@ export type UserCountOutputType = {
   sessions: number
   accounts: number
   caseAuditLogs: number
+  assignedCases: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sessions?: boolean | UserCountOutputTypeCountSessionsArgs
   accounts?: boolean | UserCountOutputTypeCountAccountsArgs
   caseAuditLogs?: boolean | UserCountOutputTypeCountCaseAuditLogsArgs
+  assignedCases?: boolean | UserCountOutputTypeCountAssignedCasesArgs
 }
 
 /**
@@ -906,6 +1039,13 @@ export type UserCountOutputTypeCountCaseAuditLogsArgs<ExtArgs extends runtime.Ty
   where?: Prisma.CaseAuditLogWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAssignedCasesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CaseRecordWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -925,6 +1065,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
   caseAuditLogs?: boolean | Prisma.User$caseAuditLogsArgs<ExtArgs>
+  assignedCases?: boolean | Prisma.User$assignedCasesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -984,6 +1125,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
   caseAuditLogs?: boolean | Prisma.User$caseAuditLogsArgs<ExtArgs>
+  assignedCases?: boolean | Prisma.User$assignedCasesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -995,6 +1137,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     sessions: Prisma.$SessionPayload<ExtArgs>[]
     accounts: Prisma.$AccountPayload<ExtArgs>[]
     caseAuditLogs: Prisma.$CaseAuditLogPayload<ExtArgs>[]
+    assignedCases: Prisma.$CaseRecordPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1417,6 +1560,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   sessions<T extends Prisma.User$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accounts<T extends Prisma.User$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   caseAuditLogs<T extends Prisma.User$caseAuditLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$caseAuditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CaseAuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  assignedCases<T extends Prisma.User$assignedCasesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$assignedCasesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CaseRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1920,6 +2064,30 @@ export type User$caseAuditLogsArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.CaseAuditLogScalarFieldEnum | Prisma.CaseAuditLogScalarFieldEnum[]
+}
+
+/**
+ * User.assignedCases
+ */
+export type User$assignedCasesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CaseRecord
+   */
+  select?: Prisma.CaseRecordSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CaseRecord
+   */
+  omit?: Prisma.CaseRecordOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CaseRecordInclude<ExtArgs> | null
+  where?: Prisma.CaseRecordWhereInput
+  orderBy?: Prisma.CaseRecordOrderByWithRelationInput | Prisma.CaseRecordOrderByWithRelationInput[]
+  cursor?: Prisma.CaseRecordWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CaseRecordScalarFieldEnum | Prisma.CaseRecordScalarFieldEnum[]
 }
 
 /**

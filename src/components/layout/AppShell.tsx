@@ -38,7 +38,7 @@ const navItems: NavItem[] = [
   },
   {
     href: "/cases",
-    label: "历史案件",
+    label: "案件队列",
     match: isCaseListNavActive,
   },
   {

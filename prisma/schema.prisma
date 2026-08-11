@@ -46,6 +46,11 @@ model CaseRecord {
   /// 最后一次有意义的运营活动时间（成功写入 Audit 时更新；创建时等于 createdAt）
   lastActivityAt DateTime @default(now())
 
+  /// 案件负责人（运营责任，非 ACL）；null = 未分配
+  assignedToUserId String?
+  assignedAt       DateTime?
+  assignedTo       User?     @relation("CaseAssignee", fields: [assignedToUserId], references: [id], onDelete: Restrict)
+
   /// 操作审计（append-only）；删除策略 Restrict，禁止静默级联删除
   auditLogs CaseAuditLog[]
 
@@ -54,6 +59,7 @@ model CaseRecord {
   @@index([lastActivityAt])
   @@index([username])
   @@index([sourceIp])
+  @@index([assignedToUserId])
 }
 
 /// 案件操作审计日志（与 Timeline 分离：记录研判人员/系统对案件的操作）
@@ -119,6 +125,7 @@ model User {
   sessions        Session[]
   accounts        Account[]
   caseAuditLogs   CaseAuditLog[]
+  assignedCases   CaseRecord[] @relation("CaseAssignee")
 
   @@unique([email])
   @@unique([username])

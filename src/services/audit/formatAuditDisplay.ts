@@ -138,6 +138,11 @@ export function formatAuditChangesForDisplay(
       }
       break;
     }
+    case "CASE_ASSIGNED":
+    case "CASE_UNASSIGNED": {
+      if (log.summary) lines.push(log.summary);
+      break;
+    }
     case "CHECKLIST_COMPLETED":
     case "CHECKLIST_REOPENED":
     case "CHECKLIST_ADDED":

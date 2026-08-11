@@ -255,8 +255,12 @@ describe("Knowledge migration gates", () => {
       )
       .sort();
     expect(all).toContain(KNOWLEDGE_MIGRATION);
-    const preKnowledge = all.filter((name) => name !== KNOWLEDGE_MIGRATION);
-    expect(preKnowledge.length).toBe(4);
+    // 当前 Prisma Client 已含后续列（如 ownership）；seed 前须应用 knowledge 以外的全部 migrations
+    const withoutKnowledge = all.filter((name) => name !== KNOWLEDGE_MIGRATION);
+    expect(withoutKnowledge.length).toBeGreaterThanOrEqual(4);
+    expect(withoutKnowledge.every((name) => name !== KNOWLEDGE_MIGRATION)).toBe(
+      true,
+    );
 
     const db = new Database(FORWARD_DB);
     db.exec(`
@@ -290,7 +294,7 @@ describe("Knowledge migration gates", () => {
         .run(name, "test-forward-checksum", name);
     };
 
-    for (const name of preKnowledge) {
+    for (const name of withoutKnowledge) {
       applySqlMigration(db, name);
     }
     db.close();

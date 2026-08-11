@@ -16,7 +16,7 @@ test("全局产品流：列表搜索 → 案件 → 对比 → 返回 → 报告
   await loginAsDemoUser(page, DEMO_USERS.analyst);
   await page.goto("/cases");
 
-  await expect(page.getByRole("heading", { name: "历史案件" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "案件队列" })).toBeVisible();
   await expect(page.getByTestId("case-list-filters")).toBeVisible();
 
   await page.locator('input[name="q"]').fill("INC-20260808-002");

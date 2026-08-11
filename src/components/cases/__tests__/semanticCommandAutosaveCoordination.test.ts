@@ -20,6 +20,7 @@ const workbench = readSrc("components/cases/PersistedCaseWorkbench.tsx");
 const SEMANTIC_ACTIONS = [
   "updateBusinessContextAction",
   "changeCaseStatusAction",
+  "assignCaseAction",
   "applyChecklistCommandAction",
   "updateHumanReviewAction",
   "addTimelineEventAction",

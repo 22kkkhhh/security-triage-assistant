@@ -26,6 +26,18 @@ import {
 /** 可注入事务客户端（与 Audit 同事务） */
 export type CaseDbClient = Prisma.TransactionClient | typeof prisma;
 
+const CASE_ASSIGNEE_SELECT = {
+  id: true,
+  name: true,
+  username: true,
+  role: true,
+  enabled: true,
+} as const;
+
+const CASE_WITH_ASSIGNEE = {
+  assignedTo: { select: CASE_ASSIGNEE_SELECT },
+} as const;
+
 /** Domain 对象 → Prisma Json 字段（结构化克隆，去掉不可序列化内容） */
 function toJsonValue(value: PersistedCaseState | ReportData): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -133,6 +145,7 @@ export async function createCaseRecord(
   try {
     const row = await client.caseRecord.create({
       data: buildCreateRowData(input, caseNumber),
+      include: CASE_WITH_ASSIGNEE,
     });
     return rowToPersistedCase(row);
   } catch (error) {
@@ -143,6 +156,7 @@ export async function createCaseRecord(
     caseNumber = await allocateCaseNumber();
     const row = await client.caseRecord.create({
       data: buildCreateRowData(input, caseNumber),
+      include: CASE_WITH_ASSIGNEE,
     });
     return rowToPersistedCase(row);
   }
@@ -159,14 +173,20 @@ export async function getCaseById(
   id: string,
   client: CaseDbClient = prisma,
 ): Promise<PersistedCase | null> {
-  const row = await client.caseRecord.findUnique({ where: { id } });
+  const row = await client.caseRecord.findUnique({
+    where: { id },
+    include: CASE_WITH_ASSIGNEE,
+  });
   return row ? rowToPersistedCase(row) : null;
 }
 
 export async function getCaseByCaseNumber(
   caseNumber: string,
 ): Promise<PersistedCase | null> {
-  const row = await prisma.caseRecord.findUnique({ where: { caseNumber } });
+  const row = await prisma.caseRecord.findUnique({
+    where: { caseNumber },
+    include: CASE_WITH_ASSIGNEE,
+  });
   return row ? rowToPersistedCase(row) : null;
 }
 
@@ -244,7 +264,10 @@ export async function saveCaseStateIfVersionMatches(
     );
   }
 
-  const row = await client.caseRecord.findUnique({ where: { id } });
+  const row = await client.caseRecord.findUnique({
+    where: { id },
+    include: CASE_WITH_ASSIGNEE,
+  });
   if (!row) throw new Error(`案件不存在：${id}`);
   return rowToPersistedCase(row);
 }
@@ -276,7 +299,56 @@ export async function saveCaseState(
   const row = await client.caseRecord.update({
     where: { id },
     data: buildCaseStateUpdateData(existing, input),
+    include: CASE_WITH_ASSIGNEE,
   });
+  return rowToPersistedCase(row);
+}
+
+/**
+ * 条件更新案件负责人（不改 caseState）。
+ * 仅当 updatedAt 仍等于 expectedUpdatedAt；与 Audit 同事务提交。
+ */
+export async function assignCaseOwnershipIfVersionMatches(
+  id: string,
+  input: {
+    assignedToUserId: string | null;
+    assignedAt: Date | null;
+  },
+  expectedUpdatedAt: string,
+  client: CaseDbClient = prisma,
+): Promise<PersistedCase> {
+  const expected = new Date(expectedUpdatedAt);
+  if (!Number.isFinite(expected.getTime())) {
+    throw new Error("baseUpdatedAt 无效");
+  }
+
+  const existing = await client.caseRecord.findUnique({ where: { id } });
+  if (!existing) throw new Error(`案件不存在：${id}`);
+
+  const result = await client.caseRecord.updateMany({
+    where: {
+      id,
+      updatedAt: expected,
+    },
+    data: {
+      assignedToUserId: input.assignedToUserId,
+      assignedAt: input.assignedAt,
+    },
+  });
+
+  if (result.count !== 1) {
+    const current = await getCaseById(id, client);
+    throw new StaleCaseStateError(
+      "案件已发生更新，已刷新到最新状态。",
+      current,
+    );
+  }
+
+  const row = await client.caseRecord.findUnique({
+    where: { id },
+    include: CASE_WITH_ASSIGNEE,
+  });
+  if (!row) throw new Error(`案件不存在：${id}`);
   return rowToPersistedCase(row);
 }
 
@@ -386,7 +458,10 @@ export async function saveReportDraft(
     });
   }
 
-  const row = await client.caseRecord.findUnique({ where: { id } });
+  const row = await client.caseRecord.findUnique({
+    where: { id },
+    include: CASE_WITH_ASSIGNEE,
+  });
   if (!row) throw new Error(`案件不存在：${id}`);
   return rowToPersistedCase(row);
 }
@@ -397,11 +472,21 @@ export async function listCases(
   const where: {
     AND?: object[];
     status?: string;
+    assignedToUserId?: string | null;
   } = {};
   const and: object[] = [];
 
   if (query.status) {
     where.status = query.status;
+  }
+  if (query.scope === "mine") {
+    const userId = query.trustedCurrentUserId?.trim();
+    if (!userId) {
+      throw new Error("scope=mine 需要可信当前用户");
+    }
+    where.assignedToUserId = userId;
+  } else if (query.scope === "unassigned") {
+    where.assignedToUserId = null;
   }
   if (query.riskLevel) {
     and.push({
@@ -432,6 +517,7 @@ export async function listCases(
 
   const rows = await prisma.caseRecord.findMany({
     where,
+    include: CASE_WITH_ASSIGNEE,
     orderBy: [{ lastActivityAt: "desc" }, { updatedAt: "desc" }],
   });
   return rows.map(rowToListItem);
@@ -440,6 +526,7 @@ export async function listCases(
 export async function listReportCases(): Promise<CaseListItem[]> {
   const rows = await prisma.caseRecord.findMany({
     where: { hasReport: true },
+    include: CASE_WITH_ASSIGNEE,
     orderBy: [{ reportUpdatedAt: "desc" }, { updatedAt: "desc" }],
   });
   return rows.map(rowToListItem);

@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import type { UserRole } from "@/domain/auth";
+import type {
+  CaseAssigneeSummary,
+  CaseOwnership,
+} from "@/domain/caseOwnership";
 import { caseStatusLabels, riskLevelLabels } from "@/domain/labels";
 import type { CaseStatus } from "@/domain/types";
 import { statusBadgeClass } from "@/components/cases/caseDisplay";
+import { CaseOwnershipControls } from "@/components/cases/CaseOwnershipControls";
 import type { AutosaveState } from "@/hooks/autosaveState";
 import type { RiskLevel } from "@/domain/types";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
@@ -73,6 +79,12 @@ export function CaseHeader({
   navigationError,
   canChangeStatus,
   readOnly = false,
+  ownership,
+  currentUserId,
+  currentUserRole,
+  canAssignCase,
+  eligibleAssignees = [],
+  onAssign,
   onStatusChange,
   onRetry,
   onBack,
@@ -87,6 +99,12 @@ export function CaseHeader({
   navigationError: string | null;
   canChangeStatus: boolean;
   readOnly?: boolean;
+  ownership: CaseOwnership;
+  currentUserId: string;
+  currentUserRole: UserRole;
+  canAssignCase: boolean;
+  eligibleAssignees?: CaseAssigneeSummary[];
+  onAssign: (targetUserId: string | null) => void;
   onStatusChange: (status: CaseStatus) => void;
   onRetry: () => void;
   onBack: () => void;
@@ -175,6 +193,16 @@ export function CaseHeader({
           </span>
         </div>
       </div>
+
+      <CaseOwnershipControls
+        ownership={ownership}
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        canAssign={canAssignCase}
+        commandPending={commandPending}
+        eligibleAssignees={eligibleAssignees}
+        onAssign={onAssign}
+      />
 
       {navigationError && (
         <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">

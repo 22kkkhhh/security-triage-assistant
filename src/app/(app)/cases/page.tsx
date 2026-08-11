@@ -13,7 +13,12 @@ import {
 import { actionClass } from "@/components/layout/pageChrome";
 import { PageFrame } from "@/components/layout/PageFrame";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ForbiddenError } from "@/domain/auth";
+import { ForbiddenError, hasPermission } from "@/domain/auth";
+import {
+  formatCaseAssigneeLabel,
+  isCaseQueueScope,
+  type CaseQueueScope,
+} from "@/domain/caseOwnership";
 import { buildNavigationCapabilities } from "@/domain/uiCapabilities";
 import { requirePermission } from "@/services/auth/requirePermission";
 import { listCases } from "@/services/persistence/caseRepository";
@@ -24,14 +29,30 @@ type SearchParams = Promise<{
   q?: string;
   status?: string;
   risk?: string;
+  scope?: string;
 }>;
 
 const statusOptions = Object.entries(caseStatusLabels) as [CaseStatus, string][];
 const riskOptions = Object.entries(riskLevelLabels) as [RiskLevel, string][];
 
+function scopeHref(scope: CaseQueueScope, params: {
+  q: string;
+  status?: CaseStatus;
+  risk?: RiskLevel;
+}): string {
+  const sp = new URLSearchParams();
+  if (scope !== "all") sp.set("scope", scope);
+  if (params.q) sp.set("q", params.q);
+  if (params.status) sp.set("status", params.status);
+  if (params.risk) sp.set("risk", params.risk);
+  const qs = sp.toString();
+  return qs ? `/cases?${qs}` : "/cases";
+}
+
 /**
- * 历史案件列表（Server Component）。
- * 搜索与筛选通过 GET searchParams 传递给 listCases，不在客户端过滤。
+ * 案件队列（Server Component）。
+ * 搜索 / 筛选 / scope 通过 GET searchParams 传给 listCases，不在客户端过滤。
+ * Ownership ≠ ACL：CASE_READ 仍可查看全部可见案件。
  */
 export default async function CasesPage({
   searchParams,
@@ -54,18 +75,33 @@ export default async function CasesPage({
   const q = params.q?.trim() ?? "";
   const status = isCaseStatus(params.status) ? params.status : undefined;
   const risk = isRiskLevel(params.risk) ? params.risk : undefined;
+  const requestedScope = isCaseQueueScope(params.scope) ? params.scope : "all";
+  /** 无 CASE_ASSIGN 时不展示「我的/未分配」（避免永远为空的无效 scope） */
+  const canUseQueueScopes = hasPermission(user, "CASE_ASSIGN");
+  const scope: CaseQueueScope = canUseQueueScopes ? requestedScope : "all";
   const { canCreateCase } = buildNavigationCapabilities(user);
 
   const cases = await listCases({
     search: q || undefined,
     status,
     riskLevel: risk,
+    scope,
+    trustedCurrentUserId: scope === "mine" ? user.id : undefined,
   });
+
+  const emptyMessage =
+    scope === "mine"
+      ? "当前没有由你负责的案件。"
+      : scope === "unassigned"
+        ? "当前没有未分配案件。"
+        : canCreateCase
+          ? "创建第一个研判案件后，可在这里继续处理。"
+          : "当前账号为只读访问，暂无可见案件。";
 
   return (
     <PageFrame width="normal">
       <PageHeader
-        title="历史案件"
+        title="案件队列"
         description={
           canCreateCase
             ? "查看并继续处理已保存的安全研判案件"
@@ -80,11 +116,46 @@ export default async function CasesPage({
         }
       />
 
+      {canUseQueueScopes ? (
+        <nav
+          className="mb-3 flex gap-1 overflow-x-auto pb-1"
+          aria-label="案件队列范围"
+          data-testid="case-queue-scopes"
+        >
+          {(
+            [
+              ["all", "全部"],
+              ["mine", "我的"],
+              ["unassigned", "未分配"],
+            ] as const
+          ).map(([value, label]) => {
+            const active = scope === value;
+            return (
+              <Link
+                key={value}
+                href={scopeHref(value, { q, status, risk })}
+                data-testid={`case-queue-scope-${value}`}
+                className={
+                  active
+                    ? "shrink-0 rounded border border-slate-800 bg-slate-800 px-3 py-1.5 text-xs font-medium text-white"
+                    : "shrink-0 rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                }
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+      ) : null}
+
       <form
         method="get"
         className="flex flex-col gap-3 border-b border-neutral-200 pb-4 sm:flex-row sm:flex-wrap sm:items-end"
         data-testid="case-list-filters"
       >
+        {scope !== "all" ? (
+          <input type="hidden" name="scope" value={scope} />
+        ) : null}
         <label className="min-w-0 flex-1 text-sm sm:min-w-[240px]">
           <span className="text-xs font-medium text-neutral-600">搜索</span>
           <input
@@ -131,13 +202,11 @@ export default async function CasesPage({
 
       {cases.length === 0 ? (
         <div className="py-14 text-center" data-testid="case-list-empty">
-          <p className="text-base font-medium text-neutral-800">暂无案件</p>
-          <p className="mt-1 text-sm text-neutral-500">
-            {canCreateCase
-              ? "创建第一个研判案件后，可在这里继续处理。"
-              : "当前账号为只读访问，暂无可见案件。"}
+          <p className="text-base font-medium text-neutral-800">
+            {scope === "all" ? "暂无案件" : "暂无匹配案件"}
           </p>
-          {canCreateCase ? (
+          <p className="mt-1 text-sm text-neutral-500">{emptyMessage}</p>
+          {canCreateCase && scope === "all" ? (
             <Link
               href="/cases/new"
               className={`mt-4 ${actionClass.primary}`}
@@ -148,7 +217,6 @@ export default async function CasesPage({
         </div>
       ) : (
         <>
-          {/* Desktop / tablet：主列精简；账号与系统并入案件单元格 */}
           <div className="hidden overflow-hidden border border-neutral-200 bg-white md:block">
             <table className="min-w-full border-collapse text-sm">
               <thead>
@@ -162,11 +230,18 @@ export default async function CasesPage({
               </thead>
               <tbody>
                 {cases.map((item) => {
-                  const risk = resolveCaseListRiskDisplay(
+                  const riskDisplay = resolveCaseListRiskDisplay(
                     item.humanRiskLevel,
                     item.suggestedRiskLevel,
                   );
                   const systems = displaySystems(item.systemsSearchText);
+                  const ownerLabel = formatCaseAssigneeLabel(item.ownership.assignee, {
+                    currentUserId: user.id,
+                  });
+                  const pending =
+                    item.pendingChecklistCount > 0
+                      ? `${item.pendingChecklistCount} 待核查`
+                      : null;
                   const secondary = [item.username, systems]
                     .filter((part) => part && part !== "—")
                     .join(" · ");
@@ -187,6 +262,13 @@ export default async function CasesPage({
                           <span className="mt-0.5 block text-[14px] font-medium leading-5 text-neutral-900">
                             {item.title}
                           </span>
+                          <span
+                            className="mt-0.5 block text-xs text-neutral-500"
+                            data-testid="case-list-owner"
+                          >
+                            负责人：{ownerLabel}
+                            {pending ? ` · ${pending}` : ""}
+                          </span>
                           {secondary ? (
                             <span className="mt-0.5 block truncate text-xs text-neutral-500">
                               {secondary}
@@ -196,11 +278,11 @@ export default async function CasesPage({
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(risk.riskLabel)}`}
+                          className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(riskDisplay.riskLabel)}`}
                           data-testid="case-list-risk"
-                          data-risk-source={risk.source}
+                          data-risk-source={riskDisplay.source}
                         >
-                          {risk.text}
+                          {riskDisplay.text}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -225,17 +307,19 @@ export default async function CasesPage({
             </table>
           </div>
 
-          {/* Mobile：紧凑行，避免横向滚动宽表 */}
           <ul
             className="divide-y divide-neutral-200 border border-neutral-200 bg-white md:hidden"
             data-testid="case-list-mobile"
           >
             {cases.map((item) => {
-              const risk = resolveCaseListRiskDisplay(
+              const riskDisplay = resolveCaseListRiskDisplay(
                 item.humanRiskLevel,
                 item.suggestedRiskLevel,
               );
               const systems = displaySystems(item.systemsSearchText);
+              const ownerLabel = formatCaseAssigneeLabel(item.ownership.assignee, {
+                currentUserId: user.id,
+              });
               const secondary = [item.username, systems]
                 .filter((part) => part && part !== "—")
                 .join(" · ");
@@ -254,11 +338,11 @@ export default async function CasesPage({
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <span
-                        className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(risk.riskLabel)}`}
+                        className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(riskDisplay.riskLabel)}`}
                         data-testid="case-list-risk"
-                        data-risk-source={risk.source}
+                        data-risk-source={riskDisplay.source}
                       >
-                        {risk.text}
+                        {riskDisplay.text}
                       </span>
                       <span
                         className={`inline-block rounded border px-1.5 py-0.5 text-xs ${statusBadgeClass(item.status)}`}
@@ -266,7 +350,13 @@ export default async function CasesPage({
                         {displayCaseStatus(item.status)}
                       </span>
                     </div>
-                    <div className="mt-1.5 text-xs text-neutral-500">
+                    <div
+                      className="mt-1.5 text-xs text-neutral-500"
+                      data-testid="case-list-owner"
+                    >
+                      负责人：{ownerLabel}
+                    </div>
+                    <div className="mt-0.5 text-xs text-neutral-500">
                       {item.pendingChecklistCount > 0
                         ? `${item.pendingChecklistCount} 待核查`
                         : "无待核查"}

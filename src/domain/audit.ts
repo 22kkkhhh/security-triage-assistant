@@ -7,6 +7,8 @@
 export type AuditActionType =
   | "CASE_CREATED"
   | "STATUS_CHANGED"
+  | "CASE_ASSIGNED"
+  | "CASE_UNASSIGNED"
   | "CHECKLIST_COMPLETED"
   | "CHECKLIST_REOPENED"
   | "CHECKLIST_ADDED"
@@ -28,6 +30,8 @@ export type AuditActorType = "SYSTEM" | "MANUAL" | "USER";
 export const AUDIT_ACTION_TYPES: readonly AuditActionType[] = [
   "CASE_CREATED",
   "STATUS_CHANGED",
+  "CASE_ASSIGNED",
+  "CASE_UNASSIGNED",
   "CHECKLIST_COMPLETED",
   "CHECKLIST_REOPENED",
   "CHECKLIST_ADDED",
@@ -44,6 +48,8 @@ export const AUDIT_ACTION_TYPES: readonly AuditActionType[] = [
 export const auditActionTypeLabels: Record<AuditActionType, string> = {
   CASE_CREATED: "创建研判案件",
   STATUS_CHANGED: "修改案件状态",
+  CASE_ASSIGNED: "分配案件负责人",
+  CASE_UNASSIGNED: "释放案件负责人",
   CHECKLIST_COMPLETED: "完成核查事项",
   CHECKLIST_REOPENED: "重新打开核查事项",
   CHECKLIST_ADDED: "添加核查事项",

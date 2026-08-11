@@ -8,6 +8,8 @@ export {
   type ChecklistCommandAction,
 } from "./caseCommands";
 
+export { assignCaseCommand } from "./assignCaseCommand";
+
 export {
   createReportDraftCommand,
   exportReportCommand,

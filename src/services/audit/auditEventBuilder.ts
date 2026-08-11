@@ -400,3 +400,80 @@ export function buildHandoffAudit(input: {
     operationId: input.operationId ?? null,
   });
 }
+
+function assigneeLabel(name: string | null | undefined, fallback = "未知用户"): string {
+  const trimmed = name?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : fallback;
+}
+
+/** 分配 / 重分配案件负责人 */
+export function buildCaseAssignedAudit(input: {
+  previousAssigneeUserId: string | null;
+  previousAssigneeName: string | null;
+  newAssigneeUserId: string;
+  newAssigneeName: string | null;
+  actor: AuditActor;
+  operationId?: string | null;
+  isSelfClaim?: boolean;
+  isAdminReassign?: boolean;
+}): BuiltAuditEvent {
+  const newName = assigneeLabel(input.newAssigneeName);
+  const prevName = assigneeLabel(input.previousAssigneeName);
+  let summary: string;
+  if (input.isSelfClaim) {
+    summary = `${newName}接手了案件`;
+  } else if (
+    input.isAdminReassign &&
+    input.previousAssigneeUserId != null
+  ) {
+    summary = `管理员将案件负责人从${prevName}调整为${newName}`;
+  } else if (input.previousAssigneeUserId == null) {
+    summary = `将案件负责人分配给${newName}`;
+  } else {
+    summary = `将案件负责人从${prevName}调整为${newName}`;
+  }
+
+  return withActor(input.actor, {
+    actionType: "CASE_ASSIGNED",
+    summary: truncateSummary(summary),
+    changes: {
+      previousAssigneeUserId: input.previousAssigneeUserId,
+      previousAssigneeName: input.previousAssigneeName,
+      newAssigneeUserId: input.newAssigneeUserId,
+      newAssigneeName: input.newAssigneeName,
+    },
+    metadata: null,
+    operationId: input.operationId ?? null,
+  });
+}
+
+/** 释放案件负责人 */
+export function buildCaseUnassignedAudit(input: {
+  previousAssigneeUserId: string | null;
+  previousAssigneeName: string | null;
+  actor: AuditActor;
+  operationId?: string | null;
+}): BuiltAuditEvent {
+  const prevName = assigneeLabel(input.previousAssigneeName);
+  const actorName = input.actor.actorName?.trim() || "用户";
+  const isSelfRelease =
+    input.actor.actorType === "USER" &&
+    input.actor.actorId != null &&
+    input.previousAssigneeUserId === input.actor.actorId;
+  const summary = isSelfRelease
+    ? `${prevName}释放了案件负责人`
+    : `${actorName}将案件释放为未分配`;
+
+  return withActor(input.actor, {
+    actionType: "CASE_UNASSIGNED",
+    summary: truncateSummary(summary),
+    changes: {
+      previousAssigneeUserId: input.previousAssigneeUserId,
+      previousAssigneeName: input.previousAssigneeName,
+      newAssigneeUserId: null,
+      newAssigneeName: null,
+    },
+    metadata: null,
+    operationId: input.operationId ?? null,
+  });
+}

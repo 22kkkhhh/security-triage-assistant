@@ -1,7 +1,9 @@
 export {
   asPlainText,
   buildBusinessContextUpdatedAudit,
+  buildCaseAssignedAudit,
   buildCaseCreatedAudit,
+  buildCaseUnassignedAudit,
   buildChecklistAddedAudit,
   buildChecklistCompletedAudit,
   buildChecklistDeletedAudit,

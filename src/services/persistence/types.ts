@@ -12,6 +12,11 @@ import type {
   RiskLevel,
   TimelineEvent,
 } from "@/domain/types";
+import type {
+  CaseAssigneeSummary,
+  CaseOwnership,
+  CaseQueueScope,
+} from "@/domain/caseOwnership";
 
 /**
  * 案件可恢复状态（单一 Source of Truth）。
@@ -85,6 +90,8 @@ export interface PersistedCase {
   reportUpdatedAt: string | null;
   /** 最后一次有意义的运营活动时间（Audit 成功写入时更新） */
   lastActivityAt: string;
+  /** 运营负责人（SoT：CaseRecord 列；非 ACL） */
+  ownership: CaseOwnership;
   caseState: PersistedCaseState;
   reportDraft: ReportData | null;
   createdAt: string;
@@ -109,6 +116,7 @@ export interface CaseListItem {
   reportUpdatedAt: string | null;
   /** 最后一次有意义的运营活动时间 */
   lastActivityAt: string;
+  ownership: CaseOwnership;
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;
@@ -120,4 +128,13 @@ export interface ListCasesQuery {
   status?: CaseStatus;
   /** 按人工风险等级筛选；无人工等级时回退建议等级 */
   riskLevel?: RiskLevel;
+  /**
+   * 队列 scope。mine 必须配合 trustedCurrentUserId（Server 注入），
+   * 禁止 Client 提交任意 userId。
+   */
+  scope?: CaseQueueScope;
+  /** scope=mine 时的可信当前用户 ID */
+  trustedCurrentUserId?: string;
 }
+
+export type { CaseAssigneeSummary, CaseOwnership, CaseQueueScope };

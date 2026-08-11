@@ -14,7 +14,7 @@ export default function AppNotFound() {
         href="/cases"
         className="inline-block text-sm text-slate-700 underline underline-offset-2 hover:text-slate-900"
       >
-        返回历史案件
+        返回案件队列
       </Link>
     </div>
   );

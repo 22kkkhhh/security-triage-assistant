@@ -76,6 +76,11 @@ function buildPersistedCase(): PersistedCase {
     hasReport: false,
     reportUpdatedAt: null,
     lastActivityAt: caseB.createdAt,
+    ownership: {
+      assignedToUserId: null,
+      assignedAt: null,
+      assignee: null,
+    },
     createdAt: caseB.createdAt,
     updatedAt: caseB.createdAt,
     closedAt: null,

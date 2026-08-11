@@ -13,6 +13,7 @@ import { hasPermission, type AuthUser } from "@/domain/auth";
 export type CaseWorkbenchCapabilities = {
   canSnapshotWrite: boolean;
   canChangeStatus: boolean;
+  canAssignCase: boolean;
   canWriteChecklist: boolean;
   canWriteBusinessContext: boolean;
   canWriteHumanReview: boolean;
@@ -45,6 +46,7 @@ export function buildCaseWorkbenchCapabilities(
   return {
     canSnapshotWrite: hasPermission(user, "CASE_SNAPSHOT_WRITE"),
     canChangeStatus: hasPermission(user, "CASE_STATUS_CHANGE"),
+    canAssignCase: hasPermission(user, "CASE_ASSIGN"),
     canWriteChecklist: hasPermission(user, "CHECKLIST_WRITE"),
     canWriteBusinessContext: hasPermission(user, "BUSINESS_CONTEXT_WRITE"),
     canWriteHumanReview: hasPermission(user, "HUMAN_REVIEW_WRITE"),

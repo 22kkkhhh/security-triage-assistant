@@ -56,7 +56,7 @@ export default async function ReportsPage() {
               案件生成报告后，可在这里继续编辑或导出 Word。
             </p>
             <Link href="/cases" className={`mt-4 ${actionClass.secondary}`}>
-              前往历史案件
+              前往案件队列
             </Link>
           </div>
         ) : (

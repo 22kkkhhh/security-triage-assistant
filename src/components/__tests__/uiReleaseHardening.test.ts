@@ -96,7 +96,7 @@ describe("S6 Loading / Not Found", () => {
     const notFound = readSrc("app/(app)/not-found.tsx");
     expect(loading).toContain("加载中");
     expect(notFound).toContain("未找到页面");
-    expect(notFound).toContain("返回历史案件");
+    expect(notFound).toContain("返回案件队列");
     expect(loading).not.toMatch(/stack|Prisma|INTERNAL|Error:/i);
     expect(notFound).not.toMatch(/stack|Prisma|INTERNAL|Error:/i);
   });

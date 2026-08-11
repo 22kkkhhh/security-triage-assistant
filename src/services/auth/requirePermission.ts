@@ -68,6 +68,8 @@ export const SERVER_ACTION_PERMISSIONS = {
   saveCaseStateAction: "CASE_SNAPSHOT_WRITE",
   createCaseAction: "CASE_CREATE",
   changeCaseStatusAction: "CASE_STATUS_CHANGE",
+  assignCaseAction: "CASE_ASSIGN",
+  listEligibleAssigneesAction: "CASE_ASSIGN",
   applyChecklistCommandAction: "CHECKLIST_WRITE",
   addInvestigationLeadToChecklistAction: "CHECKLIST_WRITE",
   updateBusinessContextAction: "BUSINESS_CONTEXT_WRITE",

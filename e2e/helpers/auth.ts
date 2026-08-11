@@ -5,6 +5,7 @@ import { expect, type Page } from "@playwright/test";
  * 不在测试代码中重复硬编码明文密码。
  */
 export const DEMO_USERS = {
+  admin: "demo-admin",
   analyst: "demo-analyst",
   viewer: "demo-viewer",
 } as const;
