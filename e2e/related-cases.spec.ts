@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { expandHistoricalLeads } from "./helpers/workbench";
 
 /**
  * v1.8-M2：Historical Signals + Investigation Leads。
@@ -18,17 +19,18 @@ test("历史调查线索：Signals / Leads 可见，关联可点，风险与 Hum
 
   const panel = page.getByTestId("related-cases-panel");
   await expect(panel).toBeVisible();
-  await expect(
-    panel.getByRole("heading", { name: "历史调查线索" }),
-  ).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "历史线索" })).toBeVisible();
 
-  // 导航锚点「历史线索」
+  // 主导航收敛为「调查」；历史线索在调查内部
   const nav = page.getByTestId("case-investigation-nav");
-  await expect(nav.getByRole("button", { name: "历史线索" })).toBeVisible();
+  await expect(nav.getByRole("button", { name: "调查" })).toBeVisible();
+  await expect(nav.getByRole("button", { name: "历史线索" })).toHaveCount(0);
+
+  await expandHistoricalLeads(page);
 
   // Demo A/B 共享 CRM_PROD → related + RECURRING_SYSTEM signal + system lead
   await expect(panel.getByTestId("historical-related-count")).toContainText(
-    "相关案件",
+    "相关",
   );
   await expect(panel.getByTestId("historical-signals")).toBeVisible();
   await expect(

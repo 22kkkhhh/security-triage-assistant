@@ -222,18 +222,17 @@ describe("Investigation Progress UI 接线契约", () => {
     expect(humanReview).toContain("当前无法确认核查状态");
   });
 
-  it("UI 文案：概览风险/异常/UNKNOWN/待办 + 进度计数；非最终结论", () => {
-    expect(panel).toContain("调查进度");
-    expect(panel).toContain("调查概览 · 非最终结论");
-    expect(panel).toContain("系统建议风险");
+  it("UI 文案：概览 Next Step + 三项主指标；非最终结论", () => {
+    expect(panel).toContain("概览");
+    expect(panel).toContain("当前情况与优先动作 · 非最终结论");
+    expect(panel).toContain("建议下一步");
     expect(panel).toContain("技术异常");
     expect(panel).toContain("信息不足");
-    expect(panel).toContain("待核查事项");
-    expect(panel).toContain("待补充上下文");
-    expect(panel).toContain("待收集证据");
-    expect(panel).toContain("待完成核查");
-    expect(panel).toContain("已解决");
+    expect(panel).toContain("待处理");
+    expect(panel).toContain("调查进度：已完成");
     expect(panel).toContain("非最终结论");
+    expect(panel).not.toContain("系统建议风险");
+    expect(panel).not.toContain("待补充上下文");
   });
 
   it("HumanReview 提示不 hard-block", () => {

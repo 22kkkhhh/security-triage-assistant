@@ -46,13 +46,14 @@ describe("Historical Intelligence / Related Cases UI 契约", () => {
 
   it("empty state 文案不宣称确认无关联", () => {
     expect(panel).toContain(
-      "当前未发现具有明确共同调查事实的历史案件。",
+      "暂未发现具有明确共同调查事实的历史案件。",
     );
     expect(panel).not.toContain("确认无关联");
   });
 
-  it("标题升级为历史调查线索；保留关联案件 cards + 对比入口", () => {
-    expect(panel).toContain("历史调查线索");
+  it("历史线索标题；展开后保留关联案件 + 对比入口", () => {
+    expect(panel).toContain("历史线索");
+    expect(panel).toContain("展开历史线索");
     expect(panel).toContain('data-testid="related-cases-list"');
     expect(panel).toContain('data-testid="historical-signals"');
     expect(panel).toContain('data-testid="investigation-leads"');
@@ -61,12 +62,15 @@ describe("Historical Intelligence / Related Cases UI 契约", () => {
     expect(workbench).toContain("currentCaseId={initial.caseId}");
   });
 
-  it("导航含历史线索锚点", () => {
+  it("历史线索仍绑定 section id；主导航改为调查工作区", () => {
     expect(INVESTIGATION_SECTION_IDS.historicalLeads).toBe(
       "investigation-historical-leads",
     );
-    expect(nav).toContain("历史线索");
-    expect(nav).toContain("INVESTIGATION_SECTION_IDS.historicalLeads");
+    expect(INVESTIGATION_SECTION_IDS.investigation).toBe(
+      "investigation-workspace",
+    );
+    expect(nav).toContain('label: "调查"');
+    expect(nav).toContain("INVESTIGATION_SECTION_IDS.investigation");
     expect(panel).toContain("INVESTIGATION_SECTION_IDS.historicalLeads");
   });
 

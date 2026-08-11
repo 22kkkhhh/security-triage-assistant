@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { RiskBadge } from "@/components/common";
 import { resolveCaseNextStep } from "./caseNextStep";
 import type { InvestigationOverviewStats } from "./investigationOverviewStats";
 import type { InvestigationProgressPanelView } from "./investigationProgressSummary";
@@ -10,7 +9,7 @@ import {
   scrollToInvestigationSection,
 } from "./investigationProgressSummary";
 
-function StatCell({
+function CompactMetric({
   label,
   value,
   onClick,
@@ -19,27 +18,21 @@ function StatCell({
   label: string;
   value: ReactNode;
   onClick?: () => void;
-  emphasize?: "warn" | "muted" | "neutral";
+  emphasize?: boolean;
 }) {
-  const valueClass =
-    emphasize === "warn"
-      ? "text-amber-800"
-      : emphasize === "muted"
-        ? "text-neutral-500"
-        : "text-neutral-900";
-
+  const valueClass = emphasize ? "text-amber-800" : "text-neutral-700";
   const content = (
     <>
-      <div className="text-xs text-neutral-500">{label}</div>
-      <div className={`mt-0.5 text-lg font-semibold tabular-nums ${valueClass}`}>
+      <span className="text-xs text-neutral-500">{label}</span>
+      <span className={`text-sm font-semibold tabular-nums ${valueClass}`}>
         {value}
-      </div>
+      </span>
     </>
   );
 
   if (!onClick) {
     return (
-      <div className="rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-left">
+      <div className="flex items-baseline justify-between gap-2 border-b border-neutral-100 py-1.5">
         {content}
       </div>
     );
@@ -48,29 +41,11 @@ function StatCell({
   return (
     <button
       type="button"
-      className="rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-left hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+      className="flex w-full items-baseline justify-between gap-2 border-b border-neutral-100 py-1.5 text-left hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
       onClick={onClick}
     >
       {content}
     </button>
-  );
-}
-
-function RiskStat({ suggestedRiskLevel }: { suggestedRiskLevel: InvestigationOverviewStats["suggestedRiskLevel"] }) {
-  return (
-    <div className="rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-left">
-      <div className="text-xs text-neutral-500">系统建议风险</div>
-      <div className="mt-1">
-        {suggestedRiskLevel ? (
-          <RiskBadge level={suggestedRiskLevel} />
-        ) : (
-          <span className="text-lg font-semibold text-neutral-500">—</span>
-        )}
-      </div>
-      <p className="mt-1 text-[11px] text-neutral-400">
-        辅助参考 · 非最终结论
-      </p>
-    </div>
   );
 }
 
@@ -81,30 +56,30 @@ function NextStepBlock({ view }: { view: InvestigationProgressPanelView }) {
     <div
       className={
         step.isUnavailable
-          ? "mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2.5"
-          : "mt-3 rounded border border-slate-200 bg-slate-50 px-3 py-2.5"
+          ? "rounded border border-amber-200 bg-amber-50 px-3 py-3"
+          : "rounded border border-slate-300 bg-white px-3 py-3"
       }
       data-testid="case-next-step"
     >
       <p className="text-xs font-medium text-neutral-600">建议下一步</p>
-      <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+      <div className="mt-1.5 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p
             className={
               step.isUnavailable
-                ? "text-sm font-medium text-amber-900"
-                : "text-sm font-medium text-neutral-900"
+                ? "text-base font-semibold text-amber-900"
+                : "text-base font-semibold text-neutral-900"
             }
           >
             {step.title}
           </p>
           {!step.isUnavailable && (
-            <p className="mt-0.5 text-xs text-neutral-600">{step.detail}</p>
+            <p className="mt-1 text-sm text-neutral-600">{step.detail}</p>
           )}
         </div>
         <button
           type="button"
-          className="shrink-0 rounded bg-slate-800 px-3 py-1.5 text-xs text-white hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+          className="shrink-0 rounded bg-slate-800 px-3.5 py-2 text-sm text-white hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
           data-testid="case-next-step-cta"
           onClick={() => scrollToInvestigationSection(step.targetId)}
         >
@@ -113,6 +88,29 @@ function NextStepBlock({ view }: { view: InvestigationProgressPanelView }) {
       </div>
     </div>
   );
+}
+
+/** 关键发现：仅复用已有 runtime 计数，最多 3 条 */
+export function deriveKeyFindings(input: {
+  relatedCaseCount: number;
+  abnormalCount: number;
+  unknownCount: number;
+  pendingChecklistCount: number;
+}): string[] {
+  const findings: string[] = [];
+  if (input.relatedCaseCount > 0) {
+    findings.push(`发现 ${input.relatedCaseCount} 个相关历史案件`);
+  }
+  if (input.abnormalCount > 0) {
+    findings.push(`当前存在 ${input.abnormalCount} 项技术异常`);
+  }
+  if (input.unknownCount > 0) {
+    findings.push(`仍有 ${input.unknownCount} 项信息不足`);
+  }
+  if (input.pendingChecklistCount > 0 && findings.length < 3) {
+    findings.push(`有 ${input.pendingChecklistCount} 项待核查事项`);
+  }
+  return findings.slice(0, 3);
 }
 
 function ReportShortcut({
@@ -124,16 +122,15 @@ function ReportShortcut({
   canWriteReport: boolean;
   onGoToReport: () => void;
 }) {
-  // 文案与底部 CTA 区分，避免 e2e / a11y 同名按钮冲突；仍复用 goToReport()
   if (hasReport) {
     return (
       <button
         type="button"
         data-testid="overview-report-cta"
-        className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 hover:bg-slate-50"
+        className="text-xs text-slate-600 underline underline-offset-2 hover:text-slate-900"
         onClick={onGoToReport}
       >
-        {canWriteReport ? "快捷编辑报告" : "快捷查看报告"}
+        {canWriteReport ? "编辑报告" : "查看报告"}
       </button>
     );
   }
@@ -143,10 +140,10 @@ function ReportShortcut({
       <button
         type="button"
         data-testid="overview-report-cta"
-        className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 hover:bg-slate-50"
+        className="text-xs text-slate-600 underline underline-offset-2 hover:text-slate-900"
         onClick={onGoToReport}
       >
-        快捷生成报告
+        生成报告
       </button>
     );
   }
@@ -154,44 +151,49 @@ function ReportShortcut({
   return null;
 }
 
-function OverviewShell({
-  children,
-  hasReport,
-  canWriteReport,
+/**
+ * 概览：Next Step 优先；最多 3 个紧凑指标；风险已迁入 Header。
+ */
+export function InvestigationProgressPanel({
+  view,
+  overviewStats,
+  relatedCaseCount = 0,
+  hasReport = false,
+  canWriteReport = false,
   onGoToReport,
-  unavailable = false,
 }: {
-  children: ReactNode;
-  hasReport: boolean;
-  canWriteReport: boolean;
+  view: InvestigationProgressPanelView;
+  overviewStats: InvestigationOverviewStats;
+  relatedCaseCount?: number;
+  hasReport?: boolean;
+  canWriteReport?: boolean;
   onGoToReport?: () => void;
-  unavailable?: boolean;
 }) {
+  const keyFindings = deriveKeyFindings({
+    relatedCaseCount,
+    abnormalCount: overviewStats.abnormalCount,
+    unknownCount: overviewStats.unknownCount,
+    pendingChecklistCount: overviewStats.pendingChecklistCount,
+  });
+
   return (
     <section
       id={INVESTIGATION_SECTION_IDS.progress}
-      className="scroll-mt-14 rounded-md border border-neutral-200 bg-white px-4 py-3"
+      className="scroll-mt-14 space-y-3"
       aria-labelledby="investigation-overview-heading"
       data-testid="investigation-overview"
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2
-              id="investigation-overview-heading"
-              className="text-sm font-semibold text-neutral-900"
-            >
-              调查进度
-            </h2>
-            {unavailable ? (
-              <span className="text-xs text-amber-700">当前不可用</span>
-            ) : null}
-          </div>
-          {!unavailable ? (
-            <p className="mt-0.5 text-xs text-neutral-500">
-              调查概览 · 非最终结论
-            </p>
-          ) : null}
+          <h2
+            id="investigation-overview-heading"
+            className="text-sm font-semibold text-neutral-900"
+          >
+            概览
+          </h2>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            当前情况与优先动作 · 非最终结论
+          </p>
         </div>
         {onGoToReport ? (
           <ReportShortcut
@@ -201,165 +203,80 @@ function OverviewShell({
           />
         ) : null}
       </div>
-      {children}
-    </section>
-  );
-}
 
-/**
- * 调查概览：风险 / 异常 / UNKNOWN / 待办 / 下一步一眼可见。
- * 消费 Server Investigation Progress DTO 的展示模型 + 前端派生计数。
- * 不运行 progress resolver；RESOLVED ≠ Human final conclusion。
- */
-export function InvestigationProgressPanel({
-  view,
-  overviewStats,
-  hasReport = false,
-  canWriteReport = false,
-  onGoToReport,
-}: {
-  view: InvestigationProgressPanelView;
-  overviewStats: InvestigationOverviewStats;
-  hasReport?: boolean;
-  canWriteReport?: boolean;
-  onGoToReport?: () => void;
-}) {
-  if (view.resolutionStatus === "RESOLUTION_UNAVAILABLE") {
-    return (
-      <OverviewShell
-        hasReport={hasReport}
-        canWriteReport={canWriteReport}
-        onGoToReport={onGoToReport}
-        unavailable
-      >
+      {view.resolutionStatus === "RESOLUTION_UNAVAILABLE" ? (
         <p
-          className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900"
+          className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900"
           role="status"
           data-testid="investigation-progress-unavailable"
         >
           调查进度暂不可用。当前无法完成重新解析，请稍后刷新后继续核查；不得将当前状态视为已完成核查或全部已解决。
         </p>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <RiskStat suggestedRiskLevel={overviewStats.suggestedRiskLevel} />
-          <StatCell
-            label="技术异常"
-            value={overviewStats.abnormalCount}
-            onClick={() =>
-              scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.analysis)
-            }
-            emphasize={overviewStats.abnormalCount > 0 ? "warn" : "muted"}
-          />
-          <StatCell
-            label="信息不足"
-            value={overviewStats.unknownCount}
-            onClick={() =>
-              scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.analysis)
-            }
-            emphasize={overviewStats.unknownCount > 0 ? "warn" : "muted"}
-          />
-          <StatCell
-            label="待核查事项"
-            value={overviewStats.pendingChecklistCount}
-            onClick={() =>
-              scrollToInvestigationSection(
-                INVESTIGATION_SECTION_IDS.evidenceWorkspace,
-              )
-            }
-            emphasize={
-              overviewStats.pendingChecklistCount > 0 ? "warn" : "muted"
-            }
-          />
-        </div>
-        <NextStepBlock view={view} />
-      </OverviewShell>
-    );
-  }
+      ) : null}
 
-  return (
-    <OverviewShell
-      hasReport={hasReport}
-      canWriteReport={canWriteReport}
-      onGoToReport={onGoToReport}
-    >
-      <p className="mt-2 text-xs leading-5 text-neutral-600">{view.disclaimer}</p>
+      <NextStepBlock view={view} />
 
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <RiskStat suggestedRiskLevel={overviewStats.suggestedRiskLevel} />
-        <StatCell
+      <div
+        className="max-w-md space-y-0"
+        data-testid="overview-primary-metrics"
+      >
+        <CompactMetric
           label="技术异常"
           value={overviewStats.abnormalCount}
           onClick={() =>
             scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.analysis)
           }
-          emphasize={overviewStats.abnormalCount > 0 ? "warn" : "muted"}
+          emphasize={overviewStats.abnormalCount > 0}
         />
-        <StatCell
+        <CompactMetric
           label="信息不足"
           value={overviewStats.unknownCount}
           onClick={() =>
             scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.analysis)
           }
-          emphasize={overviewStats.unknownCount > 0 ? "warn" : "muted"}
+          emphasize={overviewStats.unknownCount > 0}
         />
-        <StatCell
-          label="待核查事项"
+        <CompactMetric
+          label="待处理"
           value={overviewStats.pendingChecklistCount}
           onClick={() =>
             scrollToInvestigationSection(
               INVESTIGATION_SECTION_IDS.evidenceWorkspace,
             )
           }
-          emphasize={
-            overviewStats.pendingChecklistCount > 0 ? "warn" : "muted"
-          }
+          emphasize={overviewStats.pendingChecklistCount > 0}
         />
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <StatCell
-          label="待补充上下文"
-          value={view.pendingContext}
-          onClick={() =>
-            scrollToInvestigationSection(
-              INVESTIGATION_SECTION_IDS.businessContext,
-            )
-          }
-          emphasize={view.pendingContext > 0 ? "warn" : "muted"}
-        />
-        <StatCell
-          label="待收集证据"
-          value={view.pendingEvidence}
-          onClick={() =>
-            scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.evidence)
-          }
-          emphasize={view.pendingEvidence > 0 ? "warn" : "muted"}
-        />
-        <StatCell
-          label="待完成核查"
-          value={view.pendingChecks}
-          onClick={() =>
-            scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.checklist)
-          }
-          emphasize={view.pendingChecks > 0 ? "warn" : "muted"}
-        />
-        <StatCell
-          label="已解决"
-          value={view.resolvedCount}
-          onClick={() =>
-            scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.checklist)
-          }
-          emphasize="neutral"
-        />
-      </div>
+      {view.resolutionStatus === "SUCCESS" ? (
+        <p
+          className="text-xs text-neutral-500"
+          data-testid="overview-progress-line"
+        >
+          调查进度：已完成 {view.resolvedCount} · 待处理{" "}
+          {view.pendingChecks + view.pendingContext + view.pendingEvidence}
+        </p>
+      ) : null}
 
-      <p
-        className="mt-3 text-xs text-neutral-500"
-        data-testid="investigation-progress-human-review-fact"
-      >
-        {view.humanReviewFactLabel}
-      </p>
+      {keyFindings.length > 0 ? (
+        <div data-testid="overview-key-findings">
+          <p className="text-xs font-medium text-neutral-600">关键发现</p>
+          <ul className="mt-1 space-y-0.5 text-sm text-neutral-800">
+            {keyFindings.map((line) => (
+              <li key={line}>· {line}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
-      <NextStepBlock view={view} />
-    </OverviewShell>
+      {view.resolutionStatus === "SUCCESS" ? (
+        <p
+          className="text-xs text-neutral-500"
+          data-testid="investigation-progress-human-review-fact"
+        >
+          {view.humanReviewFactLabel}
+        </p>
+      ) : null}
+    </section>
   );
 }

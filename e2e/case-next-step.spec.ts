@@ -18,11 +18,12 @@ test("建议下一步、基础信息与系统分析折叠、CTA 可导航", asyn
   await loginAsDemoUser(page, DEMO_USERS.analyst);
   await page.goto(`/cases/${CASE_B_ID}`);
 
-  const progress = sectionByHeading(page, "调查进度");
-  await expect(progress.getByText("建议下一步")).toBeVisible();
+  const progress = page.getByTestId("investigation-overview");
+  await expect(progress.getByTestId("case-next-step")).toBeVisible();
   await expect(progress.getByTestId("case-next-step-cta")).toBeVisible();
+  await expect(progress.getByRole("heading", { name: "概览" })).toBeVisible();
 
-  // 案件基础信息默认关闭（details 内容仍在 DOM，以可见性断言）
+  // 案件信息默认关闭（details 内容仍在 DOM，以可见性断言）
   const basic = page.getByTestId("case-basic-info");
   await expect(basic).toBeVisible();
   await expect(basic).not.toHaveAttribute("open");
@@ -46,7 +47,9 @@ test("建议下一步、基础信息与系统分析折叠、CTA 可导航", asyn
   ).toBeVisible();
 
   // CTA 导航到正确调查 section（Case B：补充业务上下文）
-  await expect(progress.getByText("补充业务上下文")).toBeVisible();
+  await expect(
+    progress.getByTestId("case-next-step").getByText("补充业务上下文"),
+  ).toBeVisible();
   await progress.getByTestId("case-next-step-cta").click();
   const businessContext = page.locator("#investigation-business-context");
   await expect(businessContext).toBeInViewport({ timeout: 5_000 });

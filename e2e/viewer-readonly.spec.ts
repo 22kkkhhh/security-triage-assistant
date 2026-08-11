@@ -25,10 +25,11 @@ const CASE_B_NUMBER = "INC-20260808-002";
 const CASE_A_ID = "demo-case-a";
 const CASE_A_NUMBER = "INC-20260808-001";
 
+/** 取标题最近的 section（避免外层调查工作区误匹配） */
 function sectionByHeading(page: Page, name: string | RegExp) {
   return page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name }) });
+    .getByRole("heading", { name })
+    .locator("xpath=ancestor::section[1]");
 }
 
 test("demo-viewer 在 Case Workbench 与 Report 中仅可读，无任何可编辑/导出控件", async ({

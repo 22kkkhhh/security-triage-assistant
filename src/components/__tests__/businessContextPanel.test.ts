@@ -115,10 +115,10 @@ describe("BusinessContextPanel UI 契约", () => {
     expect(src).toContain("businessJustification");
   });
 
-  it("helper text：工单 / 负责人确认 / 结论与说明区别", () => {
-    expect(src).toContain("工单用于证明敏感操作是否经过变更管理");
-    expect(src).toContain("不能当作「已确认合法」");
-    expect(src).toContain("说明不等于结论");
+  it("helper text：分组说明紧凑；未知不等于正常", () => {
+    expect(src).toContain("确认计划任务或变更工单");
+    expect(src).toContain("未知不等于正常");
+    expect(src).toContain("信息不足时保持「未知 / 未填写」");
     expect(src).not.toMatch(/已违法|法律责任成立|合规结论：不合规/);
   });
 

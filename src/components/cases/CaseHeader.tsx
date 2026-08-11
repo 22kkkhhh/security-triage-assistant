@@ -1,13 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { caseStatusLabels } from "@/domain/labels";
+import { caseStatusLabels, riskLevelLabels } from "@/domain/labels";
 import type { CaseStatus } from "@/domain/types";
-import {
-  displayCaseListRisk,
-  riskBadgeClass,
-  statusBadgeClass,
-} from "@/components/cases/caseDisplay";
+import { statusBadgeClass } from "@/components/cases/caseDisplay";
 import type { AutosaveState } from "@/hooks/autosaveState";
 import type { RiskLevel } from "@/domain/types";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
@@ -31,9 +27,40 @@ function saveStatusLabel(state: AutosaveState): string {
   }
 }
 
+/** Header 风险文案：明确来源，不把系统建议伪装成人工结论 */
+export function formatHeaderRiskLabel(
+  humanRiskLevel: RiskLevel | null,
+  suggestedRiskLevel: RiskLevel | null,
+): string {
+  if (humanRiskLevel) {
+    return `人工风险 ${riskLevelLabels[humanRiskLevel]}`;
+  }
+  if (suggestedRiskLevel) {
+    return `系统建议 ${riskLevelLabels[suggestedRiskLevel]}`;
+  }
+  return "暂无法评级";
+}
+
+function headerRiskClass(humanRiskLevel: RiskLevel | null, label: string): string {
+  if (label === "暂无法评级") {
+    return "border-amber-300 bg-amber-50 text-amber-800";
+  }
+  const level = humanRiskLevel;
+  const text = level ? riskLevelLabels[level] : label.replace(/^系统建议\s*/, "");
+  if (text === "严重" || text === "高风险") {
+    return "border-red-300 bg-red-50 text-red-700";
+  }
+  if (text === "中风险") {
+    return "border-orange-300 bg-orange-50 text-orange-700";
+  }
+  if (text === "低风险") {
+    return "border-green-300 bg-green-50 text-green-700";
+  }
+  return "border-neutral-300 bg-neutral-50 text-neutral-600";
+}
+
 /**
- * 持久化案件工作台顶部栏：返回、案件信息、状态、保存反馈。
- * commandPending 与 Snapshot autosave 状态分离，避免语义命令飞行中误导为「已保存」。
+ * 持久化案件工作台顶部栏：返回、案件标识、状态、风险来源、保存反馈。
  */
 export function CaseHeader({
   caseNumber,
@@ -56,7 +83,6 @@ export function CaseHeader({
   humanRiskLevel: RiskLevel | null;
   suggestedRiskLevel: RiskLevel | null;
   saveState: AutosaveState;
-  /** 语义命令飞行中（非 autosave domain state） */
   commandPending?: boolean;
   navigationError: string | null;
   canChangeStatus: boolean;
@@ -65,23 +91,21 @@ export function CaseHeader({
   onRetry: () => void;
   onBack: () => void;
 }) {
-  const riskLabel = displayCaseListRisk(humanRiskLevel, suggestedRiskLevel);
+  const riskLabel = formatHeaderRiskLabel(humanRiskLevel, suggestedRiskLevel);
 
   return (
-    <section className="space-y-3 rounded-md border border-neutral-200 bg-white px-4 py-3">
+    <header className="space-y-3 border-b border-neutral-200 pb-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button
           type="button"
           onClick={onBack}
           className="text-sm text-slate-600 hover:text-slate-900"
         >
-          ← 返回历史案件
+          ← 返回案件
         </button>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {readOnly ? (
-            <span className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700">
-              只读模式
-            </span>
+            <span className="text-xs text-slate-600">只读模式</span>
           ) : (
             <>
               <span
@@ -110,32 +134,19 @@ export function CaseHeader({
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <div className="font-mono text-xs text-neutral-500">{caseNumber}</div>
-          <h1 className="mt-1 text-xl font-semibold text-neutral-900">
+          <h1 className="mt-0.5 text-xl font-semibold text-neutral-900">
             {title}
           </h1>
-          {!readOnly ? (
-            <p className="mt-1 text-xs text-neutral-500">
-              最后保存：{formatSavedAt(saveState.lastSavedAt)}
-            </p>
-          ) : (
-            <p className="mt-1 text-xs text-neutral-500">
-              可查看案件内容，但不能修改。
-            </p>
-          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`inline-block rounded border px-2 py-0.5 text-xs ${riskBadgeClass(riskLabel)}`}
-          >
-            {riskLabel}
-          </span>
           {canChangeStatus ? (
             <label className="flex items-center gap-2 text-sm text-neutral-600">
-              案件状态
+              <span className="sr-only">案件状态</span>
               <select
                 value={status}
+                aria-label="案件状态"
                 onChange={(e) => onStatusChange(e.target.value as CaseStatus)}
                 disabled={commandPending}
                 className={`rounded border px-2 py-1 text-xs ${statusBadgeClass(status)}`}
@@ -150,15 +161,18 @@ export function CaseHeader({
               </select>
             </label>
           ) : (
-            <div className="flex items-center gap-2 text-sm text-neutral-600">
-              <span>案件状态</span>
-              <span
-                className={`inline-block rounded border px-2 py-1 text-xs ${statusBadgeClass(status)}`}
-              >
-                {caseStatusLabels[status]}
-              </span>
-            </div>
+            <span
+              className={`inline-block rounded border px-2 py-1 text-xs ${statusBadgeClass(status)}`}
+            >
+              {caseStatusLabels[status]}
+            </span>
           )}
+          <span
+            className={`inline-block rounded border px-2 py-1 text-xs ${headerRiskClass(humanRiskLevel, riskLabel)}`}
+            data-testid="case-header-risk"
+          >
+            {riskLabel}
+          </span>
         </div>
       </div>
 
@@ -177,6 +191,6 @@ export function CaseHeader({
           </Link>
         </div>
       )}
-    </section>
+    </header>
   );
 }

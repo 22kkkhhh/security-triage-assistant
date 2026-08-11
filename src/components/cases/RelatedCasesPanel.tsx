@@ -21,7 +21,7 @@ import {
 } from "./investigationProgressSummary";
 
 /**
- * 历史调查线索：Historical Signals + Investigation Leads + Related Cases。
+ * 历史调查线索：默认 compact 摘要；展开后保留 Signals / Leads / Related / Compare。
  * 只读辅助；不改研判 / Checklist / Progress；不继承历史结论。
  */
 export function RelatedCasesPanel({
@@ -41,48 +41,95 @@ export function RelatedCasesPanel({
 }) {
   const { relatedCases, relatedCaseCount, signals, leads } = intelligence;
   const relatedListId = "related-cases-list-anchor";
+  const previewSignals = signals.slice(0, 3);
+
+  if (relatedCaseCount === 0) {
+    return (
+      <section
+        id={INVESTIGATION_SECTION_IDS.historicalLeads}
+        className="scroll-mt-14"
+        aria-labelledby="historical-leads-heading"
+        data-testid="related-cases-panel"
+      >
+        <h3
+          id="historical-leads-heading"
+          className="text-sm font-semibold text-neutral-900"
+        >
+          历史线索
+        </h3>
+        <p
+          className="mt-1 text-sm text-neutral-600"
+          data-testid="related-cases-empty"
+        >
+          暂未发现具有明确共同调查事实的历史案件。
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section
       id={INVESTIGATION_SECTION_IDS.historicalLeads}
-      className="scroll-mt-14 rounded-md border border-neutral-200 bg-white px-4 py-3"
+      className="scroll-mt-14"
       aria-labelledby="historical-leads-heading"
       data-testid="related-cases-panel"
     >
-      <div className="border-b border-neutral-100 pb-2">
-        <h2
-          id="historical-leads-heading"
-          className="text-sm font-semibold text-neutral-900"
+      <details data-testid="historical-leads-details">
+        <summary
+          className="cursor-pointer list-none [&::-webkit-details-marker]:hidden"
+          data-testid="historical-leads-expand"
         >
-          历史调查线索
-        </h2>
-        <p className="mt-0.5 text-xs text-neutral-500">
-          基于明确共同调查事实的只读参考 · 不表示同一安全事件 · 不自动提升当前风险
-        </p>
-      </div>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3
+                id="historical-leads-heading"
+                className="text-sm font-semibold text-neutral-900"
+              >
+                历史线索
+              </h3>
+              <p
+                className="mt-1 text-sm text-neutral-700"
+                data-testid="historical-related-count"
+              >
+                发现 {relatedCaseCount} 个可能相关历史案件
+                <span className="text-neutral-500">
+                  （过去 {RELATED_CASES_WINDOW_DAYS} 天）
+                </span>
+              </p>
+              {previewSignals.length > 0 ? (
+                <ul
+                  className="mt-1.5 space-y-0.5 text-sm text-neutral-700"
+                  data-testid="historical-signals-preview"
+                >
+                  {previewSignals.map((signal) => (
+                    <li key={`preview:${signal.code}:${signal.value}`}>
+                      · {formatHistoricalSignal(signal.code)} ·{" "}
+                      {signal.relatedCaseCount} 个案件
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {leads.length > 0 ? (
+                <p className="mt-1 text-sm text-neutral-600">
+                  {leads.length} 项建议核查
+                </p>
+              ) : null}
+            </div>
+            <span className="shrink-0 text-xs font-medium text-slate-700 underline underline-offset-2">
+              展开历史线索
+            </span>
+          </div>
+        </summary>
 
-      {relatedCaseCount === 0 ? (
-        <p
-          className="mt-3 text-sm text-neutral-600"
-          data-testid="related-cases-empty"
-        >
-          当前未发现具有明确共同调查事实的历史案件。
-        </p>
-      ) : (
-        <div className="mt-3 space-y-4">
-          <p
-            className="text-sm text-neutral-700"
-            data-testid="historical-related-count"
-          >
-            过去 {RELATED_CASES_WINDOW_DAYS} 天发现 {relatedCaseCount}{" "}
-            个相关案件
+        <div className="mt-3 space-y-4 border-t border-neutral-100 pt-3">
+          <p className="text-xs text-neutral-500">
+            基于明确共同调查事实的只读参考 · 不表示同一安全事件 ·
+            不自动提升当前风险
           </p>
 
           {signals.length > 0 ? (
             <div data-testid="historical-signals">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                重复事实
-              </h3>
+              <h4 className="text-xs font-medium text-neutral-500">重复事实</h4>
               <ul className="mt-1.5 space-y-1 text-sm text-neutral-800">
                 {signals.map((signal) => (
                   <li
@@ -103,9 +150,7 @@ export function RelatedCasesPanel({
 
           {leads.length > 0 ? (
             <div data-testid="investigation-leads">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                建议核查
-              </h3>
+              <h4 className="text-xs font-medium text-neutral-500">建议核查</h4>
               <ul className="mt-1.5 space-y-2 text-sm text-neutral-800">
                 {leads.map((lead) => {
                   const leadKey = `INVESTIGATION_LEAD:${lead.code}`;
@@ -118,9 +163,7 @@ export function RelatedCasesPanel({
                       data-testid="investigation-lead-item"
                       data-lead-code={lead.code}
                     >
-                      <span>
-                        · {formatInvestigationLead(lead.code)}
-                      </span>
+                      <span>· {formatInvestigationLead(lead.code)}</span>
                       {canWriteChecklist ? (
                         accepted ? (
                           <span
@@ -187,9 +230,7 @@ export function RelatedCasesPanel({
           ) : null}
 
           <div id={relatedListId} className="scroll-mt-14">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-              关联案件
-            </h3>
+            <h4 className="text-xs font-medium text-neutral-500">关联案件</h4>
             <ul className="mt-1.5 space-y-3" data-testid="related-cases-list">
               {relatedCases.map((item) => {
                 const riskLabel = displayCaseListRisk(
@@ -199,7 +240,7 @@ export function RelatedCasesPanel({
                 return (
                   <li
                     key={item.caseId}
-                    className="rounded border border-neutral-200 px-3 py-2.5"
+                    className="border border-neutral-200 px-3 py-2.5"
                     data-testid="related-case-item"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
@@ -256,7 +297,7 @@ export function RelatedCasesPanel({
             </ul>
           </div>
         </div>
-      )}
+      </details>
     </section>
   );
 }

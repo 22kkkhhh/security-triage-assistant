@@ -145,13 +145,11 @@ function Group({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded border border-neutral-200 bg-neutral-50/60 px-3 py-3">
+    <section className="space-y-2 border-t border-neutral-100 pt-3 first:border-t-0 first:pt-0">
       <div>
-        <h3 className="text-sm font-semibold text-neutral-800">{title}</h3>
+        <h3 className="text-sm font-medium text-neutral-800">{title}</h3>
         {description ? (
-          <p className="mt-0.5 text-xs leading-5 text-neutral-500">
-            {description}
-          </p>
+          <p className="mt-0.5 text-xs text-neutral-500">{description}</p>
         ) : null}
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{children}</div>
@@ -213,11 +211,7 @@ export function BusinessContextPanel({
 
   return (
     <Panel
-      title={
-        readOnly
-          ? "业务合理性核查"
-          : "业务合理性核查（可编辑，修改后自动重新分析）"
-      }
+      title="业务合理性核查"
       extra={
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {showSave && saveLabel ? (
@@ -257,19 +251,18 @@ export function BusinessContextPanel({
         </div>
       }
     >
-      <p className="mb-3 text-xs leading-5 text-neutral-500">
-        以下信息用于判断「技术异常」是否可能对应已授权业务行为。请基于已掌握的事实填写；信息不足时保持「未知 / 未填写」，不要猜测。
+      <p className="mb-3 text-xs text-neutral-500">
+        用于判断技术异常是否可能对应已授权业务。信息不足时保持「未知 / 未填写」。
       </p>
 
       <div className="space-y-3">
         <Group
           title="任务与变更"
-          description="确认是否存在计划任务或变更工单，便于区分授权作业与未备案操作。"
+          description="确认计划任务或变更工单。"
         >
           <FieldBlock
             label="计划任务状态"
             controlId="bc-planned-task-status"
-            helper="是否已确认存在（或不存在）对应的计划任务 / 批处理。未知表示尚未核实。"
             pending={businessContextFieldNeedsAttention(
               "plannedTaskStatus",
               businessContext,
@@ -286,7 +279,6 @@ export function BusinessContextPanel({
           <FieldBlock
             label="变更工单状态"
             controlId="bc-change-ticket-status"
-            helper="工单用于证明敏感操作是否经过变更管理。有工单不等于已确认合法，仍需核对编号与范围。"
             pending={businessContextFieldNeedsAttention(
               "changeTicketStatus",
               businessContext,
@@ -303,7 +295,6 @@ export function BusinessContextPanel({
           <FieldBlock
             label="工单编号"
             controlId="bc-change-ticket-id"
-            helper="填写可追溯的变更 / 授权工单号，便于后续核验。无工单时留空。"
             pending={businessContextFieldNeedsAttention(
               "changeTicketId",
               businessContext,
@@ -332,12 +323,11 @@ export function BusinessContextPanel({
 
         <Group
           title="授权与负责人"
-          description="确认业务侧责任人是否已知悉并确认本次操作。"
+          description="确认业务负责人是否已知悉并确认。"
         >
           <FieldBlock
             label="业务负责人"
             controlId="bc-business-owner"
-            helper="对该业务系统或数据负有确认责任的联系人（演示环境使用虚构姓名）。"
             pending={businessContextFieldNeedsAttention(
               "businessOwner",
               businessContext,
@@ -366,7 +356,6 @@ export function BusinessContextPanel({
           <FieldBlock
             label="负责人确认状态"
             controlId="bc-owner-verification"
-            helper="是否已联系负责人并得到明确确认或否认。未知表示尚未联系到或尚未核实，不能当作「已确认合法」。"
             pending={businessContextFieldNeedsAttention(
               "ownerVerification",
               businessContext,
@@ -401,12 +390,11 @@ export function BusinessContextPanel({
 
         <Group
           title="业务合理性"
-          description="区分「当前研判倾向」与「支撑说明」：前者是结论选项，后者是事实依据。"
+          description="结论选项与事实说明分开填写；未知不等于正常。"
         >
           <FieldBlock
             label="业务合理性结论"
             controlId="bc-business-legitimacy"
-            helper="当前基于已有信息的研判倾向：已授权 / 确认未授权 / 尚未判断。不是法律结论，也不自动等于最终案件结论。"
             pending={businessContextFieldNeedsAttention(
               "businessLegitimacy",
               businessContext,
@@ -442,7 +430,6 @@ export function BusinessContextPanel({
             <FieldBlock
               label="业务合理性说明"
               controlId="bc-business-justification"
-              helper="用简短事实说明「为何认为合理/不合理」（如任务目的、时间窗口、系统范围）。说明不等于结论；结论请使用上方「业务合理性结论」。"
               pending={businessContextFieldNeedsAttention(
                 "businessJustification",
                 businessContext,

@@ -42,7 +42,10 @@ import {
   isInvestigationLeadCode,
 } from "@/services/checklist/investigationLeadCanonical";
 import { useCaseAutosave } from "@/hooks/useCaseAutosave";
-import { BusinessContextPanel } from "@/components/BusinessContextPanel";
+import {
+  BusinessContextPanel,
+  businessContextFieldNeedsAttention,
+} from "@/components/BusinessContextPanel";
 import { ChecklistPanel } from "@/components/ChecklistPanel";
 import { DimensionPanels } from "@/components/DimensionPanels";
 import { EvidencePanel } from "@/components/EvidencePanel";
@@ -68,6 +71,7 @@ import {
 import { CaseHeader } from "./CaseHeader";
 import { CaseInvestigationNav } from "./CaseInvestigationNav";
 import { InvestigationProgressPanel } from "./InvestigationProgressPanel";
+import { InvestigationStepSection } from "./InvestigationStepSection";
 import { deriveInvestigationOverviewStats } from "./investigationOverviewStats";
 import {
   INVESTIGATION_SECTION_IDS,
@@ -75,7 +79,23 @@ import {
   type InvestigationProgressViewDto,
 } from "./investigationProgressSummary";
 import { RelatedCasesPanel } from "./RelatedCasesPanel";
+import { WorkbenchSection } from "./WorkbenchSection";
 import type { InvestigationIntelligenceView } from "@/services/correlation/investigationIntelligenceTypes";
+
+function countBusinessContextPending(ctx: BusinessContext): number {
+  const fields: (keyof BusinessContext)[] = [
+    "plannedTaskStatus",
+    "changeTicketStatus",
+    "changeTicketId",
+    "businessOwner",
+    "ownerVerification",
+    "businessLegitimacy",
+    "businessJustification",
+  ];
+  return fields.filter((field) =>
+    businessContextFieldNeedsAttention(field, ctx),
+  ).length;
+}
 
 const emptyHumanReview = (): HumanReview => ({
   reviewer: null,
@@ -740,32 +760,24 @@ export function PersistedCaseWorkbench({
 
       <CaseInvestigationNav />
 
-      {/* A. Investigation Overview */}
+      {/* A. 概览 */}
       <InvestigationProgressPanel
         view={investigationProgressView}
         overviewStats={overviewStats}
+        relatedCaseCount={investigationIntelligence.relatedCaseCount}
         hasReport={hasReport}
         canWriteReport={capabilities.canWriteReport}
         onGoToReport={() => void goToReport()}
       />
 
-      <RelatedCasesPanel
-        intelligence={investigationIntelligence}
-        currentCaseId={initial.caseId}
-        canWriteChecklist={capabilities.canWriteChecklist}
-        acceptedLeadKeys={acceptedLeadKeys}
-        pendingLeadKey={pendingLeadKey}
-        onAddLeadToChecklist={addInvestigationLeadToChecklist}
-      />
-
       <details
-        className="rounded-md border border-neutral-200 bg-white px-4 py-2"
+        className="border-b border-neutral-100 pb-3"
         data-testid="case-basic-info"
       >
-        <summary className="cursor-pointer text-sm font-medium text-neutral-800">
-          案件基础信息
+        <summary className="cursor-pointer text-sm text-neutral-600">
+          案件信息
         </summary>
-        <div className="mt-2 grid grid-cols-1 gap-x-6 border-t border-neutral-100 pt-2 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 pt-1 md:grid-cols-2 lg:grid-cols-4">
           <Field label="案件编号" value={initial.caseNumber} />
           <Field label="告警来源" value={draftBase.alert.source} />
           <Field
@@ -776,18 +788,24 @@ export function PersistedCaseWorkbench({
         </div>
       </details>
 
-      {/* B. 当前调查（人工优先）；外层用 div，避免嵌套 section 干扰 e2e 定位 */}
-      <div className="space-y-3" aria-label="当前调查">
-        <div className="border-b border-neutral-200 pb-1">
-          <p className="text-sm font-semibold text-neutral-900">当前调查</p>
-          <p className="text-xs text-neutral-500">
-            优先完成业务上下文、证据核查与人工研判
-          </p>
-        </div>
-
-        <div
+      {/* B. 调查（四步固定顺序） */}
+      <WorkbenchSection
+        id={INVESTIGATION_SECTION_IDS.investigation}
+        title="调查"
+        description="按顺序完成业务确认、核查、历史线索与最终研判"
+        testId="investigation-workspace"
+        aria-label="调查"
+      >
+        <InvestigationStepSection
           id={INVESTIGATION_SECTION_IDS.businessContext}
-          className="scroll-mt-14"
+          step={1}
+          title="业务确认"
+          description="确认任务、工单与业务负责人"
+          statusLabel={
+            countBusinessContextPending(businessContext) > 0
+              ? `待补充 ${countBusinessContextPending(businessContext)}`
+              : "已填写"
+          }
         >
           <BusinessContextPanel
             businessContext={businessContext}
@@ -798,87 +816,134 @@ export function PersistedCaseWorkbench({
             commandPending={commandPending}
             onRetrySave={retrySave}
           />
-        </div>
+        </InvestigationStepSection>
 
-        <div
+        <InvestigationStepSection
           id={INVESTIGATION_SECTION_IDS.evidenceWorkspace}
-          className="scroll-mt-14 space-y-2 rounded-md border border-neutral-200 bg-white p-3"
-          data-testid="evidence-checklist-workspace"
+          step={2}
+          title="证据与核查"
+          description="完成当前调查任务"
+          statusLabel={
+            overviewStats.pendingChecklistCount > 0
+              ? `${overviewStats.pendingChecklistCount} 项待处理`
+              : "无待处理"
+          }
+          testId="evidence-checklist-workspace"
         >
-          <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-            <h3 className="text-sm font-semibold text-neutral-900">
-              证据与核查
-            </h3>
-            <p className="text-xs text-neutral-500">
-              待核查事项 {overviewStats.pendingChecklistCount}
-            </p>
+          <div
+            id={INVESTIGATION_SECTION_IDS.checklist}
+            className="scroll-mt-14 min-w-0"
+          >
+            <ChecklistPanel
+              items={checklist}
+              canWrite={capabilities.canWriteChecklist}
+              canEditNote={capabilities.canSnapshotWrite}
+              onToggle={(id) => {
+                if (!capabilities.canWriteChecklist) return;
+                const current = checklist.find((item) => item.id === id);
+                if (!current) return;
+                const prevBase = checklistBase;
+                const next = checklist.map((item) =>
+                  item.id === id
+                    ? { ...item, completed: !item.completed }
+                    : item,
+                );
+                runChecklistCommand(
+                  current.completed ? "reopen" : "complete",
+                  id,
+                  next,
+                  prevBase,
+                );
+              }}
+              onEditNote={(id, note) => {
+                if (!capabilities.canSnapshotWrite) return;
+                const next = checklist.map((item) =>
+                  item.id === id ? { ...item, note: note || null } : item,
+                );
+                setChecklistBase(next);
+                scheduleSave("debounce", {
+                  checklistNotes: [{ checklistId: id, note: note || null }],
+                });
+              }}
+              onDelete={(id) => {
+                if (!capabilities.canWriteChecklist) return;
+                const prevBase = checklistBase;
+                const next = checklist.filter((item) => item.id !== id);
+                runChecklistCommand("delete", id, next, prevBase);
+              }}
+              onAdd={(item) => {
+                if (!capabilities.canWriteChecklist) return;
+                const prevBase = checklistBase;
+                const next = [...checklist, item];
+                runChecklistCommand("add", item.id, next, prevBase, {
+                  addItem: item,
+                });
+              }}
+            />
           </div>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <details className="mt-3" data-testid="evidence-disclosure">
+            <summary className="cursor-pointer text-sm text-neutral-600">
+              查看系统证据（{analyzed.evidences.length}）
+            </summary>
             <div
               id={INVESTIGATION_SECTION_IDS.evidence}
-              className="scroll-mt-14 min-w-0"
+              className="scroll-mt-14 mt-2 min-w-0"
             >
               <EvidencePanel evidences={analyzed.evidences} />
             </div>
-            <div
-              id={INVESTIGATION_SECTION_IDS.checklist}
-              className="scroll-mt-14 min-w-0"
-            >
-              <ChecklistPanel
-                items={checklist}
-                canWrite={capabilities.canWriteChecklist}
-                canEditNote={capabilities.canSnapshotWrite}
-                onToggle={(id) => {
-                  if (!capabilities.canWriteChecklist) return;
-                  const current = checklist.find((item) => item.id === id);
-                  if (!current) return;
-                  const prevBase = checklistBase;
-                  const next = checklist.map((item) =>
-                    item.id === id
-                      ? { ...item, completed: !item.completed }
-                      : item,
-                  );
-                  runChecklistCommand(
-                    current.completed ? "reopen" : "complete",
-                    id,
-                    next,
-                    prevBase,
-                  );
-                }}
-                onEditNote={(id, note) => {
-                  if (!capabilities.canSnapshotWrite) return;
-                  const next = checklist.map((item) =>
-                    item.id === id ? { ...item, note: note || null } : item,
-                  );
-                  setChecklistBase(next);
-                  scheduleSave("debounce", {
-                    checklistNotes: [{ checklistId: id, note: note || null }],
-                  });
-                }}
-                onDelete={(id) => {
-                  if (!capabilities.canWriteChecklist) return;
-                  const prevBase = checklistBase;
-                  const next = checklist.filter((item) => item.id !== id);
-                  runChecklistCommand("delete", id, next, prevBase);
-                }}
-                onAdd={(item) => {
-                  if (!capabilities.canWriteChecklist) return;
-                  const prevBase = checklistBase;
-                  const next = [...checklist, item];
-                  runChecklistCommand("add", item.id, next, prevBase, {
-                    addItem: item,
-                  });
-                }}
-              />
-            </div>
-          </div>
-        </div>
+          </details>
+        </InvestigationStepSection>
 
-        <div
-          id={INVESTIGATION_SECTION_IDS.humanReview}
-          className="scroll-mt-14 rounded-md border-2 border-slate-300"
-          data-testid="human-review-workspace"
+        <InvestigationStepSection
+          step={3}
+          title="历史线索"
+          description="查看重复事实与历史调查"
+          statusLabel={
+            investigationIntelligence.relatedCaseCount > 0
+              ? `${investigationIntelligence.relatedCaseCount} 个相关案件`
+              : "暂无相关"
+          }
         >
+          <RelatedCasesPanel
+            intelligence={investigationIntelligence}
+            currentCaseId={initial.caseId}
+            canWriteChecklist={capabilities.canWriteChecklist}
+            acceptedLeadKeys={acceptedLeadKeys}
+            pendingLeadKey={pendingLeadKey}
+            onAddLeadToChecklist={addInvestigationLeadToChecklist}
+          />
+        </InvestigationStepSection>
+
+        <InvestigationStepSection
+          id={INVESTIGATION_SECTION_IDS.humanReview}
+          step={4}
+          title="最终研判"
+          description="由安全人员确认最终结论"
+          statusLabel={
+            investigationProgressView.humanReviewSubmitted
+              ? "已提交"
+              : "未完成"
+          }
+          testId="human-review-workspace"
+        >
+          {overviewStats.pendingChecklistCount > 0 ||
+          overviewStats.unknownCount > 0 ? (
+            <p className="mb-2 text-xs text-neutral-600">
+              {overviewStats.pendingChecklistCount > 0
+                ? `当前还有 ${overviewStats.pendingChecklistCount} 项待核查`
+                : null}
+              {overviewStats.pendingChecklistCount > 0 &&
+              overviewStats.unknownCount > 0
+                ? " · "
+                : null}
+              {overviewStats.unknownCount > 0
+                ? `当前还有 ${overviewStats.unknownCount} 项信息不足`
+                : null}
+            </p>
+          ) : null}
+          <p className="mb-2 text-xs text-neutral-500">
+            最终结论由安全人员确认 · 系统建议不会自动写入
+          </p>
           <HumanReviewPanel
             humanReview={humanReview}
             onChange={handleHumanReviewChange}
@@ -889,157 +954,178 @@ export function PersistedCaseWorkbench({
               investigationProgressView.isResolutionUnavailable
             }
           />
-        </div>
-      </div>
+        </InvestigationStepSection>
+      </WorkbenchSection>
 
-      {/* C. 系统分析与参考 */}
-      <div
+      {/* C. 分析（次要工作区，默认折叠详情） */}
+      <WorkbenchSection
         id={INVESTIGATION_SECTION_IDS.analysis}
-        className="scroll-mt-14 space-y-3"
-        aria-label="系统分析与合规"
+        title="分析"
+        description="系统建议与合规参考 · 不替代人工最终研判"
+        aria-label="分析"
       >
-        <div className="border-b border-neutral-200 pb-1">
-          <p className="text-sm font-semibold text-neutral-800">
-            系统分析与合规
-          </p>
-          <p className="text-xs text-neutral-500">
-            辅助参考 · 不替代人工最终研判
-          </p>
-        </div>
-
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-          系统分析仅用于辅助研判，最终结论以安全人员人工确认结果为准。
-        </div>
-
-        {analyzed.suggestedAssessment && (
-          <SuggestedAssessmentBar assessment={analyzed.suggestedAssessment} />
-        )}
+        {analyzed.suggestedAssessment ? (
+          <div className="space-y-1">
+            <p className="text-xs text-neutral-500">系统建议 · 非最终结论</p>
+            <SuggestedAssessmentBar
+              assessment={analyzed.suggestedAssessment}
+            />
+          </div>
+        ) : null}
 
         <details
-          className="rounded-md border border-neutral-200 bg-white"
+          className="border-t border-neutral-100 pt-2"
           data-testid="system-analysis-details"
         >
-          <summary className="cursor-pointer px-4 py-2.5 text-sm font-semibold text-neutral-900">
-            系统分析详情
+          <summary className="cursor-pointer text-sm font-medium text-neutral-800">
+            系统分析
+            <span className="ml-2 font-normal text-neutral-500">
+              {overviewStats.abnormalCount} 异常 · {overviewStats.unknownCount}{" "}
+              信息不足
+            </span>
           </summary>
-          <div className="space-y-4 border-t border-neutral-200 px-4 py-3">
+          <div className="mt-3 space-y-4">
             <FindingsSummary results={analyzed.analysisResults} />
             <DimensionPanels securityCase={analyzed} />
           </div>
         </details>
 
-        <div
-          id={INVESTIGATION_SECTION_IDS.compliance}
-          className="scroll-mt-14"
+        <details
+          className="border-t border-neutral-100 pt-2"
+          data-testid="compliance-reference-details"
         >
-          <CaseCompliancePanel
-            view={compliancePanel}
-            resolutionStatus={complianceResolutionStatus}
-          />
-        </div>
+          <summary className="cursor-pointer text-sm font-medium text-neutral-800">
+            合规参考
+            <span className="ml-2 font-normal text-neutral-500">
+              辅助参考 · 非法律结论
+            </span>
+          </summary>
+          <div className="mt-3 space-y-3">
+            <div
+              id={INVESTIGATION_SECTION_IDS.compliance}
+              className="scroll-mt-14"
+            >
+              <CaseCompliancePanel
+                view={compliancePanel}
+                resolutionStatus={complianceResolutionStatus}
+              />
+            </div>
+            <div
+              id={INVESTIGATION_SECTION_IDS.complianceChecklist}
+              className="scroll-mt-14"
+            >
+              <CaseComplianceChecklistPanel
+                view={complianceChecklist}
+                addedSuggestionKeys={addedSuggestionKeys}
+                canWrite={capabilities.canWriteChecklist}
+                pendingSuggestionKey={pendingSuggestionKey}
+                onAddSuggestion={handleAddComplianceSuggestion}
+                resolutionStatus={complianceResolutionStatus}
+              />
+            </div>
+          </div>
+        </details>
+      </WorkbenchSection>
 
-        <div
-          id={INVESTIGATION_SECTION_IDS.complianceChecklist}
-          className="scroll-mt-14"
-        >
-          <CaseComplianceChecklistPanel
-            view={complianceChecklist}
-            addedSuggestionKeys={addedSuggestionKeys}
-            canWrite={capabilities.canWriteChecklist}
-            pendingSuggestionKey={pendingSuggestionKey}
-            onAddSuggestion={handleAddComplianceSuggestion}
-            resolutionStatus={complianceResolutionStatus}
-          />
-        </div>
-      </div>
-
-      {/* D. 调查记录 */}
-      <div
+      {/* D. 记录 */}
+      <WorkbenchSection
         id={INVESTIGATION_SECTION_IDS.records}
-        className="scroll-mt-14 space-y-3"
-        aria-label="调查记录"
+        title="记录"
+        description="调查时间线与操作审计"
+        aria-label="记录"
       >
-        <div className="border-b border-neutral-200 pb-1">
-          <p className="text-sm font-semibold text-neutral-800">调查记录</p>
-          <p className="text-xs text-neutral-500">时间线与操作活动</p>
-        </div>
+        <details open data-testid="timeline-details">
+          <summary className="cursor-pointer text-sm font-medium text-neutral-800">
+            调查时间线
+          </summary>
+          <div className="mt-2">
+            <TimelinePanel
+              events={timeline}
+              canAdd={capabilities.canWriteTimeline}
+              onAdd={(event) => {
+                if (!capabilities.canWriteTimeline) return;
+                const prev = timeline;
+                const next = [...timeline, event];
+                setTimeline(next);
+                const operationId = crypto.randomUUID();
+                setCommandError(null);
+                setCommandPending(true);
+                void (async () => {
+                  const lease = await beginSemanticCommand();
+                  if (!lease.ok) {
+                    setTimeline(prev);
+                    setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
+                    setCommandPending(false);
+                    return;
+                  }
+                  try {
+                    const result = await addTimelineEventAction(
+                      initial.caseId,
+                      event.id,
+                      operationId,
+                      lease.baseUpdatedAt,
+                      {
+                        id: event.id,
+                        occurredAt: event.occurredAt,
+                        eventType: event.eventType,
+                        title: event.title,
+                        description: event.description,
+                        operator: event.operator,
+                      },
+                    );
+                    if (!result.ok) {
+                      if (applyCommandStale(result)) return;
+                      setTimeline(prev);
+                      setCommandError(
+                        actionErrorMessage(
+                          result,
+                          "时间线事件添加失败，请重试。",
+                        ),
+                      );
+                      return;
+                    }
+                    commitExternalSave(result.updatedAt);
+                    mergeReturnedAudit(result.audit);
+                  } finally {
+                    endSemanticCommand();
+                    setCommandPending(false);
+                  }
+                })();
+              }}
+            />
+          </div>
+        </details>
 
-        <TimelinePanel
-          events={timeline}
-          canAdd={capabilities.canWriteTimeline}
-          onAdd={(event) => {
-            if (!capabilities.canWriteTimeline) return;
-            const prev = timeline;
-            const next = [...timeline, event];
-            setTimeline(next);
-            const operationId = crypto.randomUUID();
-            setCommandError(null);
-            setCommandPending(true);
-            void (async () => {
-              const lease = await beginSemanticCommand();
-              if (!lease.ok) {
-                setTimeline(prev);
-                setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
-                setCommandPending(false);
-                return;
-              }
-              try {
-                const result = await addTimelineEventAction(
-                  initial.caseId,
-                  event.id,
-                  operationId,
-                  lease.baseUpdatedAt,
-                  {
-                    id: event.id,
-                    occurredAt: event.occurredAt,
-                    eventType: event.eventType,
-                    title: event.title,
-                    description: event.description,
-                    operator: event.operator,
-                  },
-                );
-                if (!result.ok) {
-                  if (applyCommandStale(result)) return;
-                  setTimeline(prev);
-                  setCommandError(
-                    actionErrorMessage(result, "时间线事件添加失败，请重试。"),
-                  );
-                  return;
-                }
-                commitExternalSave(result.updatedAt);
-                mergeReturnedAudit(result.audit);
-              } finally {
-                endSemanticCommand();
-                setCommandPending(false);
-              }
-            })();
-          }}
-        />
+        <details open data-testid="activity-details">
+          <summary className="cursor-pointer text-sm font-medium text-neutral-800">
+            操作与审计
+          </summary>
+          <div className="mt-2">
+            <CaseActivityPanel
+              ref={activityPanelRef}
+              caseId={initial.caseId}
+              initialItems={initialAudit?.items ?? []}
+              initialNextCursor={initialAudit?.nextCursor ?? null}
+              initialHasMore={initialAudit?.hasMore ?? false}
+              initialLatestHandoff={initialAudit?.latestHandoff ?? null}
+              canWriteHandoff={capabilities.canWriteHandoff}
+              onCaseRowUpdated={(updatedAt) => {
+                commitExternalSave(updatedAt);
+              }}
+            />
+          </div>
+        </details>
+      </WorkbenchSection>
 
-        <CaseActivityPanel
-          ref={activityPanelRef}
-          caseId={initial.caseId}
-          initialItems={initialAudit?.items ?? []}
-          initialNextCursor={initialAudit?.nextCursor ?? null}
-          initialHasMore={initialAudit?.hasMore ?? false}
-          initialLatestHandoff={initialAudit?.latestHandoff ?? null}
-          canWriteHandoff={capabilities.canWriteHandoff}
-          onCaseRowUpdated={(updatedAt) => {
-            // Handoff 会触摸 CaseRecord（@updatedAt），同步 base token
-            commitExternalSave(updatedAt);
-          }}
-        />
-      </div>
-
-      {/* E. Report action */}
+      {/* E. Report — 次级动作，避免与 Next Step 同级大按钮 */}
       <div
-        className="flex flex-wrap items-center justify-end gap-3 rounded-md border border-neutral-200 bg-white px-4 py-3"
+        className="flex flex-wrap items-center justify-end gap-3 border-t border-neutral-100 pt-3"
         data-testid="case-report-cta"
       >
         {hasReport ? (
           <button
             type="button"
-            className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700"
+            className="text-sm text-slate-700 underline underline-offset-2 hover:text-slate-900"
             onClick={() => void goToReport()}
           >
             {capabilities.canWriteReport ? "继续编辑报告" : "查看报告"}
@@ -1047,7 +1133,7 @@ export function PersistedCaseWorkbench({
         ) : capabilities.canWriteReport ? (
           <button
             type="button"
-            className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700"
+            className="text-sm text-slate-700 underline underline-offset-2 hover:text-slate-900"
             onClick={() => void goToReport()}
           >
             生成报告

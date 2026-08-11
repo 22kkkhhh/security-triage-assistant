@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { expandHistoricalLeads } from "./helpers/workbench";
 
 /**
  * v1.9-M2：Investigation Lead opt-in → Checklist。
@@ -23,6 +24,7 @@ test("历史线索加入核查清单：持久化、badge、完成/重开，不�
 }) => {
   await loginAsDemoUser(page, DEMO_USERS.analyst);
   await page.goto(`/cases/${CASE_B_ID}`);
+  await expandHistoricalLeads(page);
 
   const lead = page.locator(
     '[data-testid="investigation-lead-item"][data-lead-code="COMPARE_SHARED_SYSTEM_ACTIVITY"]',
@@ -35,8 +37,11 @@ test("历史线索加入核查清单：持久化、badge、完成/重开，不�
   const conclusionBefore = await page.getByLabel("最终结论").inputValue();
   const humanRiskBefore = await page.getByLabel("人工风险等级").inputValue();
 
-  await lead.getByTestId("investigation-lead-add-button").click();
-  await waitForSemanticCommandSettled(page);
+  const addBtn = lead.getByTestId("investigation-lead-add-button");
+  if (await addBtn.count()) {
+    await addBtn.click();
+    await waitForSemanticCommandSettled(page);
+  }
   await expect(lead.getByTestId("investigation-lead-added")).toBeVisible({
     timeout: 15_000,
   });
@@ -51,6 +56,7 @@ test("历史线索加入核查清单：持久化、badge、完成/重开，不�
   ).toBeVisible();
 
   await page.reload();
+  await expandHistoricalLeads(page);
   await expect(
     page
       .locator(

@@ -62,29 +62,25 @@ function ChecklistItemRow({
           </span>
           {item.origin === "SYSTEM" ? (
             showSystemRuleBadge ? (
-              <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700">
-                系统生成 · {item.relatedRuleId}
+              <span className="text-[11px] text-neutral-400">
+                系统 · {item.relatedRuleId}
               </span>
             ) : compactRuleHint && item.relatedRuleId ? (
               <span className="text-[11px] text-neutral-400">
-                来源规则 {item.relatedRuleId}
+                规则 {item.relatedRuleId}
               </span>
             ) : null
           ) : item.sourceKind === "KNOWLEDGE_SUGGESTED" ? (
-            <span className="rounded bg-teal-50 px-1.5 py-0.5 text-xs text-teal-800">
-              合规建议
-            </span>
+            <span className="text-[11px] text-neutral-400">合规建议</span>
           ) : item.sourceKind === "INVESTIGATION_LEAD" ? (
             <span
-              className="rounded bg-sky-50 px-1.5 py-0.5 text-xs text-sky-800"
+              className="text-[11px] text-neutral-400"
               data-testid="checklist-badge-investigation-lead"
             >
               历史线索
             </span>
           ) : (
-            <span className="rounded bg-purple-50 px-1.5 py-0.5 text-xs text-purple-700">
-              人工新增
-            </span>
+            <span className="text-[11px] text-neutral-400">人工新增</span>
           )}
         </div>
         {canEditNote ? (

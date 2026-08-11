@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { expandHistoricalLeads } from "./helpers/workbench";
 
 /**
  * v1.9-M1：Comparative Investigation Workspace。
@@ -17,6 +18,7 @@ test("对比调查：共享事实可见，返回后当前研判不被改写", as
 
   const panel = page.getByTestId("related-cases-panel");
   await expect(panel).toBeVisible();
+  await expandHistoricalLeads(page);
   await expect(panel.getByTestId("related-case-compare-link").first()).toBeVisible();
 
   const suggestedBefore = (
