@@ -3,6 +3,7 @@
  * Pure helpers are testable without importing Next.js or Prisma singletons.
  */
 
+import fs from "node:fs";
 import path from "node:path";
 
 export const BETTER_AUTH_SECRET_MIN_LENGTH = 32;
@@ -179,4 +180,205 @@ export function removeSqliteDatabaseFiles(
   }
 
   return { removed: true, deletedPaths, busyPaths };
+}
+
+/** Loopback hosts allowed to use http:// in production (local smoke / CI). */
+const PRODUCTION_HTTP_LOOPBACK_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "::1",
+  "[::1]",
+]);
+
+export function isLoopbackHostname(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase();
+  if (PRODUCTION_HTTP_LOOPBACK_HOSTS.has(host)) return true;
+  // URL.hostname for IPv6 omits brackets
+  return host === "::1";
+}
+
+/**
+ * Validate BETTER_AUTH_URL: absolute http(s) URL.
+ * Production non-loopback origins must use https.
+ */
+export function validateBetterAuthUrl(
+  url: string | undefined,
+  options?: { nodeEnv?: string },
+): string {
+  const trimmed = url?.trim();
+  if (!trimmed) {
+    throw new Error(
+      "BETTER_AUTH_URL 未配置。production 必须设置对外可访问的完整站点 URL。",
+    );
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error("BETTER_AUTH_URL 不是合法的绝对 URL。");
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("BETTER_AUTH_URL 仅允许 http 或 https 协议。");
+  }
+
+  if (
+    isProductionNodeEnv(options?.nodeEnv) &&
+    parsed.protocol === "http:" &&
+    !isLoopbackHostname(parsed.hostname)
+  ) {
+    throw new Error(
+      "production 非本机 origin 必须使用 https:// 的 BETTER_AUTH_URL。",
+    );
+  }
+
+  return trimmed;
+}
+
+/**
+ * Production DATABASE_URL must be SQLite file: (current product boundary).
+ * Reuses resolveDatabaseUrl — does not invent a second required-presence check.
+ */
+export function assertProductionSqliteDatabaseUrl(
+  databaseUrl: string,
+): string {
+  if (!databaseUrl.startsWith("file:")) {
+    throw new Error(
+      "production DATABASE_URL 必须为 SQLite file: URL（当前 single-node 边界）。",
+    );
+  }
+  const filePart = databaseUrl.slice("file:".length).trim();
+  if (!filePart) {
+    throw new Error("production DATABASE_URL 的 file: 路径不能为空。");
+  }
+  return databaseUrl;
+}
+
+export type ProductionEnvironmentConfig = {
+  nodeEnv: "production";
+  betterAuthSecret: string;
+  betterAuthUrl: string;
+  databaseUrl: string;
+};
+
+export type ValidateProductionEnvironmentInput = {
+  NODE_ENV?: string;
+  BETTER_AUTH_SECRET?: string;
+  BETTER_AUTH_URL?: string;
+  DATABASE_URL?: string;
+};
+
+/**
+ * Unified production env validation entry.
+ * Composes existing secret / database helpers — no second validation stack.
+ */
+export function validateProductionEnvironment(
+  env: ValidateProductionEnvironmentInput = process.env,
+): ProductionEnvironmentConfig {
+  if (!isProductionNodeEnv(env.NODE_ENV)) {
+    throw new Error("production 环境校验要求 NODE_ENV=production。");
+  }
+
+  const betterAuthSecret = validateBetterAuthSecret(env.BETTER_AUTH_SECRET, {
+    nodeEnv: "production",
+  });
+  const betterAuthUrl = validateBetterAuthUrl(env.BETTER_AUTH_URL, {
+    nodeEnv: "production",
+  });
+  const databaseUrl = assertProductionSqliteDatabaseUrl(
+    resolveDatabaseUrl({
+      nodeEnv: "production",
+      databaseUrl: env.DATABASE_URL,
+    }),
+  );
+
+  return {
+    nodeEnv: "production",
+    betterAuthSecret,
+    betterAuthUrl,
+    databaseUrl,
+  };
+}
+
+/**
+ * Matches better-auth 1.6.26 cookie secure derivation from baseURL protocol
+ * (see node_modules/better-auth/dist/cookies/index.mjs).
+ */
+export function resolveSessionCookieSecureFromAuthUrl(
+  betterAuthUrl: string,
+): boolean {
+  return betterAuthUrl.trim().toLowerCase().startsWith("https://");
+}
+
+export type SqliteFilesystemPreflightFs = {
+  existsSync: (filePath: string) => boolean;
+  mkdirSync: (
+    filePath: string,
+    options: { recursive: boolean },
+  ) => string | undefined;
+  accessSync: (filePath: string, mode?: number) => void;
+  writeFileSync: (filePath: string, data: string) => void;
+  unlinkSync: (filePath: string) => void;
+  constants: { W_OK: number };
+};
+
+/**
+ * Ensure SQLite parent directory exists and is writable.
+ * Does not require the DB file to exist (first migrate deploy may create it).
+ * Never deletes or truncates the database.
+ */
+export function assertSqliteParentDirectoryReady(options?: {
+  databaseUrl?: string;
+  nodeEnv?: string;
+  projectRoot?: string;
+  fsImpl?: SqliteFilesystemPreflightFs;
+}): { dbFilePath: string; parentDir: string } {
+  const pathOptions =
+    options && "databaseUrl" in options
+      ? {
+          databaseUrl: options.databaseUrl,
+          nodeEnv: options.nodeEnv,
+          projectRoot: options.projectRoot,
+        }
+      : {
+          nodeEnv: options?.nodeEnv,
+          projectRoot: options?.projectRoot,
+        };
+  const resolved = resolveSqliteDatabaseFilePaths(pathOptions);
+
+  const fsImpl = options?.fsImpl ?? fs;
+  const parentDir = path.dirname(resolved.dbFilePath);
+
+  if (!fsImpl.existsSync(parentDir)) {
+    try {
+      fsImpl.mkdirSync(parentDir, { recursive: true });
+    } catch {
+      throw new Error("数据库目录不存在且无法创建，请检查路径与权限。");
+    }
+  }
+
+  try {
+    fsImpl.accessSync(parentDir, fsImpl.constants.W_OK);
+  } catch {
+    throw new Error("数据库目录不可写，请检查文件系统权限。");
+  }
+
+  const probePath = path.join(
+    parentDir,
+    `.sta-write-probe-${process.pid}-${Date.now()}`,
+  );
+  try {
+    fsImpl.writeFileSync(probePath, "ok");
+    fsImpl.unlinkSync(probePath);
+  } catch {
+    try {
+      if (fsImpl.existsSync(probePath)) fsImpl.unlinkSync(probePath);
+    } catch {
+      // ignore cleanup failure
+    }
+    throw new Error("数据库目录写入探测失败，请检查文件系统权限。");
+  }
+
+  return { dbFilePath: resolved.dbFilePath, parentDir };
 }

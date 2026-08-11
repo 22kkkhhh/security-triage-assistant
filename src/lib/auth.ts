@@ -22,7 +22,14 @@ import {
   authAccessControl,
   authAdminRoles,
 } from "@/lib/auth-access";
-import { validateBetterAuthSecret } from "@/lib/envConfig";
+import {
+  buildBetterAuthAdvancedOptions,
+  buildBetterAuthRateLimitOptions,
+} from "@/lib/authRuntimeConfig";
+import {
+  validateBetterAuthSecret,
+  validateBetterAuthUrl,
+} from "@/lib/envConfig";
 
 function requireAuthSecret(): string {
   return validateBetterAuthSecret(process.env.BETTER_AUTH_SECRET);
@@ -30,7 +37,9 @@ function requireAuthSecret(): string {
 
 function resolveBaseURL(): string {
   const url = process.env.BETTER_AUTH_URL?.trim();
-  if (url) return url;
+  if (url) {
+    return validateBetterAuthUrl(url, { nodeEnv: process.env.NODE_ENV });
+  }
   if (process.env.NODE_ENV === "production") {
     throw new Error("production 必须显式配置 BETTER_AUTH_URL");
   }
@@ -46,6 +55,17 @@ export const auth = betterAuth({
   secret: requireAuthSecret(),
   baseURL,
   trustedOrigins: [baseURL],
+  /**
+   * Native Better Auth 1.6.26 rate limit (memory; enabled in production by library).
+   * /sign-in paths use built-in special rule (3 / 10s). No Redis.
+   */
+  rateLimit: buildBetterAuthRateLimitOptions(),
+  /**
+   * Cookie httpOnly + SameSite=lax + Secure-from-https baseURL are library defaults
+   * (better-auth/dist/cookies/index.mjs). Do not monkey-patch Set-Cookie.
+   * IP headers empty until trustedProxies are explicitly configured.
+   */
+  advanced: buildBetterAuthAdvancedOptions(),
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,
