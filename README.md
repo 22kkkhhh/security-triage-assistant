@@ -2,9 +2,17 @@
 
 数据与网络安全联合研判及案件运营助手。
 
-当前稳定版本：**v1.10.0**（本地可运行的安全研判与案件运营 **MVP / Prototype**）。
+当前稳定版本：**v1.11.0**（本地可运行的安全研判与案件运营 **MVP / Prototype**）。
 
-**v1.10** 聚焦 Human-centered UX / 信息架构：任务优先的 Case Workbench、渐进披露、简化历史线索、响应式 Case List、三步告警导入呈现、响应式 Case Comparison、文档式报告编辑，以及全局页面一致性。本版本为 **UI / presentation** 工作，**不**新增自动化安全判定，**不**改变确定性分析语义。
+**v1.11** 聚焦 Case Operations：案件负责人（Case Ownership）、我的 / 未分配队列、Analyst 自助接手与释放、Admin 指派、运营截止时间（operational due dates）、逾期 / 今日到期可见性、确定性「截止优先」队列排序，以及配套 Audit 与 stale / 幂等保护。
+
+v1.11 明确语义边界：
+
+- 案件负责人是**运营责任**，**不是** Case ACL，不改变案件可见性
+- 案件负责人与 **HumanReview 责任人**保持分离
+- 截止时间是**运营元数据**，**不是**安全风险等级、**不是** SLA、**不是**合规/法定期限
+- **无**自动优先级评分（no automatic priority score）
+- **无**自动分配、**无**自动升级（no automatic assignment / escalation）
 
 在既有身份认证、Case 合规知识、告警导入、Investigation Workbench、关联历史案件、Investigation Leads、Case Comparison 与 Analyst opt-in Checklist 之上交付。
 不是 Production-ready 企业平台 / Enterprise IAM；**不是**法律意见或合规认证系统。
@@ -41,6 +49,9 @@
 - Evidence / Checklist / Timeline
 - 人工最终结论（HumanReview）
 - 案件持久化与历史跟踪
+- 案件负责人与「我的 / 未分配」队列（Analyst 自助接手 / 释放；Admin 指派）
+- 运营截止时间与逾期 / 今日到期 / 即将到期可见性
+- 确定性「截止优先」队列排序（可与范围 / 搜索 / 状态 / 风险组合）
 - 操作审计、最近活动与交接说明
 - 报告草稿持久化与 DOCX 导出
 
@@ -130,7 +141,8 @@ v1.3 已具备：认证、三角色 Server Authorization、Trusted USER Case Aud
 
 明确 Known Limitations（记录限制，非未修缺陷）：
 
-- 单实例所有 authenticated users 可查看全部 Case；无 Case Ownership / ACL
+- 单实例所有 authenticated users 可查看全部 Case；v1.11 的 Case Ownership 是运营责任，
+  **不是** Case ACL / 行级可见性隔离
 - 无 MFA / SSO / SystemAuditLog；Login / User Admin / Password 无全局审计
 - SQLite 本地持久化；非 PostgreSQL 生产就绪 / HA
 - username / email 创建后不可改；无首次强制改密 / forgot-password
@@ -229,7 +241,9 @@ Seed 使用固定 `id`（`demo-case-a` / `demo-case-b`）、固定案件编号�
 合理后续方向（**不在当前 v1.3 默认范围**）：
 
 - SystemAuditLog / Login·UserAdmin 全局审计
-- Case Ownership / Case ACL
+- Case ACL / 行级可见性隔离（Ownership 已在 v1.11 交付，但不是 ACL）
+- 团队 / 部门 / 多租户、工作量均衡、轮转分配
+- SLA 策略 / 自动升级 / 通知 / 日历集成 / 优先级评分
 - MFA / SSO
 - PostgreSQL / 企业数据库（含 last-ADMIN isolation 复验）
 - 生产级集中审计与防篡改

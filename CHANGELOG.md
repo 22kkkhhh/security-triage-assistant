@@ -2,6 +2,43 @@
 
 本项目采用轻量变更记录。版本号遵循语义化约定；未打正式 tag 的条目以 `-rc` 标记。
 
+## v1.11.0 — 2026-08-11
+
+Theme: Case Operations
+
+### Added
+
+- Persistent Case ownership
+- Analyst self-claim / release
+- Admin Case assignment
+- My / Unassigned queue scopes
+- Persistent operational due dates
+- Overdue / due-today / upcoming states
+- Deterministic deadline-first queue sorting
+- Assignment and due-date Audit events
+
+### Safety / Semantics
+
+- Ownership does not change Case visibility or ACL
+- Case owner is distinct from HumanReview reviewer
+- Due date is operational metadata, not security risk or SLA
+- No automatic priority score
+- No automatic assignment or escalation
+
+### Technical
+
+- Two Prisma migrations: `add_case_ownership`, `add_case_due_at`
+- Two new coarse-grained permissions: `CASE_ASSIGN`, `CASE_DUE_DATE_WRITE`
+- No dependency changes
+
+### Deferred / Known Limitations
+
+- Teams / departments / multi-tenant / Case ACL
+- Workload balancing / round-robin assignment
+- Pagination-aware DB-level due sorting
+- SLA policies / escalation / notifications / email / calendar integration
+- Priority scoring / AI
+
 ## v1.10.0 — 2026-08-11
 
 Theme: Human-centered UX
