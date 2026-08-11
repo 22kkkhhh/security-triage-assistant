@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
 
 /**
@@ -7,12 +7,6 @@ import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
  */
 
 const CASE_B_ID = "demo-case-b";
-
-function sectionByHeading(page: Page, name: string | RegExp) {
-  return page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name }) });
-}
 
 test("建议下一步、基础信息与系统分析折叠、CTA 可导航", async ({ page }) => {
   await loginAsDemoUser(page, DEMO_USERS.analyst);

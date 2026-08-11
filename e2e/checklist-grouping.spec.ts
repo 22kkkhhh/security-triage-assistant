@@ -11,8 +11,8 @@ const GROUP_LABEL = "联系业务负责人";
 
 function checklistSection(page: Page) {
   return page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: /^待核查事项/ }) });
+    .getByRole("heading", { name: /^待核查事项/ })
+    .locator("xpath=ancestor::section[1]");
 }
 
 test("SYSTEM 同 label 折叠为 group；展开后单 child 独立完成", async ({
@@ -45,12 +45,19 @@ test("SYSTEM 同 label 折叠为 group；展开后单 child 独立完成", async
   const childCount = await childCheckboxes.count();
   expect(childCount).toBeGreaterThanOrEqual(2);
 
-  const first = childCheckboxes.first();
-  const firstLabel = (await first.getAttribute("aria-label")) ?? "";
-  expect(firstLabel).toContain(GROUP_LABEL);
-  expect(firstLabel).toContain("未完成");
+  // 定位第一个未完成 child（按索引稳定，避免 aria-label 更新后 locator 漂移）
+  let targetIndex = -1;
+  for (let i = 0; i < childCount; i += 1) {
+    const label = (await childCheckboxes.nth(i).getAttribute("aria-label")) ?? "";
+    if (label.includes("未完成")) {
+      targetIndex = i;
+      break;
+    }
+  }
+  expect(targetIndex).toBeGreaterThanOrEqual(0);
+  const first = childCheckboxes.nth(targetIndex);
+  expect((await first.getAttribute("aria-label")) ?? "").toContain(GROUP_LABEL);
 
-  // 只勾选第一个真实 child（语义命令按具体 item.id）
   await first.check();
   await expect(page.getByText("处理中…")).toHaveCount(0, { timeout: 10_000 });
   await expect(page.getByText("保存失败")).toHaveCount(0);
@@ -61,7 +68,8 @@ test("SYSTEM 同 label 折叠为 group；展开后单 child 独立完成", async
   );
 
   // 同 group 其它 child 不得被批量完成
-  for (let i = 1; i < childCount; i += 1) {
+  for (let i = 0; i < childCount; i += 1) {
+    if (i === targetIndex) continue;
     await expect(childCheckboxes.nth(i)).not.toBeChecked();
   }
 
@@ -75,9 +83,10 @@ test("SYSTEM 同 label 折叠为 group；展开后单 child 独立完成", async
     .first();
   await groupAfter.getByRole("button", { name: "展开明细" }).click();
   const boxesAfter = groupAfter.locator('input[type="checkbox"]');
-  await expect(boxesAfter.first()).toBeChecked();
+  await expect(boxesAfter.nth(targetIndex)).toBeChecked();
   const afterCount = await boxesAfter.count();
-  for (let i = 1; i < afterCount; i += 1) {
+  for (let i = 0; i < afterCount; i += 1) {
+    if (i === targetIndex) continue;
     await expect(boxesAfter.nth(i)).not.toBeChecked();
   }
 });

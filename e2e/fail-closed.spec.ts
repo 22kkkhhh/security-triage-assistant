@@ -28,15 +28,18 @@ const CHECKLIST_EMPTY_SUCCESS_MESSAGE = "当前暂无额外合规核查事项";
 
 const PROGRESS_UNAVAILABLE_MESSAGE =
   "调查进度暂不可用。当前无法完成重新解析，请稍后刷新后继续核查；不得将当前状态视为已完成核查或全部已解决。";
-const PROGRESS_SUCCESS_ONLY_LABEL = "调查概览 · 非最终结论";
+const PROGRESS_SUCCESS_ONLY_LABEL = "当前情况与优先动作 · 非最终结论";
 
 const HUMAN_REVIEW_UNAVAILABLE_HINT =
   "调查进度暂不可用，当前无法确认核查状态；请结合现有证据完成人工研判。";
 
 function sectionByHeading(page: Page, name: string | RegExp) {
+  // 取 heading 最近祖先 section；name 用精确正则，避免「相关合规参考」等子串误匹配
+  const headingName =
+    typeof name === "string" ? new RegExp(`^${name}$`) : name;
   return page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name }) });
+    .getByRole("heading", { name: headingName })
+    .locator("xpath=ancestor::section[1]");
 }
 
 test("@fail-closed resolver unavailable 不得伪装为空结果", async ({
@@ -45,7 +48,8 @@ test("@fail-closed resolver unavailable 不得伪装为空结果", async ({
   await loginAsDemoUser(page, DEMO_USERS.analyst);
   await page.goto(`/cases/${CASE_B_ID}`);
 
-  // 8. Compliance（合规参考）必须显式 unavailable，不得与真实空结果同文案
+  // 8. Compliance（合规参考）在 disclosure 内：先展开再断言 unavailable
+  await page.getByTestId("compliance-reference-details").locator("summary").click();
   const complianceSection = sectionByHeading(page, "合规参考");
   await expect(complianceSection).toBeVisible();
   await expect(
@@ -65,8 +69,8 @@ test("@fail-closed resolver unavailable 不得伪装为空结果", async ({
     complianceChecklistSection.getByText(CHECKLIST_EMPTY_SUCCESS_MESSAGE),
   ).toHaveCount(0);
 
-  // 10. Investigation Progress（调查进度）同理：显式不可用，且不渲染成功态数值统计
-  const progressSection = sectionByHeading(page, "调查进度");
+  // 10. Overview（概览）同理：显式不可用，且不渲染成功态数值统计
+  const progressSection = page.getByTestId("investigation-overview");
   await expect(progressSection).toBeVisible();
   await expect(progressSection.getByText("当前不可用")).toBeVisible();
   await expect(

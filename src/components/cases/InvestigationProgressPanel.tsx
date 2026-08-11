@@ -185,15 +185,22 @@ export function InvestigationProgressPanel({
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <h2
-            id="investigation-overview-heading"
-            className="text-sm font-semibold text-neutral-900"
-          >
-            概览
-          </h2>
-          <p className="mt-0.5 text-xs text-neutral-500">
-            当前情况与优先动作 · 非最终结论
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2
+              id="investigation-overview-heading"
+              className="text-sm font-semibold text-neutral-900"
+            >
+              概览
+            </h2>
+            {view.resolutionStatus === "RESOLUTION_UNAVAILABLE" ? (
+              <span className="text-xs text-amber-700">当前不可用</span>
+            ) : null}
+          </div>
+          {view.resolutionStatus === "SUCCESS" ? (
+            <p className="mt-0.5 text-xs text-neutral-500">
+              当前情况与优先动作 · 非最终结论
+            </p>
+          ) : null}
         </div>
         {onGoToReport ? (
           <ReportShortcut
