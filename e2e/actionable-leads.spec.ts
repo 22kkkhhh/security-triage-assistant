@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
 
 /**
@@ -9,6 +9,14 @@ import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
 const CASE_B_ID = "demo-case-b";
 const LEAD_CHECKLIST_LABEL =
   "对比关联案件在共同业务系统中的访问时间、操作范围与上下文";
+const COMMAND_PENDING_TEXT = "处理中…";
+
+async function waitForSemanticCommandSettled(page: Page): Promise<void> {
+  await expect(page.getByText(COMMAND_PENDING_TEXT)).toHaveCount(0, {
+    timeout: 10_000,
+  });
+  await expect(page.getByText("保存失败")).toHaveCount(0);
+}
 
 test("历史线索加入核查清单：持久化、badge、完成/重开，不改研判", async ({
   page,
@@ -28,6 +36,7 @@ test("历史线索加入核查清单：持久化、badge、完成/重开，不�
   const humanRiskBefore = await page.getByLabel("人工风险等级").inputValue();
 
   await lead.getByTestId("investigation-lead-add-button").click();
+  await waitForSemanticCommandSettled(page);
   await expect(lead.getByTestId("investigation-lead-added")).toBeVisible({
     timeout: 15_000,
   });
@@ -56,17 +65,20 @@ test("历史线索加入核查清单：持久化、badge、完成/重开，不�
       .first(),
   ).toBeVisible();
 
-  // complete then reopen via checklist checkbox
-  const row = page
-    .getByTestId("evidence-checklist-workspace")
-    .getByText(LEAD_CHECKLIST_LABEL, { exact: true })
-    .locator("xpath=ancestor::li[1]");
-  const checkbox = row.getByRole("checkbox");
-  await expect(checkbox).toBeVisible();
-  await checkbox.check();
-  await expect(checkbox).toBeChecked();
-  await checkbox.uncheck();
-  await expect(checkbox).not.toBeChecked();
+  // complete then reopen — wait for semantic command between toggles
+  const pendingBox = page.getByLabel(`${LEAD_CHECKLIST_LABEL}（未完成）`);
+  await pendingBox.check();
+  await waitForSemanticCommandSettled(page);
+  await expect(
+    page.getByLabel(`${LEAD_CHECKLIST_LABEL}（已完成）`),
+  ).toBeChecked();
+
+  const completedBox = page.getByLabel(`${LEAD_CHECKLIST_LABEL}（已完成）`);
+  await completedBox.uncheck();
+  await waitForSemanticCommandSettled(page);
+  await expect(
+    page.getByLabel(`${LEAD_CHECKLIST_LABEL}（未完成）`),
+  ).not.toBeChecked();
 
   const suggestedAfter = (
     await page.getByTestId("suggested-assessment-bar").innerText()
