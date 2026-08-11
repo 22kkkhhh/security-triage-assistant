@@ -12,6 +12,8 @@ COPY package.json package-lock.json ./
 # postinstall runs `prisma generate` — schema/config must be present for npm ci.
 COPY prisma ./prisma
 COPY prisma.config.ts ./
+# prisma.config.ts requires DATABASE_URL at generate time; build-only placeholder (not runtime).
+ENV DATABASE_URL=file:./prisma/build-placeholder.db
 RUN npm ci
 
 FROM node:22-bookworm-slim AS builder
