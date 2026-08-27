@@ -8,12 +8,13 @@
 - `npm run test:e2e`：Phase 1 的 23 个测试、Phase 2 的 1 个 fail-closed 测试全部通过；使用独立 `prisma/e2e.db`。
 - `npm run typecheck`、`npm run lint`、`npm run build` 全部通过。
 - SQLite 停服备份：`/home/hermes/backups/security-triage-staging-20260828.db`，完整性为 `ok`。
-- 备份恢复到临时数据库成功，7 个 Prisma migrations 无待执行项；未修改 `prisma/staging.db`。
+- 备份恢复到临时数据库成功，8 个 Prisma migrations 无待执行项；未修改 `prisma/staging.db`。
 - 运行日志为结构化 JSON；未发现 secret、密码或告警原文写入启动日志。
 - 已配置并验证腾讯云 Docker Hub 内网镜像源 `https://mirror.ccs.tencentyun.com`。
 - Node 22 镜像 `security-triage-assistant:v1.12.0-staging` 构建成功（镜像约 1.75GB）。
-- 使用 staging 备份副本在隔离端口 `3122` 启动容器：`/api/health` 与 `/api/ready` 均返回 200；7 个迁移无待执行。
+- 使用 staging 备份副本在隔离端口 `3122` 启动容器：`/api/health` 与 `/api/ready` 均返回 200；8 个迁移无待执行。
 - 隔离容器重启后用户数（3）与案件数（2）保持不变；缺少生产密钥时启动退出码为 1，fail-closed 生效。
+- 外部告警去重已在隔离 SQLite 上验证：相同 `externalAlertId` 的第二次外部创建返回已关联案件，不新增记录；手工来源不启用该去重键。
 
 ## 当前部署边界
 
@@ -32,4 +33,4 @@
 1. 在维护窗口执行容器接管演练：备份 → 隔离端口验收 → 端口切换 → 回滚演练。
 2. 补齐容器切换后的登录、案件读取/写入、报告导出烟囱测试记录。
 3. 保持 HTTP 内网边界；未来若开放公网，再单独确认域名、证书、密钥保管和 HTTPS 切换方案。
-4. 容器切换和烟囱测试闭环后，才进入第二阶段真实数据源适配。
+4. 容器切换和烟囱测试闭环后，继续进入第二阶段真实数据源适配；当前已先落地外部告警幂等基础。
