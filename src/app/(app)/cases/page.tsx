@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ForbiddenPanel } from "@/components/auth/ForbiddenPanel";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { caseStatusLabels, riskLevelLabels } from "@/domain/labels";
 import type { CaseStatus, RiskLevel } from "@/domain/types";
 import {
@@ -152,8 +153,8 @@ export default async function CasesPage({
                 data-testid={`case-queue-scope-${value}`}
                 className={
                   active
-                    ? "shrink-0 rounded border border-slate-800 bg-slate-800 px-3 py-1.5 text-xs font-medium text-white"
-                    : "shrink-0 rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                    ? "shrink-0 rounded-[var(--ui-radius-control)] border border-[var(--ui-brand)] bg-[var(--ui-brand-selected)] px-3 py-1.5 text-xs font-medium text-[var(--ui-brand-hover)]"
+                    : "shrink-0 rounded-[var(--ui-radius-control)] border border-[var(--ui-border)] bg-[var(--ui-surface)] px-3 py-1.5 text-xs font-medium text-[var(--ui-text-secondary)] hover:bg-[var(--ui-surface-secondary)]"
                 }
               >
                 {label}
@@ -181,9 +182,9 @@ export default async function CasesPage({
               href={queueHref({ ...filterBase, sort: value })}
               data-testid={`case-queue-sort-${value}`}
               className={
-                active
-                  ? "shrink-0 rounded border border-slate-700 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-900"
-                  : "shrink-0 rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                  active
+                    ? "shrink-0 rounded-[var(--ui-radius-control)] border border-[var(--ui-brand)] bg-[var(--ui-brand-selected)] px-3 py-1.5 text-xs font-medium text-[var(--ui-brand-hover)]"
+                    : "shrink-0 rounded-[var(--ui-radius-control)] border border-[var(--ui-border)] bg-[var(--ui-surface)] px-3 py-1.5 text-xs font-medium text-[var(--ui-text-secondary)] hover:bg-[var(--ui-surface-secondary)]"
               }
             >
               {label}
@@ -194,7 +195,7 @@ export default async function CasesPage({
 
       <form
         method="get"
-        className="flex flex-col gap-3 border-b border-neutral-200 pb-4 sm:flex-row sm:flex-wrap sm:items-end"
+        className="flex flex-col gap-3 border-b border-[var(--ui-border)] pb-5 sm:flex-row sm:flex-wrap sm:items-end"
         data-testid="case-list-filters"
       >
         {scope !== "all" ? (
@@ -204,20 +205,21 @@ export default async function CasesPage({
           <input type="hidden" name="sort" value={sort} />
         ) : null}
         <label className="min-w-0 flex-1 text-sm sm:min-w-[240px]">
-          <span className="text-xs font-medium text-neutral-600">搜索</span>
+          <span className="text-xs font-medium text-[var(--ui-text-secondary)]">搜索</span>
           <input
             name="q"
             defaultValue={q}
             placeholder="案件编号 / 事件名称 / 账号 / IP / 系统"
-            className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            aria-label="搜索案件"
+            className="mt-1 h-10 w-full rounded-[var(--ui-radius-input)] border border-[var(--ui-border)] bg-[var(--ui-surface)] px-3 text-sm text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)]"
           />
         </label>
         <label className="text-sm">
-          <span className="text-xs font-medium text-neutral-600">状态</span>
+          <span className="text-xs font-medium text-[var(--ui-text-secondary)]">状态</span>
           <select
             name="status"
             defaultValue={status ?? ""}
-            className="mt-1 block w-full rounded border border-neutral-300 px-3 py-2 text-sm sm:w-auto"
+            className="mt-1 block h-9 w-full rounded-[var(--ui-radius-input)] border border-[var(--ui-border)] bg-[var(--ui-surface)] px-3 text-sm text-[var(--ui-text-primary)] sm:w-auto"
           >
             <option value="">全部状态</option>
             {statusOptions.map(([value, label]) => (
@@ -228,11 +230,11 @@ export default async function CasesPage({
           </select>
         </label>
         <label className="text-sm">
-          <span className="text-xs font-medium text-neutral-600">风险</span>
+          <span className="text-xs font-medium text-[var(--ui-text-secondary)]">风险</span>
           <select
             name="risk"
             defaultValue={risk ?? ""}
-            className="mt-1 block w-full rounded border border-neutral-300 px-3 py-2 text-sm sm:w-auto"
+            className="mt-1 block h-9 w-full rounded-[var(--ui-radius-input)] border border-[var(--ui-border)] bg-[var(--ui-surface)] px-3 text-sm text-[var(--ui-text-primary)] sm:w-auto"
           >
             <option value="">全部风险</option>
             {riskOptions.map(([value, label]) => (
@@ -248,26 +250,25 @@ export default async function CasesPage({
       </form>
 
       {cases.length === 0 ? (
-        <div className="py-14 text-center" data-testid="case-list-empty">
-          <p className="text-base font-medium text-neutral-800">
-            {scope === "all" ? "暂无案件" : "暂无匹配案件"}
-          </p>
-          <p className="mt-1 text-sm text-neutral-500">{emptyMessage}</p>
-          {canCreateCase && scope === "all" ? (
-            <Link
-              href="/cases/new"
-              className={`mt-4 ${actionClass.primary}`}
-            >
-              + 新建研判
-            </Link>
-          ) : null}
+        <div className="ui-panel" data-testid="case-list-empty">
+          <EmptyState
+            title={scope === "all" ? "暂无案件" : "暂无匹配案件"}
+            description={emptyMessage}
+            action={
+              canCreateCase && scope === "all" ? (
+                <Link href="/cases/new" className={actionClass.primary}>
+                  + 新建研判
+                </Link>
+              ) : undefined
+            }
+          />
         </div>
       ) : (
         <>
-          <div className="hidden overflow-hidden border border-neutral-200 bg-white md:block">
+          <div className="ui-panel hidden overflow-hidden md:block" data-density="comfortable">
             <table className="min-w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-neutral-200 text-left text-xs font-medium text-neutral-500">
+                <tr className="border-b border-[var(--ui-border-subtle)] text-left text-xs font-medium text-[var(--ui-text-secondary)]">
                   <th className="px-4 py-3">案件</th>
                   <th className="px-4 py-3">风险</th>
                   <th className="px-4 py-3">状态</th>
@@ -300,28 +301,28 @@ export default async function CasesPage({
                   return (
                     <tr
                       key={item.id}
-                      className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50"
+                      className="border-b border-[var(--ui-border-subtle)] last:border-0 hover:bg-[var(--ui-surface-secondary)]"
                       data-testid="case-list-row"
                     >
                       <td className="max-w-[360px] px-4 py-3">
                         <Link
                           href={`/cases/${item.id}`}
-                          className="block min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+                          className="block min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ui-brand)]"
                         >
-                          <span className="font-mono text-xs text-slate-700">
+                          <span className="font-mono text-xs text-[var(--ui-text-secondary)]">
                             {item.caseNumber}
                           </span>
-                          <span className="mt-0.5 block text-[14px] font-medium leading-5 text-neutral-900">
+                          <span className="mt-0.5 block text-[14px] font-medium leading-5 text-[var(--ui-text-primary)]">
                             {item.title}
                           </span>
                           <span
-                            className="mt-0.5 block text-xs text-neutral-500"
+                            className="mt-0.5 block text-xs text-[var(--ui-text-secondary)]"
                             data-testid="case-list-owner"
                           >
                             负责人：{ownerLabel}
                           </span>
                           {secondary ? (
-                            <span className="mt-0.5 block truncate text-xs text-neutral-500">
+                            <span className="mt-0.5 block truncate text-xs text-[var(--ui-text-secondary)]">
                               {secondary}
                             </span>
                           ) : null}
@@ -329,7 +330,7 @@ export default async function CasesPage({
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(riskDisplay.riskLabel)}`}
+                          className={`ui-badge ${riskBadgeClass(riskDisplay.riskLabel)}`}
                           data-testid="case-list-risk"
                           data-risk-source={riskDisplay.source}
                         >
@@ -338,26 +339,26 @@ export default async function CasesPage({
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-block rounded border px-1.5 py-0.5 text-xs ${statusBadgeClass(item.status)}`}
+                          className={`ui-badge ${statusBadgeClass(item.status)}`}
                         >
                           {displayCaseStatus(item.status)}
                         </span>
                       </td>
                       <td
-                        className="px-4 py-3 text-neutral-700"
+                        className="px-4 py-3 text-[var(--ui-text-secondary)]"
                         data-testid="case-list-handling"
                       >
                         <div className="tabular-nums text-xs">
                           {pending ?? "无待核查"}
                         </div>
                         <div
-                          className="mt-0.5 text-xs text-neutral-600"
+                          className="mt-0.5 text-xs text-[var(--ui-text-secondary)]"
                           data-testid="case-list-due"
                         >
                           {dueLabel}
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-neutral-600">
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-[var(--ui-text-secondary)]">
                         {displayUpdatedAt(item.lastActivityAt)}
                       </td>
                     </tr>
@@ -368,7 +369,7 @@ export default async function CasesPage({
           </div>
 
           <ul
-            className="divide-y divide-neutral-200 border border-neutral-200 bg-white md:hidden"
+            className="ui-panel divide-y divide-[var(--ui-border-subtle)] overflow-hidden md:hidden"
             data-testid="case-list-mobile"
           >
             {cases.map((item) => {
@@ -396,37 +397,37 @@ export default async function CasesPage({
                 <li key={item.id}>
                   <Link
                     href={`/cases/${item.id}`}
-                    className="block px-4 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-400"
+                    className="block px-4 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ui-brand)]"
                     aria-label={`${item.caseNumber} ${item.title}`}
                   >
-                    <div className="font-mono text-xs text-slate-700">
+                    <div className="font-mono text-xs text-[var(--ui-text-secondary)]">
                       {item.caseNumber}
                     </div>
-                    <div className="mt-0.5 text-sm font-medium text-neutral-900">
+                    <div className="mt-0.5 text-sm font-medium text-[var(--ui-text-primary)]">
                       {item.title}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <span
-                        className={`inline-block rounded border px-1.5 py-0.5 text-xs ${riskBadgeClass(riskDisplay.riskLabel)}`}
+                        className={`ui-badge ${riskBadgeClass(riskDisplay.riskLabel)}`}
                         data-testid="case-list-risk"
                         data-risk-source={riskDisplay.source}
                       >
                         {riskDisplay.text}
                       </span>
                       <span
-                        className={`inline-block rounded border px-1.5 py-0.5 text-xs ${statusBadgeClass(item.status)}`}
+                        className={`ui-badge ${statusBadgeClass(item.status)}`}
                       >
                         {displayCaseStatus(item.status)}
                       </span>
                     </div>
                     <div
-                      className="mt-1.5 text-xs text-neutral-500"
+                      className="mt-1.5 text-xs text-[var(--ui-text-secondary)]"
                       data-testid="case-list-owner"
                     >
                       负责人：{ownerLabel}
                     </div>
                     <div
-                      className="mt-0.5 text-xs text-neutral-500"
+                      className="mt-0.5 text-xs text-[var(--ui-text-secondary)]"
                       data-testid="case-list-handling"
                     >
                       {pendingText}
@@ -434,7 +435,7 @@ export default async function CasesPage({
                       <span data-testid="case-list-due">{dueLabel}</span>
                     </div>
                     {secondary ? (
-                      <div className="mt-0.5 truncate text-xs text-neutral-500">
+                      <div className="mt-0.5 truncate text-xs text-[var(--ui-text-secondary)]">
                         {secondary}
                       </div>
                     ) : null}
