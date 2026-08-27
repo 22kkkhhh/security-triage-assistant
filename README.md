@@ -25,6 +25,48 @@ v1.12 明确边界：
 
 产品能力叠于 v1.11 Case Operations 与既有认证、合规知识、告警导入、Investigation Workbench、关联历史、Leads、Comparison 与 Checklist 之上。
 
+## 界面预览
+
+以下截图使用合成演示数据，仅用于展示界面与信息层级；截图已移除浏览器地址栏、服务器地址和真实业务数据。
+
+![登录页](docs/screenshots/login.png)
+
+![总览工作台](docs/screenshots/overview.png)
+
+![用户管理](docs/screenshots/user-management.png)
+
+## 内网 Docker 部署
+
+当前版本定位为一版内网工具，staging 可通过 HTTP 直连使用；域名和 HTTPS 不作为本阶段部署前置条件。若未来开放公网访问，必须另行完成 HTTPS、访问控制、密钥保管和流量切换设计。
+
+### 腾讯云 Docker 镜像源
+
+腾讯云云服务器在内网可使用以下 Docker Hub 镜像加速地址：
+
+```text
+https://mirror.ccs.tencentyun.com
+```
+
+该地址仅支持腾讯云内网访问，不支持外网域名访问加速。详细限制和其他系统配置方式请参阅[腾讯云官方说明](https://cloud.tencent.com/document/product/213/8623)。
+
+Ubuntu 22.04 / CentOS 7 可通过以下方式配置：
+
+```bash
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
+{
+  "registry-mirrors": [
+    "https://mirror.ccs.tencentyun.com"
+  ]
+}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+docker info | sed -n '/Registry Mirrors:/,/Live Restore Enabled/p'
+```
+
+镜像源只负责加速基础镜像下载，不会改变应用本身的访问协议。配置完成后再执行 `docker build`，并在隔离端口验证 `/api/health` 与 `/api/ready`。
+
 ## 一、项目是什么
 
 本工具帮助安全人员在**已有安全平台告警之后**完成：
