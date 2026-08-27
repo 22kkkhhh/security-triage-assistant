@@ -22,6 +22,7 @@ export interface CaseRecordRow {
   id: string;
   caseNumber: string;
   title: string;
+  externalAlertId?: string | null;
   status: string;
   suggestedRiskLevel: string | null;
   humanRiskLevel: string | null;
@@ -236,6 +237,7 @@ export function rowToPersistedCase(row: CaseRecordRow): PersistedCase {
     id: row.id,
     caseNumber: row.caseNumber,
     title: row.title,
+    externalAlertId: row.externalAlertId ?? null,
     status: row.status as CaseStatus,
     suggestedRiskLevel: row.suggestedRiskLevel as RiskLevel | null,
     humanRiskLevel: row.humanRiskLevel as RiskLevel | null,
@@ -264,6 +266,7 @@ export function rowToListItem(row: CaseRecordRow): CaseListItem {
     id: row.id,
     caseNumber: row.caseNumber,
     title: row.title,
+    externalAlertId: row.externalAlertId ?? null,
     status: row.status as CaseStatus,
     suggestedRiskLevel: row.suggestedRiskLevel as RiskLevel | null,
     humanRiskLevel: row.humanRiskLevel as RiskLevel | null,

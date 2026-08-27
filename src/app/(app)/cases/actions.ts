@@ -94,7 +94,12 @@ export type CreateCaseActionResult =
   | {
       ok: false;
       error: string;
-      code?: "UNAUTHENTICATED" | "FORBIDDEN";
+      code?:
+        | "UNAUTHENTICATED"
+        | "FORBIDDEN"
+        | "DUPLICATE_EXTERNAL_ALERT";
+      existingCaseId?: string;
+      existingCaseNumber?: string;
     };
 
 const SOURCE_TYPES = [
@@ -197,7 +202,13 @@ export async function createCaseAction(
       return {
         ok: false,
         error: sanitizeActionErrorMessage(created.error, CREATE_CASE_FALLBACK),
-        code: created.code === "FORBIDDEN" ? "FORBIDDEN" : undefined,
+        code:
+          created.code === "FORBIDDEN" ||
+          created.code === "DUPLICATE_EXTERNAL_ALERT"
+            ? created.code
+            : undefined,
+        existingCaseId: created.existingCaseId,
+        existingCaseNumber: created.existingCaseNumber,
       };
     }
 

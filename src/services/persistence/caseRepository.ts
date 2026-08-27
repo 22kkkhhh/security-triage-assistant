@@ -133,6 +133,7 @@ function buildCreateRowData(input: CreateCaseInput, caseNumber: string) {
   });
   return {
     caseNumber,
+    externalAlertId: input.externalAlertId?.trim() || null,
     ...indexes,
     caseState: toJsonValue(caseState),
     hasReport: false,
@@ -189,6 +190,19 @@ export async function getCaseByCaseNumber(
 ): Promise<PersistedCase | null> {
   const row = await prisma.caseRecord.findUnique({
     where: { caseNumber },
+    include: CASE_WITH_ASSIGNEE,
+  });
+  return row ? rowToPersistedCase(row) : null;
+}
+
+/** 查找已接收的外部告警；空 ID 不参与去重。 */
+export async function findCaseByExternalAlertId(
+  externalAlertId: string,
+): Promise<PersistedCase | null> {
+  const normalized = externalAlertId.trim();
+  if (!normalized) return null;
+  const row = await prisma.caseRecord.findUnique({
+    where: { externalAlertId: normalized },
     include: CASE_WITH_ASSIGNEE,
   });
   return row ? rowToPersistedCase(row) : null;

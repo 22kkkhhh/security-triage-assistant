@@ -41,6 +41,11 @@ export interface PersistedCaseState {
 
 /** 创建案件时的输入 */
 export interface CreateCaseInput {
+  /**
+   * 外部数据源提供的稳定告警 ID。仅在外部导入/Webhook 场景显式传入，
+   * 手工或演示案件不应将 caseState 中的 originalAlertId 当作去重键。
+   */
+  externalAlertId?: string | null;
   draft: {
     name: string;
     createdAt: string;
@@ -78,6 +83,8 @@ export interface PersistedCase {
   id: string;
   caseNumber: string;
   title: string;
+  /** 外部告警去重键；历史记录迁移前可能缺失 */
+  externalAlertId?: string | null;
   status: CaseStatus;
   suggestedRiskLevel: RiskLevel | null;
   humanRiskLevel: RiskLevel | null;
@@ -107,6 +114,8 @@ export interface CaseListItem {
   id: string;
   caseNumber: string;
   title: string;
+  /** 外部告警去重键；历史记录迁移前可能缺失 */
+  externalAlertId?: string | null;
   status: CaseStatus;
   suggestedRiskLevel: RiskLevel | null;
   humanRiskLevel: RiskLevel | null;

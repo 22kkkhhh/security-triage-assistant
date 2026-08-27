@@ -36,6 +36,7 @@ import {
 } from "@/services/persistence/auditRepository";
 import {
   createCaseRecord,
+  findCaseByExternalAlertId,
   getCaseById,
   saveCaseStateIfVersionMatches,
   StaleCaseStateError,
@@ -209,9 +210,28 @@ export async function createCaseWithAudit(
     }
   }
 
+  // 只有明确的外部数据源才启用 externalAlertId 去重。
+  // MANUAL、历史演示夹具及未标注来源的内部命令继续保留原有行为。
+  const externalAlertId =
+    options.sourceType && options.sourceType !== "MANUAL"
+      ? input.draft.alert.originalAlertId?.trim() || null
+      : null;
+  if (externalAlertId) {
+    const existing = await findCaseByExternalAlertId(externalAlertId);
+    if (existing) {
+      return {
+        ok: false,
+        error: `外部告警已接收，已关联案件 ${existing.caseNumber}。`,
+        code: "DUPLICATE_EXTERNAL_ALERT",
+        existingCaseId: existing.id,
+        existingCaseNumber: existing.caseNumber,
+      };
+    }
+  }
+
   try {
     const created = await runInTransaction(async (tx) => {
-      const row = await createCaseRecord(input, tx);
+      const row = await createCaseRecord({ ...input, externalAlertId }, tx);
       const audit = await appendCaseAudit(
         {
           caseId: row.id,
@@ -236,6 +256,18 @@ export async function createCaseWithAudit(
       audit: created.audit,
     };
   } catch (error) {
+    if (externalAlertId) {
+      const existing = await findCaseByExternalAlertId(externalAlertId);
+      if (existing) {
+        return {
+          ok: false,
+          error: `外部告警已接收，已关联案件 ${existing.caseNumber}。`,
+          code: "DUPLICATE_EXTERNAL_ALERT",
+          existingCaseId: existing.id,
+          existingCaseNumber: existing.caseNumber,
+        };
+      }
+    }
     if (operationId) {
       const raced = await findAuditByOperationId(operationId);
       if (raced) {

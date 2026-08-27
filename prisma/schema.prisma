@@ -16,6 +16,8 @@ model CaseRecord {
   /// 稳定案件编号，如 INC-20260808-001；创建后永不变更
   caseNumber String @unique
   title      String
+  /// 外部告警系统提供的稳定 ID；非空时用于跨重试幂等去重
+  externalAlertId String? @unique
 
   /// NEW | INVESTIGATING | PENDING_VERIFICATION | PENDING_BUSINESS_CONFIRMATION | RESPONDING | CLOSED
   status String

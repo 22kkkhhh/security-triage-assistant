@@ -82,6 +82,7 @@ export const CaseRecordScalarFieldEnum = {
   id: 'id',
   caseNumber: 'caseNumber',
   title: 'title',
+  externalAlertId: 'externalAlertId',
   status: 'status',
   suggestedRiskLevel: 'suggestedRiskLevel',
   humanRiskLevel: 'humanRiskLevel',

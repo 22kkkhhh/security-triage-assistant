@@ -38,6 +38,7 @@ export type CaseRecordMinAggregateOutputType = {
   id: string | null
   caseNumber: string | null
   title: string | null
+  externalAlertId: string | null
   status: string | null
   suggestedRiskLevel: string | null
   humanRiskLevel: string | null
@@ -61,6 +62,7 @@ export type CaseRecordMaxAggregateOutputType = {
   id: string | null
   caseNumber: string | null
   title: string | null
+  externalAlertId: string | null
   status: string | null
   suggestedRiskLevel: string | null
   humanRiskLevel: string | null
@@ -84,6 +86,7 @@ export type CaseRecordCountAggregateOutputType = {
   id: number
   caseNumber: number
   title: number
+  externalAlertId: number
   status: number
   suggestedRiskLevel: number
   humanRiskLevel: number
@@ -119,6 +122,7 @@ export type CaseRecordMinAggregateInputType = {
   id?: true
   caseNumber?: true
   title?: true
+  externalAlertId?: true
   status?: true
   suggestedRiskLevel?: true
   humanRiskLevel?: true
@@ -142,6 +146,7 @@ export type CaseRecordMaxAggregateInputType = {
   id?: true
   caseNumber?: true
   title?: true
+  externalAlertId?: true
   status?: true
   suggestedRiskLevel?: true
   humanRiskLevel?: true
@@ -165,6 +170,7 @@ export type CaseRecordCountAggregateInputType = {
   id?: true
   caseNumber?: true
   title?: true
+  externalAlertId?: true
   status?: true
   suggestedRiskLevel?: true
   humanRiskLevel?: true
@@ -277,6 +283,7 @@ export type CaseRecordGroupByOutputType = {
   id: string
   caseNumber: string
   title: string
+  externalAlertId: string | null
   status: string
   suggestedRiskLevel: string | null
   humanRiskLevel: string | null
@@ -325,6 +332,7 @@ export type CaseRecordWhereInput = {
   id?: Prisma.StringFilter<"CaseRecord"> | string
   caseNumber?: Prisma.StringFilter<"CaseRecord"> | string
   title?: Prisma.StringFilter<"CaseRecord"> | string
+  externalAlertId?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
   status?: Prisma.StringFilter<"CaseRecord"> | string
   suggestedRiskLevel?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
   humanRiskLevel?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
@@ -352,6 +360,7 @@ export type CaseRecordOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   caseNumber?: Prisma.SortOrder
   title?: Prisma.SortOrder
+  externalAlertId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   suggestedRiskLevel?: Prisma.SortOrderInput | Prisma.SortOrder
   humanRiskLevel?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -378,6 +387,7 @@ export type CaseRecordOrderByWithRelationInput = {
 export type CaseRecordWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   caseNumber?: string
+  externalAlertId?: string
   AND?: Prisma.CaseRecordWhereInput | Prisma.CaseRecordWhereInput[]
   OR?: Prisma.CaseRecordWhereInput[]
   NOT?: Prisma.CaseRecordWhereInput | Prisma.CaseRecordWhereInput[]
@@ -403,12 +413,13 @@ export type CaseRecordWhereUniqueInput = Prisma.AtLeast<{
   dueAt?: Prisma.DateTimeNullableFilter<"CaseRecord"> | Date | string | null
   assignedTo?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   auditLogs?: Prisma.CaseAuditLogListRelationFilter
-}, "id" | "caseNumber">
+}, "id" | "caseNumber" | "externalAlertId">
 
 export type CaseRecordOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   caseNumber?: Prisma.SortOrder
   title?: Prisma.SortOrder
+  externalAlertId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   suggestedRiskLevel?: Prisma.SortOrderInput | Prisma.SortOrder
   humanRiskLevel?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -442,6 +453,7 @@ export type CaseRecordScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"CaseRecord"> | string
   caseNumber?: Prisma.StringWithAggregatesFilter<"CaseRecord"> | string
   title?: Prisma.StringWithAggregatesFilter<"CaseRecord"> | string
+  externalAlertId?: Prisma.StringNullableWithAggregatesFilter<"CaseRecord"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"CaseRecord"> | string
   suggestedRiskLevel?: Prisma.StringNullableWithAggregatesFilter<"CaseRecord"> | string | null
   humanRiskLevel?: Prisma.StringNullableWithAggregatesFilter<"CaseRecord"> | string | null
@@ -467,6 +479,7 @@ export type CaseRecordCreateInput = {
   id?: string
   caseNumber: string
   title: string
+  externalAlertId?: string | null
   status: string
   suggestedRiskLevel?: string | null
   humanRiskLevel?: string | null
@@ -493,6 +506,7 @@ export type CaseRecordUncheckedCreateInput = {
   id?: string
   caseNumber: string
   title: string
+  externalAlertId?: string | null
   status: string
   suggestedRiskLevel?: string | null
   humanRiskLevel?: string | null
@@ -519,6 +533,7 @@ export type CaseRecordUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   caseNumber?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAlertId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   suggestedRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   humanRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -545,6 +560,7 @@ export type CaseRecordUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   caseNumber?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAlertId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   suggestedRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   humanRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -571,6 +587,7 @@ export type CaseRecordCreateManyInput = {
   id?: string
   caseNumber: string
   title: string
+  externalAlertId?: string | null
   status: string
   suggestedRiskLevel?: string | null
   humanRiskLevel?: string | null
@@ -596,6 +613,7 @@ export type CaseRecordUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   caseNumber?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAlertId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   suggestedRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   humanRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -620,6 +638,7 @@ export type CaseRecordUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   caseNumber?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAlertId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   suggestedRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   humanRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -645,6 +664,7 @@ export type CaseRecordCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   caseNumber?: Prisma.SortOrder
   title?: Prisma.SortOrder
+  externalAlertId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   suggestedRiskLevel?: Prisma.SortOrder
   humanRiskLevel?: Prisma.SortOrder
@@ -674,6 +694,7 @@ export type CaseRecordMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   caseNumber?: Prisma.SortOrder
   title?: Prisma.SortOrder
+  externalAlertId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   suggestedRiskLevel?: Prisma.SortOrder
   humanRiskLevel?: Prisma.SortOrder
@@ -697,6 +718,7 @@ export type CaseRecordMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   caseNumber?: Prisma.SortOrder
   title?: Prisma.SortOrder
+  externalAlertId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   suggestedRiskLevel?: Prisma.SortOrder
   humanRiskLevel?: Prisma.SortOrder
@@ -823,6 +845,7 @@ export type CaseRecordCreateWithoutAuditLogsInput = {
   id?: string
   caseNumber: string
   title: string
+  externalAlertId?: string | null
   status: string
   suggestedRiskLevel?: string | null
   humanRiskLevel?: string | null
@@ -848,6 +871,7 @@ export type CaseRecordUncheckedCreateWithoutAuditLogsInput = {
   id?: string
   caseNumber: string
   title: string
+  externalAlertId?: string | null
   status: string
   suggestedRiskLevel?: string | null
   humanRiskLevel?: string | null
@@ -889,6 +913,7 @@ export type CaseRecordUpdateWithoutAuditLogsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   caseNumber?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAlertId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   suggestedRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   humanRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -914,6 +939,7 @@ export type CaseRecordUncheckedUpdateWithoutAuditLogsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   caseNumber?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAlertId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   suggestedRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   humanRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -939,6 +965,7 @@ export type CaseRecordCreateWithoutAssignedToInput = {
   id?: string
   caseNumber: string
   title: string
+  externalAlertId?: string | null
   status: string
   suggestedRiskLevel?: string | null
   humanRiskLevel?: string | null
@@ -964,6 +991,7 @@ export type CaseRecordUncheckedCreateWithoutAssignedToInput = {
   id?: string
   caseNumber: string
   title: string
+  externalAlertId?: string | null
   status: string
   suggestedRiskLevel?: string | null
   humanRiskLevel?: string | null
@@ -1017,6 +1045,7 @@ export type CaseRecordScalarWhereInput = {
   id?: Prisma.StringFilter<"CaseRecord"> | string
   caseNumber?: Prisma.StringFilter<"CaseRecord"> | string
   title?: Prisma.StringFilter<"CaseRecord"> | string
+  externalAlertId?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
   status?: Prisma.StringFilter<"CaseRecord"> | string
   suggestedRiskLevel?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
   humanRiskLevel?: Prisma.StringNullableFilter<"CaseRecord"> | string | null
@@ -1042,6 +1071,7 @@ export type CaseRecordCreateManyAssignedToInput = {
   id?: string
   caseNumber: string
   title: string
+  externalAlertId?: string | null
   status: string
   suggestedRiskLevel?: string | null
   humanRiskLevel?: string | null
@@ -1066,6 +1096,7 @@ export type CaseRecordUpdateWithoutAssignedToInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   caseNumber?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAlertId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   suggestedRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   humanRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1091,6 +1122,7 @@ export type CaseRecordUncheckedUpdateWithoutAssignedToInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   caseNumber?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAlertId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   suggestedRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   humanRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1116,6 +1148,7 @@ export type CaseRecordUncheckedUpdateManyWithoutAssignedToInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   caseNumber?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAlertId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   suggestedRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   humanRiskLevel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1171,6 +1204,7 @@ export type CaseRecordSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   id?: boolean
   caseNumber?: boolean
   title?: boolean
+  externalAlertId?: boolean
   status?: boolean
   suggestedRiskLevel?: boolean
   humanRiskLevel?: boolean
@@ -1199,6 +1233,7 @@ export type CaseRecordSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   id?: boolean
   caseNumber?: boolean
   title?: boolean
+  externalAlertId?: boolean
   status?: boolean
   suggestedRiskLevel?: boolean
   humanRiskLevel?: boolean
@@ -1225,6 +1260,7 @@ export type CaseRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   id?: boolean
   caseNumber?: boolean
   title?: boolean
+  externalAlertId?: boolean
   status?: boolean
   suggestedRiskLevel?: boolean
   humanRiskLevel?: boolean
@@ -1251,6 +1287,7 @@ export type CaseRecordSelectScalar = {
   id?: boolean
   caseNumber?: boolean
   title?: boolean
+  externalAlertId?: boolean
   status?: boolean
   suggestedRiskLevel?: boolean
   humanRiskLevel?: boolean
@@ -1272,7 +1309,7 @@ export type CaseRecordSelectScalar = {
   dueAt?: boolean
 }
 
-export type CaseRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "caseNumber" | "title" | "status" | "suggestedRiskLevel" | "humanRiskLevel" | "humanConclusion" | "username" | "sourceIp" | "systemsSearchText" | "pendingChecklistCount" | "hasReport" | "reportUpdatedAt" | "caseState" | "reportDraft" | "createdAt" | "updatedAt" | "closedAt" | "lastActivityAt" | "assignedToUserId" | "assignedAt" | "dueAt", ExtArgs["result"]["caseRecord"]>
+export type CaseRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "caseNumber" | "title" | "externalAlertId" | "status" | "suggestedRiskLevel" | "humanRiskLevel" | "humanConclusion" | "username" | "sourceIp" | "systemsSearchText" | "pendingChecklistCount" | "hasReport" | "reportUpdatedAt" | "caseState" | "reportDraft" | "createdAt" | "updatedAt" | "closedAt" | "lastActivityAt" | "assignedToUserId" | "assignedAt" | "dueAt", ExtArgs["result"]["caseRecord"]>
 export type CaseRecordInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   assignedTo?: boolean | Prisma.CaseRecord$assignedToArgs<ExtArgs>
   auditLogs?: boolean | Prisma.CaseRecord$auditLogsArgs<ExtArgs>
@@ -1301,6 +1338,10 @@ export type $CaseRecordPayload<ExtArgs extends runtime.Types.Extensions.Internal
      */
     caseNumber: string
     title: string
+    /**
+     * 外部告警系统提供的稳定 ID；非空时用于跨重试幂等去重
+     */
+    externalAlertId: string | null
     /**
      * NEW | INVESTIGATING | PENDING_VERIFICATION | PENDING_BUSINESS_CONFIRMATION | RESPONDING | CLOSED
      */
@@ -1772,6 +1813,7 @@ export interface CaseRecordFieldRefs {
   readonly id: Prisma.FieldRef<"CaseRecord", 'String'>
   readonly caseNumber: Prisma.FieldRef<"CaseRecord", 'String'>
   readonly title: Prisma.FieldRef<"CaseRecord", 'String'>
+  readonly externalAlertId: Prisma.FieldRef<"CaseRecord", 'String'>
   readonly status: Prisma.FieldRef<"CaseRecord", 'String'>
   readonly suggestedRiskLevel: Prisma.FieldRef<"CaseRecord", 'String'>
   readonly humanRiskLevel: Prisma.FieldRef<"CaseRecord", 'String'>
