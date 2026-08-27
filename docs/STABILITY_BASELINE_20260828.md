@@ -10,23 +10,26 @@
 - SQLite 停服备份：`/home/hermes/backups/security-triage-staging-20260828.db`，完整性为 `ok`。
 - 备份恢复到临时数据库成功，7 个 Prisma migrations 无待执行项；未修改 `prisma/staging.db`。
 - 运行日志为结构化 JSON；未发现 secret、密码或告警原文写入启动日志。
+- 已配置并验证腾讯云 Docker Hub 内网镜像源 `https://mirror.ccs.tencentyun.com`。
+- Node 22 镜像 `security-triage-assistant:v1.12.0-staging` 构建成功（镜像约 1.75GB）。
+- 使用 staging 备份副本在隔离端口 `3122` 启动容器：`/api/health` 与 `/api/ready` 均返回 200；7 个迁移无待执行。
+- 隔离容器重启后用户数（3）与案件数（2）保持不变；缺少生产密钥时启动退出码为 1，fail-closed 生效。
 
 ## 当前部署边界
 
 - staging：Node 22 bare-metal，直连 `http://43.139.70.88:3012`。
 - Nginx 当前 `3013 → 127.0.0.1:4750`，80/443 未作为本项目入口；未经确认不得改写。
-- 当前没有运行中的 Docker 容器。
+- 当前没有运行中的 Docker 容器；已构建镜像保留用于切换演练。
 
 ## 阻塞项
 
-- Docker 构建因服务器访问 Docker Hub 超时失败：无法拉取 `node:22-bookworm-slim`；不是项目编译错误。
-- 要完成 Docker 切换，需要明确可信的腾讯云/内网镜像地址，或恢复 Docker Hub 出网访问。
+- Docker 构建已解除 Docker Hub 拉取阻塞；Debian 软件源下载速度较慢，后续可评估腾讯云 APT 镜像或预构建依赖以缩短构建时间。
+- 尚未执行生产流量从 bare-metal staging 切换到容器；需要单独的维护窗口、回滚点和端口验收。
 - HTTPS 需要确认域名、证书来源和公网流量切换窗口；当前不做猜测性改动。
-- 当前服务器 .env 的 BETTER_AUTH_URL 仍为公网 HTTP，因此默认生产 build 会按门禁失败；使用临时 loopback HTTPS 参数验证通过，切换前必须配置真实 HTTPS。
 
 ## 下一步
 
-1. 配置并验证可信镜像源，构建 Node 22 镜像。
-2. 使用 staging 数据库副本在隔离端口启动容器，验证 `/api/ready`、重启持久化和 invalid-env fail-closed。
-3. 明确域名/证书/密钥保管方案后，再设计 Nginx HTTPS 切换。
-4. 完成一次生产烟囱测试后，才进入第二阶段真实数据源适配。
+1. 在维护窗口执行容器接管演练：备份 → 隔离端口验收 → 端口切换 → 回滚演练。
+2. 补齐容器切换后的登录、案件读取/写入、报告导出烟囱测试记录。
+3. 保持 HTTP 内网边界；未来若开放公网，再单独确认域名、证书、密钥保管和 HTTPS 切换方案。
+4. 容器切换和烟囱测试闭环后，才进入第二阶段真实数据源适配。
