@@ -33,7 +33,7 @@ v1.12 明确边界：
 
 ![总览工作台](docs/screenshots/overview.png)
 
-![用户管理](docs/screenshots/user-management.png)
+![案件工作台](docs/screenshots/case-detail.png)
 
 ## 内网 Docker 部署
 
