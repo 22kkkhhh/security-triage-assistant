@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 
 /**
- * 应用入口：默认进入历史案件列表。
- * 原单页 Demo App 由路由化 Shell 承接，Workbench 接入见后续步骤。
+ * 应用入口：进入轻量运营总览。
+ * 总览只复用案件队列数据，不另建 Dashboard 数据模型。
  */
 export default function HomePage() {
-  redirect("/cases");
+  redirect("/overview");
 }

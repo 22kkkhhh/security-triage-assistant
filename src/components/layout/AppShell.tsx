@@ -31,6 +31,11 @@ type NavItem = {
 // 调查工作台：新建研判是案件页的主动作，不占侧栏一级导航（历史定义：{ href: "/cases/new" }）。
 const navItems: NavItem[] = [
   {
+    href: "/overview",
+    label: "总览",
+    match: (path: string) => path === "/overview",
+  },
+  {
     href: "/cases",
     label: "案件队列",
     match: isCaseListNavActive,
