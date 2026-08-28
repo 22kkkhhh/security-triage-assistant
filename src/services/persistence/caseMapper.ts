@@ -105,6 +105,7 @@ export function toPersistedCaseState(input: {
   checklist: ChecklistItem[];
   humanReview: SecurityCaseDraft["humanReview"];
   timeline: SecurityCaseDraft["timeline"];
+  keyEvidenceIds?: string[];
 }): PersistedCaseState {
   return {
     caseData: {
@@ -119,6 +120,9 @@ export function toPersistedCaseState(input: {
     checklist: input.checklist,
     humanReview: input.humanReview,
     timeline: input.timeline,
+    ...(input.keyEvidenceIds && input.keyEvidenceIds.length > 0
+      ? { keyEvidenceIds: Array.from(new Set(input.keyEvidenceIds.filter(Boolean))) }
+      : {}),
   };
 }
 

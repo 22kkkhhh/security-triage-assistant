@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { SecurityCaseDraft } from "@/domain/types";
 import type { InvestigationIntelligenceView } from "@/services/correlation/investigationIntelligenceTypes";
 import { formatDateTimeForDisplay } from "@/lib/formatDateTimeForDisplay";
@@ -67,6 +68,8 @@ export function EntityInvestigationPanel({
 }) {
   const [selected, setSelected] = useState<EntityHistory | null>(null);
   const [dismissedRequestKey, setDismissedRequestKey] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const histories = useMemo(() => buildEntityHistory(draft, intelligence), [draft, intelligence]);
   const requestedKey = requestedEntity
     ? requestedEntity.kind + ":" + requestedEntity.value
@@ -76,6 +79,27 @@ export function EntityInvestigationPanel({
     : null;
   const visibleSelection =
     requestedMatch && dismissedRequestKey !== requestedKey ? requestedMatch : selected;
+  useEffect(() => {
+    if (!visibleSelection) return;
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+    return () => {
+      previouslyFocusedRef.current?.focus();
+      previouslyFocusedRef.current = null;
+    };
+  }, [visibleSelection]);
+
+  useEffect(() => {
+    if (!visibleSelection) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelected(null);
+        setDismissedRequestKey(requestedKey);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [visibleSelection, requestedKey]);
   const selectEntity = (entity: EntityHistory) => {
     setSelected(entity);
     setDismissedRequestKey(requestedKey);
@@ -96,10 +120,10 @@ export function EntityInvestigationPanel({
       {visibleSelection ? (
         <div className="fixed inset-0 z-40" role="presentation">
           <button className="absolute inset-0 bg-slate-900/20" aria-label="关闭实体面板" onClick={closePanel} />
-          <aside className="absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto border-l border-slate-200 bg-white p-5 shadow-xl" aria-label={`${visibleSelection.kind}调查`}>
+          <aside className="absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto border-l border-slate-200 bg-white p-5 shadow-xl sm:w-[min(100vw-1rem,28rem)]" role="complementary" tabIndex={-1} aria-label={`${visibleSelection.kind}调查`}>
             <div className="flex items-start justify-between gap-3">
               <div><p className="text-xs font-medium text-blue-700">{visibleSelection.kind}调查</p><h2 className="mt-1 break-all text-lg font-semibold text-slate-900">{visibleSelection.value}</h2></div>
-              <button type="button" className="rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100" onClick={closePanel} aria-label="关闭实体面板">关闭</button>
+              <button ref={closeButtonRef} type="button" className="rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600" onClick={closePanel} aria-label="关闭实体面板">关闭</button>
             </div>
             <div className="mt-5 grid grid-cols-3 gap-2 text-xs">
               <div className="rounded border border-slate-200 bg-slate-50 p-2"><span className="block text-slate-500">出现次数</span><strong className="text-base text-slate-900">{visibleSelection.occurrenceCount}</strong></div>
@@ -108,7 +132,7 @@ export function EntityInvestigationPanel({
             </div>
             <section className="mt-5"><h3 className="text-sm font-semibold text-slate-900">历史事实</h3><ul className="mt-2 space-y-1 text-sm text-slate-600">{visibleSelection.facts.map((fact) => <li key={fact}>· {fact}</li>)}</ul></section>
             {visibleSelection.relatedEntities.length > 0 && <section className="mt-5"><h3 className="text-sm font-semibold text-slate-900">关联对象</h3><div className="mt-2 flex flex-wrap gap-2">{visibleSelection.relatedEntities.map((item) => <span key={`${item.kind}:${item.value}`} className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">{item.kind} · {item.value}</span>)}</div></section>}
-            {visibleSelection.relatedCases.length > 0 && <section className="mt-5"><h3 className="text-sm font-semibold text-slate-900">关联案件</h3><ul className="mt-2 space-y-2">{visibleSelection.relatedCases.map((item) => <li key={item.id} className="rounded border border-slate-200 p-2"><p className="font-mono text-xs text-slate-500">{item.number}</p><p className="text-sm text-slate-800">{item.title}</p></li>)}</ul></section>}
+            {visibleSelection.relatedCases.length > 0 && <section className="mt-5"><h3 className="text-sm font-semibold text-slate-900">关联案件</h3><ul className="mt-2 space-y-2">{visibleSelection.relatedCases.map((item) => <li key={item.id} className="rounded border border-slate-200 p-2"><Link href={`/cases/${item.id}`} className="font-mono text-xs text-blue-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">{item.number}</Link><Link href={`/cases/${item.id}`} className="text-sm text-blue-700 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">{item.title}</Link></li>)}</ul></section>}
             <div className="mt-6 grid gap-2"><button type="button" className="rounded-md border border-blue-200 px-3 py-2 text-left text-sm font-medium text-blue-700 hover:bg-blue-50" onClick={() => { closePanel(); onNavigate?.("timeline"); }}>查看时间线中的相关活动 →</button><button type="button" className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50" onClick={() => { closePanel(); onNavigate?.("evidence"); }}>查看关联证据 →</button></div>
           </aside>
         </div>

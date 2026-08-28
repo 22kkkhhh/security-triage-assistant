@@ -37,6 +37,8 @@ export interface PersistedCaseState {
   checklist: ChecklistItem[];
   humanReview: HumanReview | null;
   timeline: TimelineEvent[];
+  /** 标记为关键证据的 evidenceId；旧案件缺省为空。 */
+  keyEvidenceIds?: string[];
 }
 
 /** 创建案件时的输入 */
@@ -70,6 +72,8 @@ export interface SaveCaseStateInput {
   humanReview: HumanReview | null;
   timeline: TimelineEvent[];
   suggestedRiskLevel: RiskLevel | null;
+  /** 关键证据引用；nullable/backward-compatible JSON 字段。 */
+  keyEvidenceIds?: string[];
   status?: CaseStatus;
   /**
    * 乐观并发：客户端上次已知 updatedAt。

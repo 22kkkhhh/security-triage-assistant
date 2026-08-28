@@ -47,6 +47,8 @@ export interface BuildReportInput {
    * undefined = 旧路径/无合规集成（不插入合规章节）；[] = 已评估但无条目。
    */
   complianceReferences?: ComplianceReferenceSnapshot[];
+  /** Pin 的关键证据自动进入报告引用。 */
+  keyEvidenceIds?: string[];
 }
 
 const sectionTitles: Record<ReportSection["key"], string> = {
@@ -102,6 +104,7 @@ export function buildReportData(input: BuildReportInput): ReportData {
     checklist,
     timeline,
     complianceReferences,
+    keyEvidenceIds,
   } = input;
   const {
     alert,
@@ -274,9 +277,12 @@ export function buildReportData(input: BuildReportInput): ReportData {
       ...section,
       content: normalizeDateTimesInText(section.content),
     })),
-    evidenceIds: evidences
-      .filter((e) => e.includedInReport)
-      .map((e) => e.evidenceId),
+    evidenceIds: Array.from(
+      new Set([
+        ...evidences.filter((e) => e.includedInReport).map((e) => e.evidenceId),
+        ...(keyEvidenceIds ?? []),
+      ]),
+    ),
     timelineEventIds: timeline.map((event) => event.id),
     generatedAt,
     ...(complianceReferences !== undefined

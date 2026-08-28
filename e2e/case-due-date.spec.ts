@@ -12,6 +12,8 @@ function laterTodayUtc8FormValue(): string {
   const d = String(cn.getUTCDate()).padStart(2, "0");
   let h = cn.getUTCHours() + 2;
   if (h > 23) h = 23;
+  // Keep the target safely in the future when the current UTC+8 hour is late.
+  if (h === 23) return `${y}-${m}-${d}T23:59`;
   const hh = String(h).padStart(2, "0");
   return `${y}-${m}-${d}T${hh}:00`;
 }

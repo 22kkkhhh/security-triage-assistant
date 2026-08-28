@@ -34,6 +34,8 @@ export interface RestoredWorkbenchView {
   /** 当前业务上下文下重新分析得到的建议风险（非持久化权威） */
   suggestedRiskLevel: RiskLevel | null;
   rawAlertIds?: string[];
+  /** 持久化的关键证据引用。 */
+  keyEvidenceIds?: string[];
 }
 
 /**
@@ -99,6 +101,7 @@ export function restoreWorkbenchFromState(input: {
     suggestedRiskLevel:
       analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
     rawAlertIds: [],
+    keyEvidenceIds: input.caseState.keyEvidenceIds ?? [],
   };
 }
 

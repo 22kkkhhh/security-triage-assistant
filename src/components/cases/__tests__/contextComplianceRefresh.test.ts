@@ -70,7 +70,7 @@ describe("Case Context → Compliance UI Refresh（router.refresh）", () => {
 
   it("加入核查清单 handler 本身不直接 refresh（成功路径经 runChecklistCommand）", () => {
     const match = workbench.match(
-      /const handleAddComplianceSuggestion = \([\s\S]*?\n  \};\n\n  const handleBack/,
+      /const handleAddComplianceSuggestion = \([\s\S]*?runChecklistCommand\([\s\S]*?\n  \};/,
     );
     expect(match).toBeTruthy();
     expect(match![0]).toContain("runChecklistCommand");

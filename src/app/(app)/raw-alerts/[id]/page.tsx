@@ -7,7 +7,7 @@ import { ForbiddenError } from "@/domain/auth";
 import { requirePermission } from "@/services/auth/requirePermission";
 import { getRawAlertRecordDetail } from "@/services/persistence/rawAlertRepository";
 
-type RawAlertDetailPageProps = { params: Promise<{ id: string }> };
+type RawAlertDetailPageProps = { params: Promise<{ id: string }>; searchParams?: Promise<{ fromCase?: string }> };
 
 const statusLabel: Record<string, string> = { RECEIVED: "已接收", CREATED: "已建案", DUPLICATE: "重复告警", REJECTED: "已拒绝" };
 
@@ -15,7 +15,7 @@ function formatDate(value: Date) {
   return new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "medium", hour12: false }).format(value);
 }
 
-export default async function RawAlertDetailPage({ params }: RawAlertDetailPageProps) {
+export default async function RawAlertDetailPage({ params, searchParams }: RawAlertDetailPageProps) {
   try {
     await requirePermission("CASE_READ");
   } catch (error) {
@@ -24,6 +24,7 @@ export default async function RawAlertDetailPage({ params }: RawAlertDetailPageP
   }
 
   const { id } = await params;
+  const fromCase = (await searchParams)?.fromCase?.trim();
   const row = await getRawAlertRecordDetail(id);
   if (!row) notFound();
 
@@ -31,7 +32,7 @@ export default async function RawAlertDetailPage({ params }: RawAlertDetailPageP
   return (
     <PageFrame width="normal">
       <PageHeader
-        back={<Link href="/raw-alerts" className="text-sm text-[var(--ui-accent)] hover:underline">← 返回原始告警</Link>}
+        back={<Link href={fromCase ? `/cases/${encodeURIComponent(fromCase)}` : "/raw-alerts"} className="text-sm text-[var(--ui-accent)] hover:underline">← {fromCase ? "返回案件" : "返回原始告警"}</Link>}
         eyebrow={<span className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--ui-accent)]">告警接入</span>}
         title="原始告警详情"
         description="仅展示接入时保存的脱敏副本；原始敏感字段不会恢复，也不会提供下载。"

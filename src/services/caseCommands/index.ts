@@ -2,6 +2,7 @@ export {
   addTimelineEventCommand,
   applyChecklistCommand,
   changeCaseStatusCommand,
+  toggleEvidencePinCommand,
   createCaseWithAudit,
   updateBusinessContextCommand,
   updateHumanReviewCommand,

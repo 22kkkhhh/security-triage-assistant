@@ -212,7 +212,9 @@ export function formatAuditChangesForDisplay(
       else if (log.summary) lines.push(log.summary);
       break;
     }
-    case "HANDOFF_NOTE_ADDED": {
+    case "HANDOFF_NOTE_ADDED":
+    case "EVIDENCE_PINNED":
+    case "EVIDENCE_UNPINNED": {
       if (log.summary) lines.push(log.summary);
       break;
     }

@@ -49,7 +49,10 @@ function toBundle(
     caseId: record.id,
     caseNumber: record.caseNumber,
     title: record.title,
-    report,
+    report: {
+      ...report,
+      evidenceIds: Array.from(new Set([...(report.evidenceIds ?? []), ...(record.caseState.keyEvidenceIds ?? [])])),
+    },
     freshlyCreated,
     context: buildContext(record),
     reportUpdatedAt: record.reportUpdatedAt,
@@ -93,6 +96,7 @@ export function buildInitialReportFromRecord(
     humanReview: record.caseState.humanReview,
     checklist,
     timeline: record.caseState.timeline,
+    keyEvidenceIds: record.caseState.keyEvidenceIds ?? [],
     complianceReferences: options?.complianceReferences,
   });
   return {
@@ -190,7 +194,10 @@ export async function getReportExportPayload(caseId: string): Promise<{
   if (!record?.reportDraft) return null;
   const context = buildContext(record);
   return {
-    report: record.reportDraft,
+    report: {
+      ...record.reportDraft,
+      evidenceIds: Array.from(new Set([...(record.reportDraft.evidenceIds ?? []), ...(record.caseState.keyEvidenceIds ?? [])])),
+    },
     evidences: context.evidences,
     timeline: context.timeline,
     caseNumber: record.caseNumber,

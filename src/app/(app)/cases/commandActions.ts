@@ -23,6 +23,7 @@ import {
   setCaseDueAtCommand,
   updateBusinessContextCommand,
   updateHumanReviewCommand,
+  toggleEvidencePinCommand,
   type BusinessContextSemanticPatch,
   type ChecklistAddSemanticIntent,
   type ChecklistCommandAction,
@@ -570,6 +571,38 @@ export async function updateHumanReviewAction(
       actor: userActor(user),
       finalConclusion: semantic.finalConclusion,
       humanRiskLevel: semantic.humanRiskLevel,
+    }),
+  );
+}
+
+/** 关键证据 Pin：复用 CASE_SNAPSHOT_WRITE，不扩大权限边界。 */
+export async function toggleEvidencePinAction(
+  caseId: string,
+  evidenceId: unknown,
+  pinned: unknown,
+  operationId: unknown,
+  baseUpdatedAt: unknown,
+): Promise<SemanticCommandActionResult> {
+  let user;
+  try {
+    user = await requirePermission("CASE_SNAPSHOT_WRITE");
+  } catch (error) {
+    return toAuthActionFailure(error);
+  }
+  if (!caseId?.trim()) return { ok: false, error: "案件 ID 无效" };
+  if (!isNonEmptyString(evidenceId)) return { ok: false, error: "证据 ID 无效" };
+  if (typeof pinned !== "boolean") return { ok: false, error: "证据状态无效" };
+  if (!isNonEmptyString(operationId)) return { ok: false, error: "operationId 无效" };
+  const base = parseBaseUpdatedAt(baseUpdatedAt);
+  if (!base) return { ok: false, error: "baseUpdatedAt 无效" };
+  return toResult(
+    await toggleEvidencePinCommand({
+      caseId,
+      evidenceId: evidenceId.trim(),
+      pinned,
+      operationId: operationId.trim(),
+      baseUpdatedAt: base,
+      actor: userActor(user),
     }),
   );
 }

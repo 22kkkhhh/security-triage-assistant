@@ -5,6 +5,7 @@
  */
 
 import type { AuditActionType } from "@/domain/audit";
+import { analyzePersistedCase } from "@/services/analysis/analyzePersistedCase";
 import type {
   BusinessContext,
   CaseStatus,
@@ -13,6 +14,7 @@ import type {
 } from "@/domain/types";
 import {
   buildBusinessContextUpdatedAudit,
+  buildEvidencePinAudit,
   buildCaseCreatedAudit,
   buildChecklistAddedAudit,
   buildChecklistCompletedAudit,
@@ -298,6 +300,64 @@ export async function createCaseWithAudit(
       ),
     };
   }
+}
+
+/** 标记/取消关键证据（caseState 持久化 + Audit 同事务） */
+export async function toggleEvidencePinCommand(input: {
+  caseId: string;
+  evidenceId: string;
+  pinned: boolean;
+  operationId: string;
+  baseUpdatedAt: string;
+  actor: AuditActor;
+}): Promise<CommandResult> {
+  const actor = requireActor(input.actor);
+  if ("ok" in actor && actor.ok === false) return actor;
+  const trusted = actor as TrustedCommandActor;
+  if (!input.evidenceId.trim()) return { ok: false, error: "证据 ID 无效" };
+  const idempotent = await resolveOperationId({
+    caseId: input.caseId,
+    operationId: input.operationId,
+    actor: trusted,
+    actionType: input.pinned ? "EVIDENCE_PINNED" : "EVIDENCE_UNPINNED",
+  });
+  if (idempotent) return idempotent;
+  const base = requireBaseUpdatedAt(input.baseUpdatedAt);
+  if (typeof base !== "string") return base;
+  const existing = await getCaseById(input.caseId);
+  if (!existing) return { ok: false, error: "案件不存在" };
+  const evidenceExists = analyzePersistedCase(existing).analyzed.evidences.some(
+    (evidence) => evidence.evidenceId === input.evidenceId,
+  );
+  if (!evidenceExists) return { ok: false, error: "证据不存在" };
+  const current = existing.caseState.keyEvidenceIds ?? [];
+  const next = input.pinned
+    ? Array.from(new Set([...current, input.evidenceId]))
+    : current.filter((id) => id !== input.evidenceId);
+  if (next.length === current.length && next.every((id, i) => id === current[i])) {
+    return { ok: true, alreadyApplied: true, case: existing, audit: null };
+  }
+  const canonicalState: SaveCaseStateInput = {
+    caseData: existing.caseState.caseData,
+    businessContext: existing.caseState.businessContext,
+    checklist: existing.caseState.checklist,
+    humanReview: existing.caseState.humanReview,
+    timeline: existing.caseState.timeline,
+    keyEvidenceIds: next,
+    suggestedRiskLevel: existing.suggestedRiskLevel,
+    status: existing.status,
+  };
+  return commitStateAndAudit({
+    caseId: input.caseId,
+    baseUpdatedAt: base,
+    canonicalState,
+    built: buildEvidencePinAudit({
+      evidenceId: input.evidenceId,
+      pinned: input.pinned,
+      actor: trusted,
+      operationId: input.operationId,
+    }),
+  });
 }
 
 /** 修改案件状态 */

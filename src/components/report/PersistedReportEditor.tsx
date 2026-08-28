@@ -205,7 +205,7 @@ export function PersistedReportEditor({
 
       <div className="border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-blue-950">
         <span className="font-medium">自动带入：</span>
-        案件事实、核查项、时间线和已选证据会复用到报告中；人工主要补充事件名称、研判结论和整改建议。
+        案件事实、核查项、时间线和关键证据会复用到报告中；人工主要补充事件名称、研判结论和整改建议。
       </div>
 
       {staleNotice && (

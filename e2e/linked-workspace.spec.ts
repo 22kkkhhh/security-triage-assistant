@@ -17,6 +17,10 @@ test("Analyst：实体、证据和关联调查保持当前案件上下文", asyn
   await expect(page.getByRole("heading", { name: /证据中心/ })).toBeVisible();
   await page.getByRole("button", { name: "标记为关键证据" }).first().click();
   await expect(page.getByRole("button", { name: "取消关键证据" })).toBeVisible();
+  await page.reload();
+  await page.getByText(/查看系统证据/).click();
+  await expect(page.getByRole("button", { name: "取消关键证据" })).toBeVisible();
+  await expect(page.getByTestId("human-review-key-evidence-context")).toBeVisible();
 
   await page.getByRole("button", { name: "IP · 172.16.8.23" }).last().click();
   await expect(page.getByRole("complementary", { name: "IP调查" })).toContainText(

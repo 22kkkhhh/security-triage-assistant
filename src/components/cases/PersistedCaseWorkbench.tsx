@@ -18,6 +18,7 @@ import {
   setCaseDueAtAction,
   updateBusinessContextAction,
   updateHumanReviewAction,
+  toggleEvidencePinAction,
 } from "@/app/(app)/cases/commandActions";
 import type { UserRole } from "@/domain/auth";
 import type {
@@ -192,7 +193,7 @@ export function PersistedCaseWorkbench({
   const [timeline, setTimeline] = useState<TimelineEvent[]>(
     initial.draft.timeline,
   );
-  const [pinnedEvidenceIds, setPinnedEvidenceIds] = useState<string[]>([]);
+  const [pinnedEvidenceIds, setPinnedEvidenceIds] = useState<string[]>(initial.keyEvidenceIds ?? []);
   const [entityRequest, setEntityRequest] = useState<{ kind: "账号" | "IP" | "系统"; value: string } | null>(null);
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
@@ -237,6 +238,7 @@ export function PersistedCaseWorkbench({
         humanReview: HumanReview | null;
         checklist: ChecklistItem[];
         timeline: TimelineEvent[];
+        keyEvidenceIds?: string[];
       };
       ownership?: CaseOwnership;
       dueAt?: string | null;
@@ -246,6 +248,7 @@ export function PersistedCaseWorkbench({
       setHumanReview(payload.caseState.humanReview ?? emptyHumanReview());
       setChecklistBase(payload.caseState.checklist);
       setTimeline(payload.caseState.timeline);
+      setPinnedEvidenceIds(payload.caseState.keyEvidenceIds ?? []);
       if (payload.ownership) setOwnership(payload.ownership);
       if (payload.dueAt !== undefined) setDueAt(payload.dueAt);
     },
@@ -752,6 +755,38 @@ export function PersistedCaseWorkbench({
     });
   };
 
+  const handleEvidencePinToggle = (evidenceId: string) => {
+    if (!capabilities.canSnapshotWrite || commandPending) return;
+    const pinned = !pinnedEvidenceIds.includes(evidenceId);
+    const previous = pinnedEvidenceIds;
+    setPinnedEvidenceIds(pinned ? [...previous, evidenceId] : previous.filter((id) => id !== evidenceId));
+    setCommandError(null);
+    setCommandPending(true);
+    void (async () => {
+      const lease = await beginSemanticCommand();
+      if (!lease.ok) {
+        setPinnedEvidenceIds(previous);
+        setCommandError(SNAPSHOT_BLOCKED_MESSAGE);
+        setCommandPending(false);
+        return;
+      }
+      try {
+        const result = await toggleEvidencePinAction(initial.caseId, evidenceId, pinned, crypto.randomUUID(), lease.baseUpdatedAt);
+        if (!result.ok) {
+          if (applyCommandStale(result)) return;
+          setPinnedEvidenceIds(previous);
+          setCommandError(actionErrorMessage(result, "关键证据更新失败，请重试。"));
+          return;
+        }
+        setPinnedEvidenceIds(result.caseState.keyEvidenceIds ?? []);
+        commitExternalSave(result.updatedAt);
+        mergeReturnedAudit(result.audit);
+      } finally {
+        endSemanticCommand();
+        setCommandPending(false);
+      }
+    })();
+  };
   const handleBack = async () => {
     setNavigationError(null);
     // 由 flushSave 判定是否仍有未落盘编辑，不依赖瞬时 UI 状态
@@ -1015,17 +1050,12 @@ export function PersistedCaseWorkbench({
               <EvidencePanel
                 evidences={analyzed.evidences.map((evidence) => ({ ...evidence, rawAlertId: initial.rawAlertIds?.[0] ?? null }))}
                 pinnedEvidenceIds={pinnedEvidenceIds}
-                onTogglePin={(evidenceId) =>
-                  setPinnedEvidenceIds((current) =>
-                    current.includes(evidenceId)
-                      ? current.filter((id) => id !== evidenceId)
-                      : [...current, evidenceId],
-                  )
-                }
+                caseId={initial.caseId}
+                onTogglePin={handleEvidencePinToggle}
               />
               {pinnedEvidenceIds.length > 0 ? (
                 <p className="mt-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800" data-testid="key-evidence-summary">
-                  已标记 {pinnedEvidenceIds.length} 条关键证据；生成报告时将自动复用案件证据引用。
+                  已标记 {pinnedEvidenceIds.length} 条关键证据；人工研判与报告会复用这些证据引用。
                 </p>
               ) : null}
             </div>
@@ -1082,6 +1112,14 @@ export function PersistedCaseWorkbench({
           <p className="mb-2 text-xs text-neutral-500">
             最终结论由安全人员确认 · 系统建议不会自动写入
           </p>
+          {pinnedEvidenceIds.length > 0 ? (
+            <div className="mb-3 rounded-md border border-blue-200 bg-blue-50/60 px-3 py-2" data-testid="human-review-key-evidence-context">
+              <p className="text-xs font-medium text-blue-900">关键证据上下文</p>
+              <p className="mt-1 text-xs leading-5 text-blue-800">
+                {analyzed.evidences.filter((evidence) => pinnedEvidenceIds.includes(evidence.evidenceId)).map((evidence) => `${evidence.evidenceId} · ${evidence.title}`).join("；")}
+              </p>
+            </div>
+          ) : null}
           <HumanReviewPanel
             humanReview={humanReview}
             onChange={handleHumanReviewChange}

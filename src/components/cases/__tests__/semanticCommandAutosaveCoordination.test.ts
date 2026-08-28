@@ -24,6 +24,7 @@ const SEMANTIC_ACTIONS = [
   "setCaseDueAtAction",
   "applyChecklistCommandAction",
   "updateHumanReviewAction",
+  "toggleEvidencePinAction",
   "addTimelineEventAction",
   "addInvestigationLeadToChecklistAction",
 ] as const;

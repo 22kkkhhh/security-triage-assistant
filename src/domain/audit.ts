@@ -20,7 +20,9 @@ export type AuditActionType =
   | "REPORT_CREATED"
   | "REPORT_UPDATED"
   | "REPORT_EXPORTED"
-  | "HANDOFF_NOTE_ADDED";
+  | "HANDOFF_NOTE_ADDED"
+  | "EVIDENCE_PINNED"
+  | "EVIDENCE_UNPINNED";
 
 /**
  * 操作主体类型。
@@ -45,6 +47,8 @@ export const AUDIT_ACTION_TYPES: readonly AuditActionType[] = [
   "REPORT_UPDATED",
   "REPORT_EXPORTED",
   "HANDOFF_NOTE_ADDED",
+  "EVIDENCE_PINNED",
+  "EVIDENCE_UNPINNED",
 ] as const;
 
 export const auditActionTypeLabels: Record<AuditActionType, string> = {
@@ -64,6 +68,8 @@ export const auditActionTypeLabels: Record<AuditActionType, string> = {
   REPORT_UPDATED: "更新调查报告",
   REPORT_EXPORTED: "导出调查报告",
   HANDOFF_NOTE_ADDED: "添加交接记录",
+  EVIDENCE_PINNED: "标记关键证据",
+  EVIDENCE_UNPINNED: "取消关键证据",
 };
 
 export const auditActorTypeLabels: Record<AuditActorType, string> = {

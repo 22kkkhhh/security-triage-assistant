@@ -201,6 +201,21 @@ export function buildChecklistDeletedAudit(input: {
   return checklistAudit("CHECKLIST_DELETED", input);
 }
 
+export function buildEvidencePinAudit(input: {
+  evidenceId: string;
+  pinned: boolean;
+  actor: AuditActor;
+  operationId?: string | null;
+}): BuiltAuditEvent {
+  return withActor(input.actor, {
+    actionType: input.pinned ? "EVIDENCE_PINNED" : "EVIDENCE_UNPINNED",
+    summary: input.pinned ? "标记关键证据" : "取消关键证据",
+    changes: { evidenceId: input.evidenceId, pinned: input.pinned },
+    metadata: null,
+    operationId: input.operationId ?? null,
+  });
+}
+
 export function buildBusinessContextUpdatedAudit(input: {
   fields: string[];
   /** 枚举类字段的新旧值（可选，短值） */

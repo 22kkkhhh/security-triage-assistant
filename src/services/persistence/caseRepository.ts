@@ -212,6 +212,7 @@ function buildCaseStateUpdateData(
   existing: {
     status: string;
     closedAt: Date | null;
+    caseState: unknown;
   },
   input: SaveCaseStateInput,
 ) {
@@ -228,6 +229,7 @@ function buildCaseStateUpdateData(
     checklist: input.checklist,
     humanReview: input.humanReview,
     timeline: input.timeline,
+    keyEvidenceIds: input.keyEvidenceIds ?? (existing.caseState as PersistedCaseState).keyEvidenceIds,
   });
   const indexes = indexFieldsFromState({
     title: input.caseData.name,
