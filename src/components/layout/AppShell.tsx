@@ -24,27 +24,16 @@ type NavItem = {
   requiresCreateCase?: boolean;
   requiresManageUsers?: boolean;
   requiresChangeOwnPassword?: boolean;
-  /** 主导作：视觉重量高于普通导航项 */
+  /** 兼容历史配置；主动作不作为一级导航项 */
   emphasize?: boolean;
 };
 
+// 调查工作台：新建研判是案件页的主动作，不占侧栏一级导航（历史定义：{ href: "/cases/new" }）。
 const navItems: NavItem[] = [
-  {
-    href: "/cases/new",
-    label: "+ 新建研判",
-    match: (path: string) => path.startsWith("/cases/new"),
-    requiresCreateCase: true,
-    emphasize: true,
-  },
   {
     href: "/cases",
     label: "案件队列",
     match: isCaseListNavActive,
-  },
-  {
-    href: "/raw-alerts",
-    label: "原始告警",
-    match: (path: string) => path.startsWith("/raw-alerts"),
   },
   {
     href: "/reports",
@@ -56,6 +45,20 @@ const navItems: NavItem[] = [
     label: "用户管理",
     match: (path: string) => path.startsWith("/admin/users"),
     requiresManageUsers: true,
+  },
+];
+
+const importNavItems: NavItem[] = [
+  {
+    href: "/cases/import",
+    label: "批量导入",
+    match: (path: string) => path.startsWith("/cases/import"),
+    requiresCreateCase: true,
+  },
+  {
+    href: "/raw-alerts",
+    label: "原始告警",
+    match: (path: string) => path.startsWith("/raw-alerts"),
   },
 ];
 
@@ -128,9 +131,11 @@ export function AppShell({
   /** 打开时绑定当前 path；路由变化后自动视为关闭，避免 effect setState */
   const [navOpenForPath, setNavOpenForPath] = useState<string | null>(null);
   const [managementOpen, setManagementOpen] = useState(pathname.startsWith("/admin"));
+  const [importOpen, setImportOpen] = useState(pathname.startsWith("/cases/import") || pathname.startsWith("/raw-alerts"));
   const [commandOpen, setCommandOpen] = useState(false);
   const navOpen = navOpenForPath === pathname;
   const managementExpanded = managementOpen || pathname.startsWith("/admin");
+  const importExpanded = importOpen || pathname.startsWith("/cases/import") || pathname.startsWith("/raw-alerts");
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -154,11 +159,12 @@ export function AppShell({
   };
 
   const visibleNav = navItems.filter((item) => !item.requiresManageUsers && isVisible(item));
+  const visibleImportNav = importNavItems.filter(isVisible);
   const visibleManageNav = navItems.filter((item) => item.requiresManageUsers && isVisible(item));
 
   return (
-    <div className="flex min-h-screen bg-neutral-50 text-neutral-900">
-      <div className="fixed inset-x-0 top-0 z-40 flex h-12 items-center gap-3 border-b border-slate-800 bg-slate-900 px-4 text-slate-100 md:hidden">
+    <div className="flex min-h-screen bg-[#f6f8fa] text-[#17212b]">
+      <div className="fixed inset-x-0 top-0 z-40 flex h-12 items-center gap-3 border-b border-slate-800 bg-[#0f1c2e] px-4 text-slate-100 md:hidden">
         <button
           type="button"
           aria-expanded={navOpen}
@@ -190,37 +196,69 @@ export function AppShell({
 
       <aside
         id="app-shell-nav"
-        className={`fixed inset-y-0 left-0 z-50 flex w-[230px] shrink-0 flex-col bg-slate-900 text-slate-100 transition-transform duration-200 md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[230px] shrink-0 flex-col bg-[#0f1c2e] text-slate-100 transition-transform duration-200 md:static md:translate-x-0 ${
           navOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="px-5 py-5">
-          <div className="text-sm font-semibold tracking-wide">
-            数据与网络安全联合研判及案件运营助手
+        <div className="border-b border-slate-800 px-5 py-5">
+          <div className="flex items-center gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-blue-600 text-xs font-bold tracking-wide text-white">SC</span>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold leading-5 tracking-wide">数据与网络安全联合研判及案件运营助手</div>
+              <div className="mt-0.5 truncate text-xs text-slate-400">Security Triage Assistant</div>
+            </div>
           </div>
-          <div className="mt-1 text-xs text-slate-400">调查工作台</div>
         </div>
         <nav className="flex flex-1 flex-col gap-1 px-3 pb-4">
           {visibleNav.map((item) => {
             const active = item.match(pathname);
             const base = item.emphasize
               ? active
-                ? "bg-white text-slate-900"
-                : "border border-slate-500 text-white hover:bg-slate-800"
+                ? "bg-blue-600 text-white"
+                : "border border-slate-600 text-white hover:bg-slate-800"
               : active
-                ? "bg-slate-800 text-white"
+                ? "bg-blue-600 text-white"
                 : "text-slate-300 hover:bg-slate-800/80 hover:text-white";
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setNavOpenForPath(null)}
+                aria-current={active ? "page" : undefined}
                 className={`rounded px-3 py-2.5 text-sm transition-colors ${base}`}
               >
                 {item.label}
               </Link>
             );
           })}
+          {visibleImportNav.length > 0 ? (
+            <>
+              <div className="my-3 border-t border-slate-800" />
+              <button
+                type="button"
+                aria-expanded={importExpanded}
+                className="flex w-full items-center justify-between rounded px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-slate-800/80 hover:text-white"
+                onClick={() => setImportOpen((open) => !open)}
+              >
+                <span>导入</span>
+                <span aria-hidden="true" className={`text-xs transition-transform ${importExpanded ? "rotate-180" : ""}`}>⌄</span>
+              </button>
+              {importExpanded ? visibleImportNav.map((item) => {
+                const active = item.match(pathname);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setNavOpenForPath(null)}
+                    aria-current={active ? "page" : undefined}
+                    className={`ml-3 rounded px-3 py-2.5 pl-5 text-sm transition-colors ${active ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"}`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              }) : null}
+            </>
+          ) : null}
           {visibleManageNav.length > 0 ? (
             <>
               <div className="my-3 border-t border-slate-800" />
