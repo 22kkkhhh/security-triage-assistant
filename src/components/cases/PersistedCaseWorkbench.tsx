@@ -87,6 +87,7 @@ import {
 } from "./investigationProgressSummary";
 import { RelatedCasesPanel } from "./RelatedCasesPanel";
 import { WorkbenchSection } from "./WorkbenchSection";
+import { InvestigationNextActions } from "./InvestigationNextActions";
 import type { InvestigationIntelligenceView } from "@/services/correlation/investigationIntelligenceTypes";
 
 function countBusinessContextPending(ctx: BusinessContext): number {
@@ -870,6 +871,12 @@ export function PersistedCaseWorkbench({
       )}
 
       <CaseInvestigationNav />
+
+      <InvestigationNextActions
+        draft={draftBase}
+        checklist={checklist}
+        pendingContext={countBusinessContextPending(businessContext)}
+      />
 
       {/* A. 概览 */}
       <InvestigationProgressPanel
