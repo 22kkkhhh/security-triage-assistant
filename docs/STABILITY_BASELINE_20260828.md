@@ -7,6 +7,7 @@
 - `npm test`：102 个测试文件、970 个测试全部通过。
 - `npm run test:e2e`：Phase 1 的 23 个测试、Phase 2 的 1 个 fail-closed 测试全部通过；使用独立 `prisma/e2e.db`。
 - `npm run typecheck`、`npm run lint`、`npm run build` 全部通过。
+- 新增 JSONL 批量导入、原始告警脱敏存储与 `RawAlertRecord` 迁移；新增 3 个边界单元测试后，`npm test` 为 104 个测试文件、973 个测试全部通过，`typecheck` 与 `lint` 通过。
 - SQLite 停服备份：`/home/hermes/backups/security-triage-staging-20260828.db`，完整性为 `ok`。
 - 备份恢复到临时数据库成功，8 个 Prisma migrations 无待执行项；未修改 `prisma/staging.db`。
 - 运行日志为结构化 JSON；未发现 secret、密码或告警原文写入启动日志。
@@ -18,6 +19,7 @@
 - 维护窗口已完成容器接管演练：最新镜像正式监听 `3012`，`/login`、`/api/health`、`/api/ready` 均通过，Docker health 为 `healthy`。
 - 回滚演练已完成：停止容器、恢复切换前 SQLite 备份并启动 bare-metal，三项检查均通过；随后再次切回容器并保持运行。
 - 试点导入 10 条脱敏 Wazuh 公共格式样例，回滚后案件总数仍为 12（原有 2 条 + 试点 10 条）。
+- 新增迁移 `20260828160000_add_raw_alert_records` 已在隔离 SQLite 数据库部署并完成 seed 验证；服务器 staging 镜像尚待磁盘空间释放后重建。
 
 ## 当前部署边界
 
@@ -29,6 +31,7 @@
 
 - Docker 构建已解除 Docker Hub 拉取阻塞；Debian 软件源下载速度较慢，后续可评估腾讯云 APT 镜像或预构建依赖以缩短构建时间。
 - 已完成一次容器接管、回滚和再次接管；后续切换仍需沿用维护窗口、回滚点和端口验收流程。
+- 当前新镜像构建因宿主机根分区仅剩约 800 MB 暂停；未清理其他项目数据，待确认后仅回收本次构建产生的悬空层。
 - HTTPS 需要确认域名、证书来源和公网流量切换窗口；当前不做猜测性改动。
 
 ## 下一步

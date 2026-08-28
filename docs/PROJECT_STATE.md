@@ -35,7 +35,8 @@
 - `CaseRecord.externalAlertId` 已作为可选唯一字段，并提供迁移。
 - 明确标注为外部来源（如 Wazuh、Webhook、批量导入）的案件，会按 `externalAlertId` 做幂等去重；重复告警返回已关联案件，不新建案件。
 - `MANUAL`、历史演示夹具和未标注来源的内部命令不启用该字段，避免把旧的 `originalAlertId` 误当作外部幂等键。
-- 原始告警仍保留在案件状态中；敏感字段脱敏与 JSONL/Webhook 入口将在此基础上继续接入。
+- 新增 `RawAlertRecord`：每次 JSONL 告警先递归脱敏（password/token/authorization/cookie 等）再保存，重复到达也保留接收记录并关联既有案件。
+- 新增 `/cases/import` JSONL 批量导入页：最多 100 条、总计 1 MB，复用 Wazuh 适配器和现有案件创建/审计/去重命令；当前代码已通过类型检查和全量测试，待镜像构建完成后发布到 staging。
 
 ## M3 不变量
 

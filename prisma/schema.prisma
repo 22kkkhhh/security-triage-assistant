@@ -59,6 +59,9 @@ model CaseRecord {
   /// 操作审计（append-only）；删除策略 Restrict，禁止静默级联删除
   auditLogs CaseAuditLog[]
 
+  /// 原始告警接收记录（脱敏后留存，可关联到创建的案件）
+  rawAlerts RawAlertRecord[]
+
   @@index([status])
   @@index([updatedAt])
   @@index([lastActivityAt])
@@ -66,6 +69,27 @@ model CaseRecord {
   @@index([sourceIp])
   @@index([assignedToUserId])
   @@index([dueAt])
+}
+
+/// 原始告警接收记录：保存脱敏 JSON，保留每次到达（包括重复告警）
+model RawAlertRecord {
+  id               String    @id @default(cuid())
+  sourceType       String
+  externalAlertId  String?
+  receivedAt       DateTime  @default(now())
+  payloadJson      Json
+  payloadHash      String
+  redactionVersion String    @default("v1")
+  /// RECEIVED | CREATED | DUPLICATE | REJECTED
+  ingestStatus     String    @default("RECEIVED")
+  errorMessage     String?
+  caseId           String?
+  case             CaseRecord? @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  @@index([externalAlertId])
+  @@index([receivedAt])
+  @@index([caseId])
+  @@index([ingestStatus])
 }
 
 /// 案件操作审计日志（与 Timeline 分离：记录研判人员/系统对案件的操作）

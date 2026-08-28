@@ -52,6 +52,7 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   CaseRecord: 'CaseRecord',
+  RawAlertRecord: 'RawAlertRecord',
   CaseAuditLog: 'CaseAuditLog',
   User: 'User',
   Session: 'Session',
@@ -105,6 +106,22 @@ export const CaseRecordScalarFieldEnum = {
 } as const
 
 export type CaseRecordScalarFieldEnum = (typeof CaseRecordScalarFieldEnum)[keyof typeof CaseRecordScalarFieldEnum]
+
+
+export const RawAlertRecordScalarFieldEnum = {
+  id: 'id',
+  sourceType: 'sourceType',
+  externalAlertId: 'externalAlertId',
+  receivedAt: 'receivedAt',
+  payloadJson: 'payloadJson',
+  payloadHash: 'payloadHash',
+  redactionVersion: 'redactionVersion',
+  ingestStatus: 'ingestStatus',
+  errorMessage: 'errorMessage',
+  caseId: 'caseId'
+} as const
+
+export type RawAlertRecordScalarFieldEnum = (typeof RawAlertRecordScalarFieldEnum)[keyof typeof RawAlertRecordScalarFieldEnum]
 
 
 export const CaseAuditLogScalarFieldEnum = {

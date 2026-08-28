@@ -398,6 +398,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   CaseRecord: 'CaseRecord',
+  RawAlertRecord: 'RawAlertRecord',
   CaseAuditLog: 'CaseAuditLog',
   User: 'User',
   Session: 'Session',
@@ -424,7 +425,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "caseRecord" | "caseAuditLog" | "user" | "session" | "account" | "verification" | "complianceDocument" | "complianceDocumentVersion" | "complianceClause" | "complianceControl" | "ruleControlMapping" | "controlClauseMapping"
+    modelProps: "caseRecord" | "rawAlertRecord" | "caseAuditLog" | "user" | "session" | "account" | "verification" | "complianceDocument" | "complianceDocumentVersion" | "complianceClause" | "complianceControl" | "ruleControlMapping" | "controlClauseMapping"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -499,6 +500,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.CaseRecordCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.CaseRecordCountAggregateOutputType> | number
+        }
+      }
+    }
+    RawAlertRecord: {
+      payload: Prisma.$RawAlertRecordPayload<ExtArgs>
+      fields: Prisma.RawAlertRecordFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RawAlertRecordFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RawAlertRecordFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload>
+        }
+        findFirst: {
+          args: Prisma.RawAlertRecordFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RawAlertRecordFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload>
+        }
+        findMany: {
+          args: Prisma.RawAlertRecordFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload>[]
+        }
+        create: {
+          args: Prisma.RawAlertRecordCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload>
+        }
+        createMany: {
+          args: Prisma.RawAlertRecordCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RawAlertRecordCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload>[]
+        }
+        delete: {
+          args: Prisma.RawAlertRecordDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload>
+        }
+        update: {
+          args: Prisma.RawAlertRecordUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload>
+        }
+        deleteMany: {
+          args: Prisma.RawAlertRecordDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RawAlertRecordUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RawAlertRecordUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload>[]
+        }
+        upsert: {
+          args: Prisma.RawAlertRecordUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RawAlertRecordPayload>
+        }
+        aggregate: {
+          args: Prisma.RawAlertRecordAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRawAlertRecord>
+        }
+        groupBy: {
+          args: Prisma.RawAlertRecordGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RawAlertRecordGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RawAlertRecordCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RawAlertRecordCountAggregateOutputType> | number
         }
       }
     }
@@ -1381,6 +1456,22 @@ export const CaseRecordScalarFieldEnum = {
 export type CaseRecordScalarFieldEnum = (typeof CaseRecordScalarFieldEnum)[keyof typeof CaseRecordScalarFieldEnum]
 
 
+export const RawAlertRecordScalarFieldEnum = {
+  id: 'id',
+  sourceType: 'sourceType',
+  externalAlertId: 'externalAlertId',
+  receivedAt: 'receivedAt',
+  payloadJson: 'payloadJson',
+  payloadHash: 'payloadHash',
+  redactionVersion: 'redactionVersion',
+  ingestStatus: 'ingestStatus',
+  errorMessage: 'errorMessage',
+  caseId: 'caseId'
+} as const
+
+export type RawAlertRecordScalarFieldEnum = (typeof RawAlertRecordScalarFieldEnum)[keyof typeof RawAlertRecordScalarFieldEnum]
+
+
 export const CaseAuditLogScalarFieldEnum = {
   id: 'id',
   caseId: 'caseId',
@@ -1831,6 +1922,7 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
   caseRecord?: Prisma.CaseRecordOmit
+  rawAlertRecord?: Prisma.RawAlertRecordOmit
   caseAuditLog?: Prisma.CaseAuditLogOmit
   user?: Prisma.UserOmit
   session?: Prisma.SessionOmit

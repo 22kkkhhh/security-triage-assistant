@@ -9,6 +9,7 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/CaseRecord'
+export type * from './models/RawAlertRecord'
 export type * from './models/CaseAuditLog'
 export type * from './models/User'
 export type * from './models/Session'
