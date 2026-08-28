@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { goToWorkspace } from "./helpers/workbench";
 
 /**
  * v1.6-M1 E2E-03 — VIEWER Read-only。
@@ -43,6 +44,7 @@ test("demo-viewer 在 Case Workbench 与 Report 中仅可读，无任何可编�
 
   // 2. Case Workbench 可读：只验证页面能正常读取，不依赖具体业务字段值
   await page.goto(`/cases/${CASE_B_ID}`);
+  await goToWorkspace(page, "调查");
   await expect(page.getByText(CASE_B_NUMBER).first()).toBeVisible();
 
   // 3. Business Context 必须只读：内容可见，但 panel 内无任何 input/textarea/select

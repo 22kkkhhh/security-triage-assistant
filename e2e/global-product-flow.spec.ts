@@ -28,7 +28,7 @@ test("全局产品流：列表搜索 → 案件 → 对比 → 返回 → 报告
     .first()
     .click();
   await expect(page).toHaveURL(new RegExp(`/cases/${CASE_B_ID}$`));
-  await expect(page.getByTestId("case-next-step")).toBeVisible();
+  await expect(page.getByTestId("investigation-next-actions")).toBeVisible();
 
   await expandHistoricalLeads(page);
   const compareLink = page.getByTestId("related-case-compare-link").first();

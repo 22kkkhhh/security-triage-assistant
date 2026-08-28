@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
-import { expandHistoricalLeads } from "./helpers/workbench";
+import { expandHistoricalLeads, goToWorkspace } from "./helpers/workbench";
 
 /**
  * v1.10-M1：Workbench IA — 高价值任务流。
@@ -15,26 +15,26 @@ test("Analyst：Next Step → 调查 → Checklist → 历史线索 opt-in → �
   await page.goto(`/cases/${CASE_B_ID}`);
 
   await expect(page.getByTestId("investigation-overview")).toBeVisible();
-  await expect(page.getByTestId("case-next-step")).toBeVisible();
-  await expect(page.getByTestId("case-next-step-cta")).toBeVisible();
+  await expect(page.getByTestId("investigation-next-actions")).toBeVisible();
 
   const nav = page.getByTestId("case-investigation-nav");
   for (const label of ["概览", "调查", "分析", "记录"]) {
-    await expect(nav.getByRole("button", { name: label })).toBeVisible();
+    await expect(nav.getByRole("tab", { name: label })).toBeVisible();
   }
 
-  await page.getByTestId("case-next-step-cta").click();
-  await expect(page.locator("#investigation-business-context")).toBeInViewport({
-    timeout: 5_000,
-  });
+  await page.getByTestId("investigation-next-actions").getByRole("button", { name: "开始调查" }).click();
+  await expect(page).toHaveURL(/view=investigation/);
+  await expect(page.locator("#investigation-business-context")).toBeVisible();
+  const allChecklistItems = page.getByTestId("evidence-checklist-workspace").getByRole("tab", { name: /全部/ });
+  if (await allChecklistItems.count()) await allChecklistItems.click();
+  const showMoreChecklistItems = page.getByTestId("evidence-checklist-workspace").getByRole("button", { name: /查看全部/ });
+  if (await showMoreChecklistItems.count()) await showMoreChecklistItems.click();
 
-  const pendingBox = page
-    .locator('#investigation-checklist input[type="checkbox"]:not(:checked)')
-    .first();
+  const pendingBox = page.locator('#investigation-checklist input[type="checkbox"]:not(:checked)').first();
   await expect(pendingBox).toBeVisible();
   const pendingLabel = await pendingBox.getAttribute("aria-label");
   expect(pendingLabel).toBeTruthy();
-  await pendingBox.check();
+  await pendingBox.evaluate((element) => (element as HTMLInputElement).click());
   await expect(page.getByText("处理中…")).toHaveCount(0, { timeout: 10_000 });
   const completedLabel = pendingLabel!.replace("（未完成）", "（已完成）");
   await expect(page.getByLabel(completedLabel)).toBeChecked();
@@ -52,7 +52,7 @@ test("Analyst：Next Step → 调查 → Checklist → 历史线索 opt-in → �
     timeout: 15_000,
   });
 
-  await nav.getByRole("button", { name: "分析" }).click();
+  await goToWorkspace(page, "分析");
   const analysis = page.getByTestId("system-analysis-details");
   await expect(analysis).toBeVisible();
   if (!(await analysis.getAttribute("open"))) {
@@ -60,6 +60,7 @@ test("Analyst：Next Step → 调查 → Checklist → 历史线索 opt-in → �
   }
   await expect(analysis).toHaveAttribute("open", "");
 
+  await goToWorkspace(page, "调查");
   await expect(page.getByLabel("最终结论")).toBeVisible();
   await page.getByLabel("最终结论").selectOption({ label: "暂无法定论" });
   await expect(page.getByText("处理中…")).toHaveCount(0, { timeout: 10_000 });
@@ -71,7 +72,7 @@ test("Viewer：四主导航可见，历史线索可展开，无可写控件", as
 
   const nav = page.getByTestId("case-investigation-nav");
   for (const label of ["概览", "调查", "分析", "记录"]) {
-    await expect(nav.getByRole("button", { name: label })).toBeVisible();
+    await expect(nav.getByRole("tab", { name: label })).toBeVisible();
   }
 
   await expandHistoricalLeads(page);

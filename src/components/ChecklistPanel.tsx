@@ -14,6 +14,7 @@ function ChecklistItemRow({
   onToggle,
   onEditNote,
   onDelete,
+  onTargetClick,
   showSystemRuleBadge,
   compactRuleHint,
 }: {
@@ -23,10 +24,12 @@ function ChecklistItemRow({
   onToggle: (id: string) => void;
   onEditNote: (id: string, note: string) => void;
   onDelete: (id: string) => void;
+  onTargetClick?: (kind: string, value: string) => void;
   /** 单项 SYSTEM 仍展示「系统生成 · ruleId」；group child 用次要提示 */
   showSystemRuleBadge: boolean;
   compactRuleHint: boolean;
 }) {
+  const targetRef = item.sourceRef?.targetRef;
   return (
     <li className="flex items-start gap-2 rounded border border-neutral-100 px-3 py-2">
       {canWrite ? (
@@ -83,11 +86,11 @@ function ChecklistItemRow({
             <span className="text-[11px] text-neutral-400">人工新增</span>
           )}
         </div>
-        {item.sourceRef?.targetRef ? (
+        {targetRef ? (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs" data-testid="checklist-target-ref">
             <span className="text-neutral-500">调查目标</span>
-            <button type="button" className="rounded border border-blue-200 bg-blue-50 px-2 py-1 font-medium text-blue-700 hover:border-blue-400" onClick={() => document.getElementById("investigation-next-actions")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-              {item.sourceRef.targetRef.kind} · {item.sourceRef.targetRef.value}
+            <button type="button" className="rounded border border-blue-200 bg-blue-50 px-2 py-1 font-medium text-blue-700 hover:border-blue-400" onClick={() => onTargetClick?.(targetRef.kind, targetRef.value)}>
+              {targetRef.kind} · {targetRef.value}
             </button>
           </div>
         ) : null}
@@ -126,6 +129,7 @@ function SystemChecklistGroup({
   onToggle,
   onEditNote,
   onDelete,
+  onTargetClick,
 }: {
   label: string;
   category: SecurityDomain;
@@ -135,6 +139,7 @@ function SystemChecklistGroup({
   onToggle: (id: string) => void;
   onEditNote: (id: string, note: string) => void;
   onDelete: (id: string) => void;
+  onTargetClick?: (kind: string, value: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const total = items.length;
@@ -177,6 +182,7 @@ function SystemChecklistGroup({
               onToggle={onToggle}
               onEditNote={onEditNote}
               onDelete={onDelete}
+              onTargetClick={onTargetClick}
               showSystemRuleBadge={false}
               compactRuleHint
             />
@@ -196,6 +202,7 @@ export function ChecklistPanel({
   onToggle,
   onEditNote,
   onDelete,
+  onTargetClick,
   onAdd,
   canWrite = true,
   canEditNote = true,
@@ -204,12 +211,15 @@ export function ChecklistPanel({
   onToggle: (id: string) => void;
   onEditNote: (id: string, note: string) => void;
   onDelete: (id: string) => void;
+  onTargetClick?: (kind: string, value: string) => void;
   onAdd: (item: ChecklistItem) => void;
   canWrite?: boolean;
   canEditNote?: boolean;
 }) {
   const [newLabel, setNewLabel] = useState("");
   const [newCategory, setNewCategory] = useState<SecurityDomain>("BUSINESS");
+  const [filter, setFilter] = useState<"pending" | "completed" | "all">("pending");
+  const [showAll, setShowAll] = useState(false);
 
   const handleAdd = () => {
     if (!canWrite) return;
@@ -219,10 +229,34 @@ export function ChecklistPanel({
     setNewLabel("");
   };
 
-  const displayEntries = groupChecklistItemsForDisplay(items);
+  const filteredItems = items.filter((item) =>
+    filter === "pending" ? !item.completed : filter === "completed" ? item.completed : true,
+  );
+  const visibleItems = showAll ? filteredItems : filteredItems.slice(0, 7);
+  const displayEntries = groupChecklistItemsForDisplay(visibleItems);
+  const pendingCount = items.filter((item) => !item.completed).length;
+  const completedCount = items.length - pendingCount;
 
   return (
     <Panel title={`待核查事项（${items.filter((i) => !i.completed).length} 项未完成）`}>
+      <div className="mb-3 flex flex-wrap items-center gap-1" role="tablist" aria-label="核查事项筛选">
+        {([
+          ["pending", `待处理 ${pendingCount}`],
+          ["completed", `已完成 ${completedCount}`],
+          ["all", `全部 ${items.length}`],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={filter === value}
+            className={`rounded px-2.5 py-1 text-xs font-medium ${filter === value ? "bg-[var(--ui-brand-soft)] text-[var(--ui-brand-hover)]" : "text-neutral-500 hover:bg-neutral-50"}`}
+            onClick={() => { setFilter(value); setShowAll(false); }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <ul className="space-y-1.5">
         {displayEntries.map((entry) =>
           entry.kind === "single" ? (
@@ -234,6 +268,7 @@ export function ChecklistPanel({
               onToggle={onToggle}
               onEditNote={onEditNote}
               onDelete={onDelete}
+              onTargetClick={onTargetClick}
               showSystemRuleBadge={entry.item.origin === "SYSTEM"}
               compactRuleHint={false}
             />
@@ -248,13 +283,24 @@ export function ChecklistPanel({
               onToggle={onToggle}
               onEditNote={onEditNote}
               onDelete={onDelete}
+              onTargetClick={onTargetClick}
             />
           ),
         )}
-        {items.length === 0 && (
+        {filteredItems.length === 0 && (
           <li className="text-sm text-neutral-500">暂无待核查事项。</li>
         )}
       </ul>
+      {filteredItems.length > 7 ? (
+        <button
+          type="button"
+          className="mt-2 text-xs font-medium text-[var(--ui-brand-hover)] underline underline-offset-2"
+          onClick={() => setShowAll((value) => !value)}
+          aria-expanded={showAll}
+        >
+          {showAll ? "收起其余事项" : `查看全部（还有 ${filteredItems.length - 7} 项）`}
+        </button>
+      ) : null}
       {canWrite ? (
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3">
           <select

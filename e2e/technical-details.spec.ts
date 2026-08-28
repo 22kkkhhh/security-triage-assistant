@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { goToWorkspace } from "./helpers/workbench";
 
 /**
  * v1.6-M2-02：技术/审计字段降级隐藏。
@@ -20,11 +21,14 @@ function sectionByHeading(page: Page, name: string | RegExp) {
 test("技术详情默认关闭；一级不暴露内部字段名", async ({ page }) => {
   await loginAsDemoUser(page, DEMO_USERS.analyst);
   await page.goto(`/cases/${CASE_B_ID}`);
+  await goToWorkspace(page, "概览");
 
   // Overview：产品化文案，不得再出现「服务端投影」
   const progress = page.getByTestId("investigation-overview");
   await expect(progress.getByText("当前情况与优先动作 · 非最终结论")).toBeVisible();
   await expect(page.getByText("服务端投影")).toHaveCount(0);
+
+  await goToWorkspace(page, "分析");
 
   // Compliance：先展开合规参考 disclosure
   const complianceDetails = page.getByTestId("compliance-reference-details");

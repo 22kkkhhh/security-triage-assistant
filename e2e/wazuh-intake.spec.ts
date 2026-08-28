@@ -1,6 +1,7 @@
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { goToWorkspace } from "./helpers/workbench";
 
 /**
  * v1.7-M4：Wazuh JSON 导入 → preview → 人工确认 → 创建 Case → Workbench。
@@ -53,6 +54,7 @@ test("Wazuh JSON 导入可 preview、确认并创建 Case", async ({ page }) => 
   await expect(basic.getByText("Wazuh", { exact: true })).toBeVisible();
 
   // 缺上下文不得伪装为 NORMAL；UI 以中文三态展示 UNKNOWN
+  await goToWorkspace(page, "分析");
   await page.getByTestId("system-analysis-details").locator("summary").click();
   await expect(
     page.getByText("数据不足，暂无法判断").first(),

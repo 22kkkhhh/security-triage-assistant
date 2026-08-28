@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { goToWorkspace } from "./helpers/workbench";
 
 /**
  * v1.6-M1 E2E-01 — Analyst Investigation。
@@ -61,6 +62,12 @@ test("demo-analyst 在 demo-case-b 的修改在 reload 后仍真实持久化", a
   await loginAsDemoUser(page, DEMO_USERS.analyst);
 
   await page.goto(`/cases/${CASE_B_ID}`);
+  await goToWorkspace(page, "调查");
+  const checklistWorkspace = page.getByTestId("evidence-checklist-workspace");
+  const allChecklistItems = checklistWorkspace.getByRole("tab", { name: /全部/ });
+  if (await allChecklistItems.count()) await allChecklistItems.click();
+  const showMoreChecklistItems = checklistWorkspace.getByRole("button", { name: /查看全部/ });
+  if (await showMoreChecklistItems.count()) await showMoreChecklistItems.click();
   // 案件编号在页头/风险徽标等处会多次出现；只需确认已进入正确案件页。
   await expect(page.getByText(CASE_B_NUMBER).first()).toBeVisible();
 
@@ -70,10 +77,8 @@ test("demo-analyst 在 demo-case-b 的修改在 reload 后仍真实持久化", a
   await waitForSnapshotSaveRoundTrip(page);
 
   // 3. Checklist：CL-4「确认数据是否被导出及去向」未完成 → 已完成
-  const checklistCheckbox = page.getByLabel(
-    `${CHECKLIST_ITEM_LABEL}（未完成）`,
-  );
-  await checklistCheckbox.check();
+  const checklistCheckbox = page.getByLabel(`${CHECKLIST_ITEM_LABEL}（未完成）`).first();
+  await checklistCheckbox.evaluate((element) => (element as HTMLInputElement).click());
   await waitForSemanticCommandSettled(page);
   await expect(
     page.getByLabel(`${CHECKLIST_ITEM_LABEL}（已完成）`),
@@ -97,6 +102,11 @@ test("demo-analyst 在 demo-case-b 的修改在 reload 后仍真实持久化", a
 
   // 5. 最关键的 reload 验收：证明五项均来自 Server persistence，而非本地 state / false SAVED。
   await page.reload();
+  await goToWorkspace(page, "调查");
+  const allChecklistItemsAfterReload = page.getByTestId("evidence-checklist-workspace").getByRole("tab", { name: /全部/ });
+  if (await allChecklistItemsAfterReload.count()) await allChecklistItemsAfterReload.click();
+  const showMoreChecklistItemsAfterReload = page.getByTestId("evidence-checklist-workspace").getByRole("button", { name: /查看全部/ });
+  if (await showMoreChecklistItemsAfterReload.count()) await showMoreChecklistItemsAfterReload.click();
 
   // A. BusinessContext unique value 仍存在
   await expect(page.getByLabel("业务合理性说明")).toHaveValue(

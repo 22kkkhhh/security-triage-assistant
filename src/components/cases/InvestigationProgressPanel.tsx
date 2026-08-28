@@ -161,6 +161,7 @@ export function InvestigationProgressPanel({
   hasReport = false,
   canWriteReport = false,
   onGoToReport,
+  showNextStep = true,
 }: {
   view: InvestigationProgressPanelView;
   overviewStats: InvestigationOverviewStats;
@@ -168,6 +169,7 @@ export function InvestigationProgressPanel({
   hasReport?: boolean;
   canWriteReport?: boolean;
   onGoToReport?: () => void;
+  showNextStep?: boolean;
 }) {
   const keyFindings = deriveKeyFindings({
     relatedCaseCount,
@@ -221,7 +223,7 @@ export function InvestigationProgressPanel({
         </p>
       ) : null}
 
-      <NextStepBlock view={view} />
+      {showNextStep ? <NextStepBlock view={view} /> : null}
 
       <div
         className="max-w-md space-y-0"

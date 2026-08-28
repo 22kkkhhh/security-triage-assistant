@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { goToWorkspace } from "./helpers/workbench";
 
 /**
  * v1.6-M1 E2E-04 — Fail-closed Runtime。
@@ -49,6 +50,7 @@ test("@fail-closed resolver unavailable 不得伪装为空结果", async ({
   await page.goto(`/cases/${CASE_B_ID}`);
 
   // 8. Compliance（合规参考）在 disclosure 内：先展开再断言 unavailable
+  await goToWorkspace(page, "分析");
   await page.getByTestId("compliance-reference-details").locator("summary").click();
   const complianceSection = sectionByHeading(page, "合规参考");
   await expect(complianceSection).toBeVisible();
@@ -70,6 +72,7 @@ test("@fail-closed resolver unavailable 不得伪装为空结果", async ({
   ).toHaveCount(0);
 
   // 10. Overview（概览）同理：显式不可用，且不渲染成功态数值统计
+  await goToWorkspace(page, "概览");
   const progressSection = page.getByTestId("investigation-overview");
   await expect(progressSection).toBeVisible();
   await expect(progressSection.getByText("当前不可用")).toBeVisible();
@@ -92,6 +95,7 @@ test("@fail-closed resolver unavailable 不得伪装为空结果", async ({
   await expect(page.getByText("已解决", { exact: true })).toHaveCount(0);
 
   // 11. HumanReview fail-closed hint（不测试 HumanReview 编辑）
+  await goToWorkspace(page, "调查");
   const humanReviewSection = sectionByHeading(page, "人工最终研判");
   await expect(
     humanReviewSection.getByText(HUMAN_REVIEW_UNAVAILABLE_HINT),

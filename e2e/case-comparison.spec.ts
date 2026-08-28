@@ -16,9 +16,9 @@ test("对比调查：共享事实可见，返回后当前研判不被改写", as
   await loginAsDemoUser(page, DEMO_USERS.analyst);
   await page.goto(`/cases/${CASE_B_ID}`);
 
+  await expandHistoricalLeads(page);
   const panel = page.getByTestId("related-cases-panel");
   await expect(panel).toBeVisible();
-  await expandHistoricalLeads(page);
   await expect(panel.getByTestId("related-case-compare-link").first()).toBeVisible();
 
   const suggestedBefore = (

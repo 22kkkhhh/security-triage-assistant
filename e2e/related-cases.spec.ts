@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
-import { expandHistoricalLeads } from "./helpers/workbench";
+import { expandHistoricalLeads, goToWorkspace } from "./helpers/workbench";
 
 /**
  * v1.8-M2：Historical Signals + Investigation Leads。
@@ -16,6 +16,7 @@ test("历史调查线索：Signals / Leads 可见，关联可点，风险与 Hum
 }) => {
   await loginAsDemoUser(page, DEMO_USERS.analyst);
   await page.goto(`/cases/${CASE_B_ID}`);
+  await goToWorkspace(page, "调查");
 
   const panel = page.getByTestId("related-cases-panel");
   await expect(panel).toBeVisible();
@@ -23,7 +24,7 @@ test("历史调查线索：Signals / Leads 可见，关联可点，风险与 Hum
 
   // 主导航收敛为「调查」；历史线索在调查内部
   const nav = page.getByTestId("case-investigation-nav");
-  await expect(nav.getByRole("button", { name: "调查" })).toBeVisible();
+  await expect(nav.getByRole("tab", { name: "调查" })).toBeVisible();
   await expect(nav.getByRole("button", { name: "历史线索" })).toHaveCount(0);
 
   await expandHistoricalLeads(page);
@@ -46,10 +47,12 @@ test("历史调查线索：Signals / Leads 可见，关联可点，风险与 Hum
   await expect(panel.getByText(CASE_A_NUMBER)).toBeVisible();
 
   // 记录当前 Suggested Risk / HumanReview，确认 intelligence 未改写
+  await goToWorkspace(page, "分析");
   const suggestedBar = page.getByTestId("suggested-assessment-bar");
   await expect(suggestedBar).toBeVisible();
   const suggestedBefore = (await suggestedBar.innerText()).trim();
 
+  await goToWorkspace(page, "调查");
   const finalConclusion = page.getByLabel("最终结论");
   const humanRisk = page.getByLabel("人工风险等级");
   const conclusionBefore = await finalConclusion.inputValue();
@@ -58,16 +61,19 @@ test("历史调查线索：Signals / Leads 可见，关联可点，风险与 Hum
   await panel.getByTestId("related-case-link").first().click();
   await expect(page).toHaveURL(new RegExp(`/cases/${CASE_A_ID}$`));
   await expect(page.getByText(CASE_A_NUMBER).first()).toBeVisible();
+  await goToWorkspace(page, "调查");
   await expect(page.getByTestId("related-cases-panel")).toBeVisible();
 
   // 回到 Case B，Suggested / HumanReview 仍未被自动修改
   await page.goto(`/cases/${CASE_B_ID}`);
+  await goToWorkspace(page, "分析");
   const suggestedAfter = (
     await page.getByTestId("suggested-assessment-bar").innerText()
   ).trim();
   // innerText 空白可能随折叠/重排/块级节点拼接变化；比对时去掉全部空白
   const collapseWs = (value: string) => value.replace(/\s+/g, "").trim();
   expect(collapseWs(suggestedAfter)).toBe(collapseWs(suggestedBefore));
+  await goToWorkspace(page, "调查");
   await expect(page.getByLabel("最终结论")).toHaveValue(conclusionBefore);
   await expect(page.getByLabel("人工风险等级")).toHaveValue(humanRiskBefore);
 

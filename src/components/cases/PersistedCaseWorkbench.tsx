@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type {
   BusinessContext,
   CaseStatus,
@@ -77,7 +77,7 @@ import {
   type ComplianceResolutionStatus,
 } from "./CaseCompliancePanel";
 import { CaseHeader } from "./CaseHeader";
-import { CaseInvestigationNav } from "./CaseInvestigationNav";
+import { CaseInvestigationNav, normalizeWorkspaceView } from "./CaseInvestigationNav";
 import { InvestigationProgressPanel } from "./InvestigationProgressPanel";
 import { InvestigationStepSection } from "./InvestigationStepSection";
 import { deriveInvestigationOverviewStats } from "./investigationOverviewStats";
@@ -167,6 +167,17 @@ export function PersistedCaseWorkbench({
   investigationIntelligence?: InvestigationIntelligenceView;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const workspaceView = normalizeWorkspaceView(searchParams.get("view"));
+  const switchWorkspace = useCallback(
+    (view: "overview" | "investigation" | "analysis" | "records") => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("view", view);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
   const readOnly = isCaseWorkbenchReadOnly(capabilities);
 
   /**
@@ -910,41 +921,44 @@ export function PersistedCaseWorkbench({
 
       <CaseInvestigationNav />
 
-      <InvestigationNextActions
-        draft={draftBase}
-        checklist={checklist}
-        pendingContext={countBusinessContextPending(businessContext)}
-        intelligence={investigationIntelligence}
-        entityRequest={entityRequest}
-      />
+      <div hidden={workspaceView !== "overview"} aria-hidden={workspaceView !== "overview"}>
+        <InvestigationNextActions
+          draft={draftBase}
+          checklist={checklist}
+          pendingContext={countBusinessContextPending(businessContext)}
+          intelligence={investigationIntelligence}
+          entityRequest={entityRequest}
+        />
 
-      {/* A. 概览 */}
-      <InvestigationProgressPanel
-        view={investigationProgressView}
-        overviewStats={overviewStats}
-        relatedCaseCount={investigationIntelligence.relatedCaseCount}
-        hasReport={hasReport}
-        canWriteReport={capabilities.canWriteReport}
-        onGoToReport={() => void goToReport()}
-      />
+        {/* A. 概览：只保留下一步、进度和最小案件上下文 */}
+        <InvestigationProgressPanel
+          view={investigationProgressView}
+          overviewStats={overviewStats}
+          relatedCaseCount={investigationIntelligence.relatedCaseCount}
+          hasReport={hasReport}
+          canWriteReport={capabilities.canWriteReport}
+          onGoToReport={() => void goToReport()}
+          showNextStep={false}
+        />
 
-      <details
-        className="border-b border-neutral-100 pb-3"
-        data-testid="case-basic-info"
-      >
-        <summary className="cursor-pointer text-sm text-neutral-600">
-          案件信息
-        </summary>
-        <div className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 pt-1 md:grid-cols-2 lg:grid-cols-4">
-          <Field label="案件编号" value={initial.caseNumber} />
-          <Field label="告警来源" value={draftBase.alert.source} />
-          <Field
-            label="告警时间"
-            value={formatDateTimeForDisplay(draftBase.alert.occurredAt)}
-          />
-          <Field label="告警标题" value={draftBase.alert.title} />
-        </div>
-      </details>
+        <details
+          className="mt-3 border-b border-neutral-100 pb-3"
+          data-testid="case-basic-info"
+        >
+          <summary className="cursor-pointer text-sm text-neutral-600">
+            案件信息
+          </summary>
+          <div className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 pt-1 md:grid-cols-2 lg:grid-cols-4">
+            <Field label="案件编号" value={initial.caseNumber} />
+            <Field label="告警来源" value={draftBase.alert.source} />
+            <Field
+              label="告警时间"
+              value={formatDateTimeForDisplay(draftBase.alert.occurredAt)}
+            />
+            <Field label="告警标题" value={draftBase.alert.title} />
+          </div>
+        </details>
+      </div>
 
       {/* B. 调查（四步固定顺序） */}
       <WorkbenchSection
@@ -953,6 +967,7 @@ export function PersistedCaseWorkbench({
         description="按顺序完成业务确认、核查、历史线索与最终研判"
         testId="investigation-workspace"
         aria-label="调查"
+        hidden={workspaceView !== "investigation"}
       >
         <InvestigationStepSection
           id={INVESTIGATION_SECTION_IDS.businessContext}
@@ -1036,6 +1051,11 @@ export function PersistedCaseWorkbench({
                 runChecklistCommand("add", item.id, next, prevBase, {
                   addItem: item,
                 });
+              }}
+              onTargetClick={(kind, value) => {
+                setEntityRequest({ kind: kind as "账号" | "IP" | "系统", value });
+                switchWorkspace("overview");
+                window.setTimeout(() => scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.progress), 0);
               }}
             />
           </div>
@@ -1139,6 +1159,7 @@ export function PersistedCaseWorkbench({
         title="分析"
         description="系统建议与合规参考 · 不替代人工最终研判"
         aria-label="分析"
+        hidden={workspaceView !== "analysis"}
       >
         {analyzed.suggestedAssessment ? (
           <div className="space-y-1">
@@ -1209,6 +1230,7 @@ export function PersistedCaseWorkbench({
         title="记录"
         description="调查时间线与操作审计"
         aria-label="记录"
+        hidden={workspaceView !== "records"}
       >
         <details open data-testid="timeline-details">
           <summary className="cursor-pointer text-sm font-medium text-neutral-800">
@@ -1237,10 +1259,14 @@ export function PersistedCaseWorkbench({
               onEntityClick={(kind, value) => {
                 if (kind === "账号" || kind === "IP" || kind === "系统") {
                   setEntityRequest({ kind, value });
-                  scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.investigation);
+                  switchWorkspace("overview");
+                  window.setTimeout(() => scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.progress), 0);
                 }
               }}
-              onEvidenceClick={() => scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.evidence)}
+              onEvidenceClick={() => {
+                switchWorkspace("investigation");
+                window.setTimeout(() => scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.evidence), 0);
+              }}
               onAdd={(event) => {
                 if (!capabilities.canWriteTimeline) return;
                 const prev = timeline;

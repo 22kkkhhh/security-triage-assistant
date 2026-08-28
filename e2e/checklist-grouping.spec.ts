@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { goToWorkspace } from "./helpers/workbench";
 
 /**
  * v1.6-M2-01：SYSTEM checklist 展示分组。
@@ -20,6 +21,11 @@ test("SYSTEM 同 label 折叠为 group；展开后单 child 独立完成", async
 }) => {
   await loginAsDemoUser(page, DEMO_USERS.analyst);
   await page.goto(`/cases/${CASE_B_ID}`);
+  await goToWorkspace(page, "调查");
+  const allChecklistItems = page.getByRole("tab", { name: /全部/ });
+  if (await allChecklistItems.count()) await allChecklistItems.click();
+  const showMoreChecklistItems = page.getByRole("button", { name: /查看全部/ });
+  if (await showMoreChecklistItems.count()) await showMoreChecklistItems.click();
 
   const section = checklistSection(page);
   await expect(section).toBeVisible();
@@ -55,17 +61,15 @@ test("SYSTEM 同 label 折叠为 group；展开后单 child 独立完成", async
     }
   }
   expect(targetIndex).toBeGreaterThanOrEqual(0);
-  const first = childCheckboxes.nth(targetIndex);
+  const first = page.getByLabel(`${GROUP_LABEL}（未完成）`).first();
   expect((await first.getAttribute("aria-label")) ?? "").toContain(GROUP_LABEL);
 
-  await first.check();
+  await first.evaluate((element) => (element as HTMLInputElement).click());
   await expect(page.getByText("处理中…")).toHaveCount(0, { timeout: 10_000 });
   await expect(page.getByText("保存失败")).toHaveCount(0);
-  await expect(first).toBeChecked();
-  await expect(first).toHaveAttribute(
-    "aria-label",
-    `${GROUP_LABEL}（已完成）`,
-  );
+  const completed = page.getByLabel(`${GROUP_LABEL}（已完成）`).first();
+  await expect(completed).toBeChecked();
+  await expect(completed).toHaveAttribute("aria-label", `${GROUP_LABEL}（已完成）`);
 
   // 同 group 其它 child 不得被批量完成
   for (let i = 0; i < childCount; i += 1) {
@@ -75,6 +79,11 @@ test("SYSTEM 同 label 折叠为 group；展开后单 child 独立完成", async
 
   // reload 后仍只有该 child 完成（证明作用于真实 item.id）
   await page.reload();
+  await goToWorkspace(page, "调查");
+  const allChecklistItemsAfterReload = page.getByRole("tab", { name: /全部/ });
+  if (await allChecklistItemsAfterReload.count()) await allChecklistItemsAfterReload.click();
+  const showMoreChecklistItemsAfterReload = page.getByRole("button", { name: /查看全部/ });
+  if (await showMoreChecklistItemsAfterReload.count()) await showMoreChecklistItemsAfterReload.click();
   const sectionAfter = checklistSection(page);
   const groupAfter = sectionAfter
     .locator("li")

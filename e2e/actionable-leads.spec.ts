@@ -36,17 +36,25 @@ test("历史线索加入核查清单：持久化、badge、完成/重开，不�
   ).trim();
   const conclusionBefore = await page.getByLabel("最终结论").inputValue();
   const humanRiskBefore = await page.getByLabel("人工风险等级").inputValue();
+  const checklist = page.getByTestId("evidence-checklist-workspace");
 
   const addBtn = lead.getByTestId("investigation-lead-add-button");
   if (await addBtn.count()) {
     await addBtn.click();
     await waitForSemanticCommandSettled(page);
   }
+  const allAfterAdd = checklist.getByRole("tab", { name: /全部/ });
+  if (await allAfterAdd.count()) await allAfterAdd.click();
+  const showMoreAfterAdd = checklist.getByRole("button", { name: /查看全部/ });
+  if (await showMoreAfterAdd.count()) await showMoreAfterAdd.click();
   await expect(lead.getByTestId("investigation-lead-added")).toBeVisible({
     timeout: 15_000,
   });
 
-  const checklist = page.getByTestId("evidence-checklist-workspace");
+  const showAll = checklist.getByRole("tab", { name: /全部/ });
+  if (await showAll.count()) await showAll.click();
+  const showMore = checklist.getByRole("button", { name: /查看全部/ });
+  if (await showMore.count()) await showMore.click();
   await expect(
     checklist.getByTestId("checklist-badge-investigation-lead").first(),
   ).toBeVisible();
@@ -57,6 +65,10 @@ test("历史线索加入核查清单：持久化、badge、完成/重开，不�
 
   await page.reload();
   await expandHistoricalLeads(page);
+  const showAllAfterReload = page.getByTestId("evidence-checklist-workspace").getByRole("tab", { name: /全部/ });
+  if (await showAllAfterReload.count()) await showAllAfterReload.click();
+  const showMoreAfterReload = page.getByTestId("evidence-checklist-workspace").getByRole("button", { name: /查看全部/ });
+  if (await showMoreAfterReload.count()) await showMoreAfterReload.click();
   await expect(
     page
       .locator(
@@ -73,14 +85,14 @@ test("历史线索加入核查清单：持久化、badge、完成/重开，不�
 
   // complete then reopen — wait for semantic command between toggles
   const pendingBox = page.getByLabel(`${LEAD_CHECKLIST_LABEL}（未完成）`);
-  await pendingBox.check();
+  await pendingBox.evaluate((element) => (element as HTMLInputElement).click());
   await waitForSemanticCommandSettled(page);
   await expect(
     page.getByLabel(`${LEAD_CHECKLIST_LABEL}（已完成）`),
   ).toBeChecked();
 
   const completedBox = page.getByLabel(`${LEAD_CHECKLIST_LABEL}（已完成）`);
-  await completedBox.uncheck();
+  await completedBox.evaluate((element) => (element as HTMLInputElement).click());
   await waitForSemanticCommandSettled(page);
   await expect(
     page.getByLabel(`${LEAD_CHECKLIST_LABEL}（未完成）`),

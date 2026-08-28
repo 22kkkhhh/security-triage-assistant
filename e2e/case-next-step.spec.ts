@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { goToWorkspace } from "./helpers/workbench";
 
 /**
  * v1.6-M2-03：Case 首屏「状态 + 下一步」与调查工作流重排。
@@ -13,8 +14,8 @@ test("建议下一步、基础信息与系统分析折叠、CTA 可导航", asyn
   await page.goto(`/cases/${CASE_B_ID}`);
 
   const progress = page.getByTestId("investigation-overview");
-  await expect(progress.getByTestId("case-next-step")).toBeVisible();
-  await expect(progress.getByTestId("case-next-step-cta")).toBeVisible();
+  const nextActions = page.getByTestId("investigation-next-actions");
+  await expect(nextActions).toBeVisible();
   await expect(progress.getByRole("heading", { name: "概览" })).toBeVisible();
 
   // 案件信息默认关闭（details 内容仍在 DOM，以可见性断言）
@@ -28,6 +29,7 @@ test("建议下一步、基础信息与系统分析折叠、CTA 可导航", asyn
   await expect(basic.getByText("告警时间")).toBeVisible();
 
   // 系统分析详情默认关闭
+  await goToWorkspace(page, "分析");
   const analysis = page.getByTestId("system-analysis-details");
   await expect(analysis).toBeVisible();
   await expect(analysis).not.toHaveAttribute("open");
@@ -41,10 +43,9 @@ test("建议下一步、基础信息与系统分析折叠、CTA 可导航", asyn
   ).toBeVisible();
 
   // CTA 导航到正确调查 section（Case B：补充业务上下文）
-  await expect(
-    progress.getByTestId("case-next-step").getByText("补充业务上下文"),
-  ).toBeVisible();
-  await progress.getByTestId("case-next-step-cta").click();
+  await goToWorkspace(page, "概览");
+  await expect(nextActions.getByText("补充业务上下文")).toBeVisible();
+  await nextActions.getByRole("button", { name: /补充业务上下文/ }).click();
   const businessContext = page.locator("#investigation-business-context");
   await expect(businessContext).toBeInViewport({ timeout: 5_000 });
 });

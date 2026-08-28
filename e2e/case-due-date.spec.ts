@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { DEMO_USERS, loginAsDemoUser } from "./helpers/auth";
+import { goToWorkspace } from "./helpers/workbench";
 
 const CASE_B_ID = "demo-case-b";
 
@@ -76,6 +77,7 @@ test.describe("Case Due Date & Queue Prioritization", () => {
     await loginAsDemoUser(page, DEMO_USERS.admin);
 
     await page.goto(`/cases/${CASE_B_ID}`);
+    await goToWorkspace(page, "记录");
     const select = page.getByTestId("case-ownership-admin-select");
     await expect(select).toBeVisible();
     const analystOption = select.locator("option", { hasText: "演示分析员" });

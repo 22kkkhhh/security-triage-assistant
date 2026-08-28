@@ -10,6 +10,7 @@ export function WorkbenchSection({
   meta,
   children,
   testId,
+  hidden = false,
   "aria-label": ariaLabel,
 }: {
   id?: string;
@@ -18,12 +19,15 @@ export function WorkbenchSection({
   meta?: ReactNode;
   children: ReactNode;
   testId?: string;
+  hidden?: boolean;
   "aria-label"?: string;
 }) {
   return (
     <section
       id={id}
       className="scroll-mt-14 space-y-3"
+      hidden={hidden}
+      aria-hidden={hidden || undefined}
       aria-label={ariaLabel}
       data-testid={testId}
     >
