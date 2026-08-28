@@ -51,7 +51,7 @@ const navItems: NavItem[] = [
 const importNavItems: NavItem[] = [
   {
     href: "/cases/import",
-    label: "批量导入",
+    label: "批量接入",
     match: (path: string) => path.startsWith("/cases/import"),
     requiresCreateCase: true,
   },
@@ -240,7 +240,7 @@ export function AppShell({
                 className="flex w-full items-center justify-between rounded px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-slate-800/80 hover:text-white"
                 onClick={() => setImportOpen((open) => !open)}
               >
-                <span>导入</span>
+                <span>告警接入</span>
                 <span aria-hidden="true" className={`text-xs transition-transform ${importExpanded ? "rotate-180" : ""}`}>⌄</span>
               </button>
               {importExpanded ? visibleImportNav.map((item) => {
