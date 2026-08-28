@@ -33,6 +33,7 @@ export interface RestoredWorkbenchView {
   initialChecklist: ChecklistItem[];
   /** 当前业务上下文下重新分析得到的建议风险（非持久化权威） */
   suggestedRiskLevel: RiskLevel | null;
+  rawAlertIds?: string[];
 }
 
 /**
@@ -97,6 +98,7 @@ export function restoreWorkbenchFromState(input: {
     initialChecklist,
     suggestedRiskLevel:
       analyzed.suggestedAssessment?.suggestedRiskLevel ?? null,
+    rawAlertIds: [],
   };
 }
 

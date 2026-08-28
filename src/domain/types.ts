@@ -185,6 +185,8 @@ export interface Evidence {
   /** 研判人员补充说明 */
   analystNote: string | null;
   includedInReport: boolean;
+  /** 可选原始告警来源 ID；详情页继续受 CASE_READ/no-store/redaction 保护。 */
+  rawAlertId?: string | null;
 }
 
 /** Checklist 来源标记（可选；存在 caseState JSON，无 Prisma 表变更） */
@@ -199,6 +201,12 @@ export type ChecklistSourceKind =
  * 字段均为可选以保持历史反序列化兼容。
  */
 export type ChecklistSourceRef = {
+  /** 调查目标，供工作台直接跳转 Account/IP/System/Evidence/RawAlert。 */
+  targetRef?: {
+    kind: "ACCOUNT" | "IP" | "SYSTEM" | "EVIDENCE" | "RAW_ALERT";
+    value: string;
+    navigationTarget?: string;
+  };
   /** CaseComplianceChecklistItem.key / security suggestionKey */
   suggestionKey?: string;
   kind?: "CONTEXT" | "EVIDENCE" | "CHECKLIST";
@@ -245,6 +253,9 @@ export interface TimelineEvent {
   operator: string | null;
   /** SYSTEM = 来自告警/日志；HUMAN = 人工研判或处置记录 */
   source: "SYSTEM" | "HUMAN";
+  /** 可选实体/证据引用，旧事件缺失时由 presenter 推导。 */
+  relatedEntityRefs?: Array<{ kind: "ACCOUNT" | "IP" | "SYSTEM" | "账号" | "系统"; value: string }>;
+  evidenceIds?: string[];
 }
 
 /**

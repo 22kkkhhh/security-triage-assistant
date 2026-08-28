@@ -82,6 +82,7 @@ import { InvestigationStepSection } from "./InvestigationStepSection";
 import { deriveInvestigationOverviewStats } from "./investigationOverviewStats";
 import {
   INVESTIGATION_SECTION_IDS,
+  scrollToInvestigationSection,
   toInvestigationProgressPanelView,
   type InvestigationProgressViewDto,
 } from "./investigationProgressSummary";
@@ -191,6 +192,7 @@ export function PersistedCaseWorkbench({
   const [timeline, setTimeline] = useState<TimelineEvent[]>(
     initial.draft.timeline,
   );
+  const [pinnedEvidenceIds, setPinnedEvidenceIds] = useState<string[]>([]);
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [staleNotice, setStaleNotice] = useState<string | null>(null);
@@ -876,6 +878,7 @@ export function PersistedCaseWorkbench({
         draft={draftBase}
         checklist={checklist}
         pendingContext={countBusinessContextPending(businessContext)}
+        intelligence={investigationIntelligence}
       />
 
       {/* A. 概览 */}
@@ -1007,7 +1010,22 @@ export function PersistedCaseWorkbench({
               id={INVESTIGATION_SECTION_IDS.evidence}
               className="scroll-mt-14 mt-2 min-w-0"
             >
-              <EvidencePanel evidences={analyzed.evidences} />
+              <EvidencePanel
+                evidences={analyzed.evidences.map((evidence) => ({ ...evidence, rawAlertId: initial.rawAlertIds?.[0] ?? null }))}
+                pinnedEvidenceIds={pinnedEvidenceIds}
+                onTogglePin={(evidenceId) =>
+                  setPinnedEvidenceIds((current) =>
+                    current.includes(evidenceId)
+                      ? current.filter((id) => id !== evidenceId)
+                      : [...current, evidenceId],
+                  )
+                }
+              />
+              {pinnedEvidenceIds.length > 0 ? (
+                <p className="mt-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800" data-testid="key-evidence-summary">
+                  已标记 {pinnedEvidenceIds.length} 条关键证据；生成报告时将自动复用案件证据引用。
+                </p>
+              ) : null}
             </div>
           </details>
         </InvestigationStepSection>
@@ -1158,8 +1176,26 @@ export function PersistedCaseWorkbench({
           </summary>
           <div className="mt-2">
             <TimelinePanel
-              events={timeline}
+              events={timeline.map((event) => {
+                const haystack = `${event.title} ${event.description}`;
+                const refs = [
+                  draftBase.identityContext.accountName
+                    ? { kind: "账号" as const, value: draftBase.identityContext.accountName }
+                    : null,
+                  draftBase.identityContext.loginSourceIp
+                    ? { kind: "IP" as const, value: draftBase.identityContext.loginSourceIp }
+                    : null,
+                  draftBase.networkContext.internalSourceIp
+                    ? { kind: "IP" as const, value: draftBase.networkContext.internalSourceIp }
+                    : null,
+                  ...draftBase.identityContext.accessedSystems.map((value) => ({ kind: "系统" as const, value })),
+                ].filter((ref): ref is { kind: "账号" | "IP" | "系统"; value: string } => Boolean(ref && haystack.includes(ref.value)));
+                const evidenceIds = analyzed.evidences.filter((evidence) => haystack.includes(evidence.title) || haystack.includes(evidence.summary.slice(0, 24))).map((evidence) => evidence.evidenceId);
+                return { ...event, relatedEntityRefs: event.relatedEntityRefs ?? Array.from(new Map(refs.map((ref) => [`${ref.kind}:${ref.value}`, ref])).values()), evidenceIds: event.evidenceIds ?? evidenceIds };
+              })}
               canAdd={capabilities.canWriteTimeline}
+              onEntityClick={() => scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.investigation)}
+              onEvidenceClick={() => scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.evidence)}
               onAdd={(event) => {
                 if (!capabilities.canWriteTimeline) return;
                 const prev = timeline;

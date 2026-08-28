@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # CI / local Docker production smoke (v1.12-M2).
 set -euo pipefail
 

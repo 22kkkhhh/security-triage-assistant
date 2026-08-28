@@ -238,3 +238,13 @@ Security Triage Assistant 是“数据与网络安全联合研判及案件运营
 ## 4.7 Investigation workspace additions
 
 案件详情首屏必须提供有限的“下一步行动”（最多 3 条），直接定位现有 Checklist 或业务上下文；不得自动完成 Checklist、提升风险或写入人工结论。账号、IP、系统使用统一 Entity Reference，优先在当前案件内打开 Drawer，展示当前事实、相关时间线和证据入口；没有历史数据时明确显示 UNKNOWN，不推断为正常。实体入口只复用已授权可见的案件事实，不扩大权限范围。
+
+
+## v2.7 Investigation Workspace productization
+
+- 案件首屏保持 Task-first：下一步行动不超过 3 项，调查对象以 Entity Reference 呈现。
+- Account / IP / System 使用右侧 Drawer 展示当前事实、历史出现次数、首末时间、关联对象和关联案件；历史数据不足明确显示 UNKNOWN，不解释为正常。
+- Checklist 可携带 `targetRef`（Account/IP/System/Evidence/RawAlert），通过点击进入调查上下文。
+- Evidence 提供来源回跳（受 CASE_READ、redaction、no-store、折叠和禁止下载约束）及关键证据标记；Timeline 提供实体与证据回跳。
+- Related Case 的 Compare 入口在关联案件行内可见，保持“相关不等于同一事件、Compare 不等于基线”的语义。
+- 视觉继续遵守 4px spacing、border-first、低饱和中性背景、WCAG AA、移动端 Drawer 全屏化。

@@ -83,6 +83,14 @@ function ChecklistItemRow({
             <span className="text-[11px] text-neutral-400">人工新增</span>
           )}
         </div>
+        {item.sourceRef?.targetRef ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs" data-testid="checklist-target-ref">
+            <span className="text-neutral-500">调查目标</span>
+            <button type="button" className="rounded border border-blue-200 bg-blue-50 px-2 py-1 font-medium text-blue-700 hover:border-blue-400" onClick={() => document.getElementById("investigation-next-actions")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+              {item.sourceRef.targetRef.kind} · {item.sourceRef.targetRef.value}
+            </button>
+          </div>
+        ) : null}
         {canEditNote ? (
           <input
             className="mt-1 w-full rounded border border-neutral-200 px-2 py-0.5 text-xs text-neutral-700"

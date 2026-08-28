@@ -86,3 +86,13 @@ export async function getRawAlertRecordDetail(id: string) {
     },
   });
 }
+
+export async function listRawAlertIdsForCase(caseId: string): Promise<string[]> {
+  try {
+    const rows = await prisma.rawAlertRecord.findMany({ where: { caseId }, orderBy: { receivedAt: "desc" }, take: 10, select: { id: true } });
+    return rows.map((row) => row.id);
+  } catch {
+    // Legacy/test databases may predate RawAlertRecord; the case workflow remains usable.
+    return [];
+  }
+}

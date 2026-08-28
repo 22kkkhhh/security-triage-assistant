@@ -5,12 +5,14 @@ import { loadCaseWorkbenchRuntimeViewsFromAnalyzed } from "@/app/(app)/cases/loa
 import { analyzePersistedCase } from "@/services/analysis/analyzePersistedCase";
 import { restoreWorkbenchFromAnalyzed } from "@/services/persistence/restoreWorkbench";
 import type { PersistedCase } from "@/services/persistence/types";
+import { listRawAlertIdsForCase } from "@/services/persistence/rawAlertRepository";
 
 export async function loadCaseDetailPageData(record: PersistedCase) {
   const { draft, analyzed } = analyzePersistedCase(record);
-  const [initial, runtimeViews] = await Promise.all([
+  const [initial, runtimeViews, rawAlertIds] = await Promise.all([
     Promise.resolve(restoreWorkbenchFromAnalyzed(record, draft, analyzed)),
     loadCaseWorkbenchRuntimeViewsFromAnalyzed(record, draft, analyzed),
+    listRawAlertIdsForCase(record.id),
   ]);
-  return { initial, runtimeViews, draft, analyzed };
+  return { initial: { ...initial, rawAlertIds }, runtimeViews, draft, analyzed };
 }

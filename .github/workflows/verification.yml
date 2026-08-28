@@ -6,6 +6,7 @@ on:
       - "agent/**"
       - "integration/**"
       - "main"
+      - "codex/**"
   pull_request:
     branches:
       - "integration/**"
