@@ -39,7 +39,9 @@ export function InvestigationNextActions({
     return result;
   }, [draft]);
 
-  const pending = checklist.filter((item) => !item.completed).slice(0, 3);
+  const pending = checklist
+    .filter((item) => !item.completed)
+    .slice(0, pendingContext > 0 ? 2 : 3);
 
   return (
     <>
@@ -145,4 +147,3 @@ export function InvestigationNextActions({
     </>
   );
 }
-
