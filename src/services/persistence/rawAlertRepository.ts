@@ -64,3 +64,25 @@ export async function queryRawAlertRecords(input: {
   ]);
   return { page, pageSize, total, rows };
 }
+
+/**
+ * Returns the already-redacted payload for an authorized detail view.
+ * RawAlertRecord.payloadJson is written only after recursive redaction at ingest.
+ */
+export async function getRawAlertRecordDetail(id: string) {
+  return prisma.rawAlertRecord.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      sourceType: true,
+      externalAlertId: true,
+      receivedAt: true,
+      ingestStatus: true,
+      caseId: true,
+      errorMessage: true,
+      payloadJson: true,
+      payloadHash: true,
+      redactionVersion: true,
+    },
+  });
+}

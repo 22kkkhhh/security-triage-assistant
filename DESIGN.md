@@ -222,6 +222,7 @@ Security Triage Assistant 是“数据与网络安全联合研判及案件运营
 | v2.2 | 2026-08-28 | 增加 Wazuh 签名 Webhook、原始告警查询与 JSONL 共用接入管线；原始 JSON 先递归脱敏再落库，Webhook 使用带时间戳的 HMAC-SHA256 并拒绝过期请求。 |
 | v2.3 | 2026-08-28 | 修复接入功能导致的导航漂移：新建研判回归案件页主动作，批量导入与原始告警归入“导入”分组；恢复 SC 品牌块、统一蓝色选中态和 token 化表格容器。 |
 | v2.4 | 2026-08-28 | 将侧栏“导入”分组更名为“告警接入”，子项使用“批量接入”和“原始告警”；名称覆盖 Webhook、JSONL 与后续安全数据源配置，避免把入口误解为单纯文件上传。 |
+| v2.5 | 2026-08-28 | 原始告警列表增加“查看详情”入口；详情页仅面向 `CASE_READ`，展示接入时已脱敏副本，载荷默认折叠并禁止下载，所有详情响应使用 `no-store`。 |
 
 ## 12. 外部告警接入安全边界
 
@@ -229,5 +230,6 @@ Security Triage Assistant 是“数据与网络安全联合研判及案件运营
 - timestamp 必须在服务器当前时间前后 5 分钟内；签名使用 constant-time compare，缺少密钥、签名错误或重放请求均不进入解析和写库。
 - 请求体上限 1 MB、最多 100 条；Wazuh 单对象、数组或 `{alerts: [...]}` envelope 均进入同一 `ingestAlertObject` 管线。
 - 原始告警落库前递归替换 password、token、secret、authorization、cookie 等敏感键；查询 API 默认只返回接收元数据，不回显 payload。
+- 原始告警详情 API 与页面仍要求 `CASE_READ`；只读取落库时的脱敏副本，默认折叠载荷、避免复制/下载能力，并通过 `Cache-Control: no-store` 降低浏览器缓存残留风险。
 - `externalAlertId` 仍是跨重试去重依据；重复到达保留 `RawAlertRecord`，标记 `DUPLICATE` 并关联既有案件。Webhook operationId 仅用于同一批次幂等，不替代外部 ID 去重。
 - 已知限制：当前密钥由运行环境注入，尚未提供密钥轮换 UI；公网开放前必须增加 HTTPS、来源网络限制、密钥轮换和速率限制方案。
