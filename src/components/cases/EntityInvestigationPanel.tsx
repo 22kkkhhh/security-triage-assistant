@@ -58,39 +58,58 @@ export function EntityInvestigationPanel({
   draft,
   intelligence,
   onNavigate,
+  requestedEntity,
 }: {
   draft: SecurityCaseDraft;
   intelligence: InvestigationIntelligenceView;
   onNavigate?: (target: "timeline" | "evidence") => void;
+  requestedEntity?: EntityRef | null;
 }) {
   const [selected, setSelected] = useState<EntityHistory | null>(null);
+  const [dismissedRequestKey, setDismissedRequestKey] = useState<string | null>(null);
   const histories = useMemo(() => buildEntityHistory(draft, intelligence), [draft, intelligence]);
+  const requestedKey = requestedEntity
+    ? requestedEntity.kind + ":" + requestedEntity.value
+    : null;
+  const requestedMatch = requestedEntity
+    ? histories.find((item) => item.kind === requestedEntity.kind && item.value === requestedEntity.value) ?? null
+    : null;
+  const visibleSelection =
+    requestedMatch && dismissedRequestKey !== requestedKey ? requestedMatch : selected;
+  const selectEntity = (entity: EntityHistory) => {
+    setSelected(entity);
+    setDismissedRequestKey(requestedKey);
+  };
+  const closePanel = () => {
+    setSelected(null);
+    setDismissedRequestKey(requestedKey);
+  };
   return (
     <>
       <div className="flex flex-wrap gap-2" data-testid="entity-reference-list">
         {histories.map((entity) => (
-          <button key={`${entity.kind}:${entity.value}`} type="button" className="rounded-md border border-blue-200 bg-white px-2.5 py-1.5 text-sm text-blue-800 hover:border-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600" onClick={() => setSelected(entity)}>
+          <button key={`${entity.kind}:${entity.value}`} type="button" className="rounded-md border border-blue-200 bg-white px-2.5 py-1.5 text-sm text-blue-800 hover:border-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600" onClick={() => selectEntity(entity)}>
             {entity.kind} · <span className="font-mono">{entity.value}</span>
           </button>
         ))}
       </div>
-      {selected ? (
+      {visibleSelection ? (
         <div className="fixed inset-0 z-40" role="presentation">
-          <button className="absolute inset-0 bg-slate-900/20" aria-label="关闭实体面板" onClick={() => setSelected(null)} />
-          <aside className="absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto border-l border-slate-200 bg-white p-5 shadow-xl" aria-label={`${selected.kind}调查`}>
+          <button className="absolute inset-0 bg-slate-900/20" aria-label="关闭实体面板" onClick={closePanel} />
+          <aside className="absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto border-l border-slate-200 bg-white p-5 shadow-xl" aria-label={`${visibleSelection.kind}调查`}>
             <div className="flex items-start justify-between gap-3">
-              <div><p className="text-xs font-medium text-blue-700">{selected.kind}调查</p><h2 className="mt-1 break-all text-lg font-semibold text-slate-900">{selected.value}</h2></div>
-              <button type="button" className="rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100" onClick={() => setSelected(null)} aria-label="关闭实体面板">关闭</button>
+              <div><p className="text-xs font-medium text-blue-700">{visibleSelection.kind}调查</p><h2 className="mt-1 break-all text-lg font-semibold text-slate-900">{visibleSelection.value}</h2></div>
+              <button type="button" className="rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100" onClick={closePanel} aria-label="关闭实体面板">关闭</button>
             </div>
             <div className="mt-5 grid grid-cols-3 gap-2 text-xs">
-              <div className="rounded border border-slate-200 bg-slate-50 p-2"><span className="block text-slate-500">出现次数</span><strong className="text-base text-slate-900">{selected.occurrenceCount}</strong></div>
-              <div className="rounded border border-slate-200 bg-slate-50 p-2"><span className="block text-slate-500">首次出现</span><strong className="block truncate text-slate-900">{formatDateTimeForDisplay(selected.firstSeen)}</strong></div>
-              <div className="rounded border border-slate-200 bg-slate-50 p-2"><span className="block text-slate-500">最近出现</span><strong className="block truncate text-slate-900">{formatDateTimeForDisplay(selected.lastSeen)}</strong></div>
+              <div className="rounded border border-slate-200 bg-slate-50 p-2"><span className="block text-slate-500">出现次数</span><strong className="text-base text-slate-900">{visibleSelection.occurrenceCount}</strong></div>
+              <div className="rounded border border-slate-200 bg-slate-50 p-2"><span className="block text-slate-500">首次出现</span><strong className="block truncate text-slate-900">{formatDateTimeForDisplay(visibleSelection.firstSeen)}</strong></div>
+              <div className="rounded border border-slate-200 bg-slate-50 p-2"><span className="block text-slate-500">最近出现</span><strong className="block truncate text-slate-900">{formatDateTimeForDisplay(visibleSelection.lastSeen)}</strong></div>
             </div>
-            <section className="mt-5"><h3 className="text-sm font-semibold text-slate-900">历史事实</h3><ul className="mt-2 space-y-1 text-sm text-slate-600">{selected.facts.map((fact) => <li key={fact}>· {fact}</li>)}</ul></section>
-            {selected.relatedEntities.length > 0 && <section className="mt-5"><h3 className="text-sm font-semibold text-slate-900">关联对象</h3><div className="mt-2 flex flex-wrap gap-2">{selected.relatedEntities.map((item) => <span key={`${item.kind}:${item.value}`} className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">{item.kind} · {item.value}</span>)}</div></section>}
-            {selected.relatedCases.length > 0 && <section className="mt-5"><h3 className="text-sm font-semibold text-slate-900">关联案件</h3><ul className="mt-2 space-y-2">{selected.relatedCases.map((item) => <li key={item.id} className="rounded border border-slate-200 p-2"><p className="font-mono text-xs text-slate-500">{item.number}</p><p className="text-sm text-slate-800">{item.title}</p></li>)}</ul></section>}
-            <div className="mt-6 grid gap-2"><button type="button" className="rounded-md border border-blue-200 px-3 py-2 text-left text-sm font-medium text-blue-700 hover:bg-blue-50" onClick={() => { setSelected(null); onNavigate?.("timeline"); }}>查看时间线中的相关活动 →</button><button type="button" className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50" onClick={() => { setSelected(null); onNavigate?.("evidence"); }}>查看关联证据 →</button></div>
+            <section className="mt-5"><h3 className="text-sm font-semibold text-slate-900">历史事实</h3><ul className="mt-2 space-y-1 text-sm text-slate-600">{visibleSelection.facts.map((fact) => <li key={fact}>· {fact}</li>)}</ul></section>
+            {visibleSelection.relatedEntities.length > 0 && <section className="mt-5"><h3 className="text-sm font-semibold text-slate-900">关联对象</h3><div className="mt-2 flex flex-wrap gap-2">{visibleSelection.relatedEntities.map((item) => <span key={`${item.kind}:${item.value}`} className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">{item.kind} · {item.value}</span>)}</div></section>}
+            {visibleSelection.relatedCases.length > 0 && <section className="mt-5"><h3 className="text-sm font-semibold text-slate-900">关联案件</h3><ul className="mt-2 space-y-2">{visibleSelection.relatedCases.map((item) => <li key={item.id} className="rounded border border-slate-200 p-2"><p className="font-mono text-xs text-slate-500">{item.number}</p><p className="text-sm text-slate-800">{item.title}</p></li>)}</ul></section>}
+            <div className="mt-6 grid gap-2"><button type="button" className="rounded-md border border-blue-200 px-3 py-2 text-left text-sm font-medium text-blue-700 hover:bg-blue-50" onClick={() => { closePanel(); onNavigate?.("timeline"); }}>查看时间线中的相关活动 →</button><button type="button" className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50" onClick={() => { closePanel(); onNavigate?.("evidence"); }}>查看关联证据 →</button></div>
           </aside>
         </div>
       ) : null}

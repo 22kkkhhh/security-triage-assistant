@@ -193,6 +193,7 @@ export function PersistedCaseWorkbench({
     initial.draft.timeline,
   );
   const [pinnedEvidenceIds, setPinnedEvidenceIds] = useState<string[]>([]);
+  const [entityRequest, setEntityRequest] = useState<{ kind: "账号" | "IP" | "系统"; value: string } | null>(null);
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [staleNotice, setStaleNotice] = useState<string | null>(null);
@@ -879,6 +880,7 @@ export function PersistedCaseWorkbench({
         checklist={checklist}
         pendingContext={countBusinessContextPending(businessContext)}
         intelligence={investigationIntelligence}
+        entityRequest={entityRequest}
       />
 
       {/* A. 概览 */}
@@ -1194,7 +1196,12 @@ export function PersistedCaseWorkbench({
                 return { ...event, relatedEntityRefs: event.relatedEntityRefs ?? Array.from(new Map(refs.map((ref) => [`${ref.kind}:${ref.value}`, ref])).values()), evidenceIds: event.evidenceIds ?? evidenceIds };
               })}
               canAdd={capabilities.canWriteTimeline}
-              onEntityClick={() => scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.investigation)}
+              onEntityClick={(kind, value) => {
+                if (kind === "账号" || kind === "IP" || kind === "系统") {
+                  setEntityRequest({ kind, value });
+                  scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.investigation);
+                }
+              }}
               onEvidenceClick={() => scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.evidence)}
               onAdd={(event) => {
                 if (!capabilities.canWriteTimeline) return;
