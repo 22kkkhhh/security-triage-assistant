@@ -219,3 +219,13 @@ Security Triage Assistant 是“数据与网络安全联合研判及案件运营
 | v1.9 | 2026-08-27 | 明确管理分组与业务导航的同层级视觉规则，统一字号、颜色、高度和展开状态。 |
 | v2.0 | 2026-08-27 | 增加桌面顶部工作台栏规范：当前页标题、可验证的快速访问和右上角用户菜单；禁止无数据支撑的装饰性通知/搜索控件。 |
 | v2.1 | 2026-08-27 | 顶部栏调整为居中快速访问与右上角用户菜单，移除重复的左侧页面名；登录页同步工作台配色并加入低对比抽象安全纹理背景。 |
+| v2.2 | 2026-08-28 | 增加 Wazuh 签名 Webhook、原始告警查询与 JSONL 共用接入管线；原始 JSON 先递归脱敏再落库，Webhook 使用带时间戳的 HMAC-SHA256 并拒绝过期请求。 |
+
+## 12. 外部告警接入安全边界
+
+- Webhook 信任边界在 `POST /api/intake/wazuh`：仅接受配置了 `WAZUH_WEBHOOK_SECRET` 的请求，签名覆盖 `timestamp + "." + rawBody`，支持 `x-wazuh-signature`/`x-signature` 和对应 timestamp header。
+- timestamp 必须在服务器当前时间前后 5 分钟内；签名使用 constant-time compare，缺少密钥、签名错误或重放请求均不进入解析和写库。
+- 请求体上限 1 MB、最多 100 条；Wazuh 单对象、数组或 `{alerts: [...]}` envelope 均进入同一 `ingestAlertObject` 管线。
+- 原始告警落库前递归替换 password、token、secret、authorization、cookie 等敏感键；查询 API 默认只返回接收元数据，不回显 payload。
+- `externalAlertId` 仍是跨重试去重依据；重复到达保留 `RawAlertRecord`，标记 `DUPLICATE` 并关联既有案件。Webhook operationId 仅用于同一批次幂等，不替代外部 ID 去重。
+- 已知限制：当前密钥由运行环境注入，尚未提供密钥轮换 UI；公网开放前必须增加 HTTPS、来源网络限制、密钥轮换和速率限制方案。

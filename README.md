@@ -58,6 +58,8 @@ v1.12 明确边界：
 
 - 导入（手工 / CSV / 文本粘贴 / JSON 单条告警）
 - Wazuh JSON 确定性字段映射（JSON adapter，**不是** Wazuh/SIEM 直连）
+- 签名 Wazuh Webhook 接入（HMAC-SHA256 + 时间戳防重放；密钥由运行环境注入）
+- 原始告警元数据查询与筛选（来源 / 接入状态 / externalAlertId；默认不回显原文）
 - 字段标准化与人工确认（不自动创建 Case）
 - 数据 / 网络 / 身份联合辅助研判（含 Golden Case 规则基线）
 - Case Investigation Workbench（概览 / 下一步 / 证据与核查 / 人工研判）
@@ -143,6 +145,19 @@ Production 首个管理员：显式运行 `npm run user:bootstrap-admin`（见 `
 → ReportDraft（独立持久化）
 → DOCX 导出
 ```
+
+### 外部告警接入（Wazuh）
+
+`POST /api/intake/wazuh` 接收 Wazuh 单条 JSON、数组或 `{ "alerts": [...] }` envelope。请求必须配置 `WAZUH_WEBHOOK_SECRET`，并携带：
+
+```text
+x-wazuh-timestamp: <Unix 秒>
+x-wazuh-signature: sha256=<HMAC_SHA256(secret, timestamp + "." + rawBody)>
+```
+
+服务端拒绝缺少签名、签名不匹配或超出 ±5 分钟窗口的请求；单次请求最多 100 条、正文最大 1 MB。原始告警会先递归脱敏（password、token、secret、authorization、cookie 等）再落库，并依据 `externalAlertId` 幂等去重。未配置密钥时接口保持关闭并返回 503。
+
+登录后可从“原始告警”页面查询接收记录，也可直接调用 `GET /api/raw-alerts?sourceType=WAZUH&status=CREATED&page=1&pageSize=20`。该 API 仅返回接收时间、来源、状态、哈希和关联案件等元数据，不返回原始 payload。
 
 ## 六、核心安全设计
 

@@ -42,6 +42,11 @@ const navItems: NavItem[] = [
     match: isCaseListNavActive,
   },
   {
+    href: "/raw-alerts",
+    label: "原始告警",
+    match: (path: string) => path.startsWith("/raw-alerts"),
+  },
+  {
     href: "/reports",
     label: "报告中心",
     match: isReportsNavActive,
@@ -272,6 +277,7 @@ export function AppShell({
                   <p className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">快速访问</p>
                   <Link href="/cases" onClick={() => setCommandOpen(false)} className="block rounded-lg px-3 py-2 text-sm text-[var(--ui-text)] hover:bg-[var(--ui-surface-subtle)]">案件队列 <span className="ml-2 text-xs text-[var(--ui-text-muted)]">查看与筛选案件</span></Link>
                   <Link href="/reports" onClick={() => setCommandOpen(false)} className="block rounded-lg px-3 py-2 text-sm text-[var(--ui-text)] hover:bg-[var(--ui-surface-subtle)]">报告中心 <span className="ml-2 text-xs text-[var(--ui-text-muted)]">查看调查报告</span></Link>
+                  <Link href="/raw-alerts" onClick={() => setCommandOpen(false)} className="block rounded-lg px-3 py-2 text-sm text-[var(--ui-text)] hover:bg-[var(--ui-surface-subtle)]">原始告警 <span className="ml-2 text-xs text-[var(--ui-text-muted)]">查询接收记录</span></Link>
                   {navigation.canManageUsers ? <Link href="/admin/users" onClick={() => setCommandOpen(false)} className="block rounded-lg px-3 py-2 text-sm text-[var(--ui-text)] hover:bg-[var(--ui-surface-subtle)]">用户管理 <span className="ml-2 text-xs text-[var(--ui-text-muted)]">管理账号与角色</span></Link> : null}
                 </div>
               ) : null}

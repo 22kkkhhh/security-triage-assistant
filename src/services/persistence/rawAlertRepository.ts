@@ -37,3 +37,30 @@ export async function updateRawAlertIngestResult(input: {
     },
   });
 }
+
+export async function queryRawAlertRecords(input: {
+  sourceType?: string;
+  ingestStatus?: RawAlertIngestStatus;
+  externalAlertId?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const page = Math.max(1, Math.floor(input.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Math.floor(input.pageSize ?? 25)));
+  const where: Prisma.RawAlertRecordWhereInput = {
+    ...(input.sourceType ? { sourceType: input.sourceType } : {}),
+    ...(input.ingestStatus ? { ingestStatus: input.ingestStatus } : {}),
+    ...(input.externalAlertId ? { externalAlertId: { contains: input.externalAlertId.slice(0, 120) } } : {}),
+  };
+  const [total, rows] = await Promise.all([
+    prisma.rawAlertRecord.count({ where }),
+    prisma.rawAlertRecord.findMany({
+      where,
+      orderBy: { receivedAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: { id: true, sourceType: true, externalAlertId: true, receivedAt: true, ingestStatus: true, caseId: true, errorMessage: true, payloadHash: true, redactionVersion: true },
+    }),
+  ]);
+  return { page, pageSize, total, rows };
+}
