@@ -110,7 +110,7 @@ function classifyStage(
     operation.length > 0;
   const transferObserved =
     draft.networkContext.outboundTransferBytes !== null ||
-    draft.networkContext.externalCommunication !== "UNKNOWN";
+    draft.networkContext.externalCommunication === "ABNORMAL";
   const stageObserved =
     references.length > 0 ||
     (definition.key === "STORAGE" &&
