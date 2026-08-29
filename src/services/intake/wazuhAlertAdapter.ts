@@ -17,7 +17,29 @@ const USERNAME_PATHS = [
   "data.dstuser",
   "data.user",
   "data.username",
+  "data.office365.UserId",
+  "user.name",
+  "user",
 ] as const;
+
+const SOURCE_IP_PATHS = ["data.srcip", "data.src_ip", "srcip", "src_ip", "source.ip"] as const;
+const DESTINATION_IP_PATHS = ["data.dstip", "data.dst_ip", "dstip", "dst_ip", "dest_ip", "destination.ip"] as const;
+const DESTINATION_PORT_PATHS = ["data.dstport", "data.dst_port", "dstport", "dst_port", "dest_port", "destination.port"] as const;
+const PROTOCOL_PATHS = ["data.protocol", "protocol", "proto", "network.protocol"] as const;
+const OPERATION_PATHS = [
+  "data.operation",
+  "data.command",
+  "data.action",
+  "data.office365.Operation",
+  "operation",
+  "command",
+  "action",
+  "audit.command",
+] as const;
+const ROW_COUNT_PATHS = ["data.rows", "data.row_count", "rows", "row_count"] as const;
+const DATABASE_PATHS = ["data.database", "data.db", "database", "db", "database.name"] as const;
+const TABLE_PATHS = ["data.table", "data.table_name", "table", "table_name", "object.name"] as const;
+const SENSITIVE_TYPES_PATHS = ["data.sensitive_types", "data.sensitive_data_types", "sensitive_types"] as const;
 
 const UNMAPPED_REASON = "未识别的字段，未映射到任何标准字段";
 
@@ -52,19 +74,26 @@ export function normalizeWazuhAlert(text: string): NormalizeResult {
     return value;
   };
 
+  const consumeFirst = (paths: readonly string[]): string | undefined => {
+    const hit = firstPresent(byPath, paths);
+    if (!hit) return undefined;
+    consumed.add(hit.path);
+    return hit.value;
+  };
+
   const pushMapped = (fieldKey: string, value: string) => {
     const trimmed = value.trim();
     if (!trimmed) return;
     mappedPairs.push({ rawKey: fieldKey, rawValue: trimmed });
   };
 
-  const id = consume("id");
+  const id = consumeFirst(["id", "_id"]);
   if (id) pushMapped("externalAlertId", id);
 
   const timestamp = consume("timestamp");
   if (timestamp) pushMapped("alertTime", timestamp);
 
-  const ruleDescription = consume("rule.description");
+  const ruleDescription = consumeFirst(["rule.description", "alert.signature"]);
   if (ruleDescription) pushMapped("alertName", ruleDescription);
 
   const fullLog = consume("full_log");
@@ -74,7 +103,7 @@ export function normalizeWazuhAlert(text: string): NormalizeResult {
     pushMapped("description", ruleDescription);
   }
 
-  const srcIp = consume("data.srcip");
+  const srcIp = consumeFirst(SOURCE_IP_PATHS);
   if (srcIp) pushMapped("sourceIp", srcIp);
 
   const usernameHit = firstPresent(byPath, USERNAME_PATHS);
@@ -83,14 +112,35 @@ export function normalizeWazuhAlert(text: string): NormalizeResult {
     pushMapped("username", usernameHit.value);
   }
 
-  const dstIp = consume("data.dstip");
+  const dstIp = consumeFirst(DESTINATION_IP_PATHS);
   if (dstIp) pushMapped("destinationIp", dstIp);
 
-  const dstPort = consume("data.dstport");
+  const dstPort = consumeFirst(DESTINATION_PORT_PATHS);
   if (dstPort) pushMapped("destinationPort", dstPort);
 
-  const protocol = consume("data.protocol");
+  const protocol = consumeFirst(PROTOCOL_PATHS);
   if (protocol) pushMapped("protocol", protocol);
+
+  const operation = consumeFirst(OPERATION_PATHS);
+  if (operation) pushMapped("operation", operation);
+
+  const rowCount = consumeFirst(ROW_COUNT_PATHS);
+  if (rowCount) pushMapped("rowsAffected", rowCount);
+
+  const database = consumeFirst(DATABASE_PATHS);
+  if (database) pushMapped("database", database);
+
+  const table = consumeFirst(TABLE_PATHS);
+  if (table) pushMapped("tableName", table);
+
+  const sensitiveTypes = consumeFirst(SENSITIVE_TYPES_PATHS);
+  if (sensitiveTypes) pushMapped("sensitiveDataTypes", sensitiveTypes);
+
+  const externalCommunication = consumeFirst([
+    "data.external_communication",
+    "external_communication",
+  ]);
+  if (externalCommunication) pushMapped("externalCommunication", externalCommunication);
 
   // provenance：Wazuh 导入固定告警来源文案
   pushMapped("alertSource", "Wazuh");

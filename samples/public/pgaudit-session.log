@@ -1,0 +1,2 @@
+AUDIT: SESSION,1,1,DDL,CREATE TABLE,TABLE,public.customers,create table customers (id int, email text),<not logged>
+AUDIT: SESSION,2,1,READ,SELECT,TABLE,public.customers,select id,email from customers where id = 1,<not logged>
