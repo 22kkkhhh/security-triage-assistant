@@ -5,7 +5,7 @@
 | 项目 | 值 |
 | --- | --- |
 | 产品 | 数据与网络安全联合研判及案件运营助手 |
-| 当前版本线 | v1.12.0（稳定化基线，main @ `4bcddb2`） |
+| 当前版本线 | v1.12.0（稳定化基线，main @ `9530fb0`） |
 | 部署形态 | main：Node 22 Docker；3012 直连 HTTP；3133 候选预览已停止 |
 | 当前地址 | `http://43.139.70.88:3012`（内网直连 HTTP） |
 | 数据库 | SQLite：`prisma/staging.db`；迁移由生产启动门禁执行 |
@@ -47,6 +47,8 @@
 - `MANUAL`、历史演示夹具和未标注来源的内部命令不启用该字段，避免把旧的 `originalAlertId` 误当作外部幂等键。
 - 新增 `RawAlertRecord`：每次 JSONL 告警先递归脱敏（password/token/authorization/cookie 等）再保存，重复到达也保留接收记录并关联既有案件。
 - 新增 `/cases/import` JSONL 批量导入页：最多 100 条、总计 1 MB，复用 Wazuh 适配器和现有案件创建/审计/去重命令；已发布到 staging 并完成登录、创建/重复、脱敏留存烟囱测试。
+- Wazuh JSON 适配器已覆盖常见网络、身份、Office 365 与数据审计字段；映射保持显式路径，未识别字段继续保留供人工核查。
+- 新增 pgAudit `SESSION` 文本适配器：数据库审计文本粘贴可确定性映射为 `DATABASE_AUDIT`，生成稳定幂等 ID；一次导入一条事件，批量数据继续使用批量入口。
 
 ## M3 不变量
 
