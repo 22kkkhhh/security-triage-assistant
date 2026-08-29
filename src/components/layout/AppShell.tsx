@@ -180,12 +180,16 @@ export function AppShell({
               current === pathname ? null : pathname,
             )
           }
-          className="min-h-9 rounded border border-slate-600 px-3 py-1.5 text-sm text-slate-100 hover:bg-slate-800"
+          className="grid size-9 shrink-0 place-items-center rounded border border-slate-600 text-slate-100 hover:bg-slate-800"
         >
-          菜单
+          <span aria-hidden="true" className="text-lg leading-none">☰</span>
+          <span className="sr-only">导航</span>
         </button>
-        <div className="min-w-0 truncate text-sm font-semibold tracking-wide">
-          数据与网络安全联合研判及案件运营助手
+        <div
+          className="min-w-0 truncate text-sm font-semibold tracking-wide"
+          title="数据与网络安全联合研判及案件运营助手"
+        >
+          联合研判工作台
         </div>
         <div className="ml-auto"><UserMenu user={user} canChangeOwnPassword={navigation.canChangeOwnPassword} showReadOnlyHint={showReadOnlyHint} compact /></div>
       </div>

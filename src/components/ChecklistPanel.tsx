@@ -7,6 +7,8 @@ import { createManualChecklistItem } from "@/services/checklist/generateChecklis
 import { groupChecklistItemsForDisplay } from "./checklistGrouping";
 import { Panel } from "./common";
 
+const INITIAL_VISIBLE_CHECKLIST_ITEMS = 3;
+
 function ChecklistItemRow({
   item,
   canWrite,
@@ -232,7 +234,9 @@ export function ChecklistPanel({
   const filteredItems = items.filter((item) =>
     filter === "pending" ? !item.completed : filter === "completed" ? item.completed : true,
   );
-  const visibleItems = showAll ? filteredItems : filteredItems.slice(0, 7);
+  const visibleItems = showAll
+    ? filteredItems
+    : filteredItems.slice(0, INITIAL_VISIBLE_CHECKLIST_ITEMS);
   const displayEntries = groupChecklistItemsForDisplay(visibleItems);
   const pendingCount = items.filter((item) => !item.completed).length;
   const completedCount = items.length - pendingCount;
@@ -291,14 +295,16 @@ export function ChecklistPanel({
           <li className="text-sm text-neutral-500">暂无待核查事项。</li>
         )}
       </ul>
-      {filteredItems.length > 7 ? (
+      {filteredItems.length > INITIAL_VISIBLE_CHECKLIST_ITEMS ? (
         <button
           type="button"
           className="mt-2 text-xs font-medium text-[var(--ui-brand-hover)] underline underline-offset-2"
           onClick={() => setShowAll((value) => !value)}
           aria-expanded={showAll}
         >
-          {showAll ? "收起其余事项" : `查看全部（还有 ${filteredItems.length - 7} 项）`}
+          {showAll
+            ? "收起其余事项"
+            : `查看全部（还有 ${filteredItems.length - INITIAL_VISIBLE_CHECKLIST_ITEMS} 项）`}
         </button>
       ) : null}
       {canWrite ? (

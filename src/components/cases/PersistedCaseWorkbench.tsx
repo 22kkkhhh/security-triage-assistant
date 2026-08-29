@@ -1059,27 +1059,50 @@ export function PersistedCaseWorkbench({
               }}
             />
           </div>
-          <details className="mt-3" data-testid="evidence-disclosure">
-            <summary className="cursor-pointer text-sm text-neutral-600">
-              查看系统证据（{analyzed.evidences.length}）
-            </summary>
-            <div
-              id={INVESTIGATION_SECTION_IDS.evidence}
-              className="scroll-mt-14 mt-2 min-w-0"
-            >
-              <EvidencePanel
-                evidences={analyzed.evidences.map((evidence) => ({ ...evidence, rawAlertId: initial.rawAlertIds?.[0] ?? null }))}
-                pinnedEvidenceIds={pinnedEvidenceIds}
-                caseId={initial.caseId}
-                onTogglePin={handleEvidencePinToggle}
-              />
-              {pinnedEvidenceIds.length > 0 ? (
-                <p className="mt-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800" data-testid="key-evidence-summary">
-                  已标记 {pinnedEvidenceIds.length} 条关键证据；人工研判与报告会复用这些证据引用。
+          <section
+            className="mt-3 rounded-md border border-neutral-200 bg-neutral-50/60 px-3 py-2.5"
+            data-testid="evidence-summary"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-neutral-800">
+                  证据摘要
+                  <span className="ml-2 text-xs font-normal text-neutral-500">
+                    {analyzed.evidences.length} 条 · 来源可追溯
+                  </span>
                 </p>
+                <p className="mt-0.5 text-xs text-neutral-500">
+                  先查看与当前任务最相关的证据，原始告警默认保持收起。
+                </p>
+              </div>
+              {pinnedEvidenceIds.length > 0 ? (
+                <span className="shrink-0 rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+                  已标记 {pinnedEvidenceIds.length} 条关键证据
+                </span>
               ) : null}
             </div>
-          </details>
+            <details className="mt-2" data-testid="evidence-disclosure">
+              <summary className="cursor-pointer text-xs font-medium text-[var(--ui-brand-hover)] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ui-focus-ring)]">
+                查看证据与来源
+              </summary>
+              <div
+                id={INVESTIGATION_SECTION_IDS.evidence}
+                className="scroll-mt-14 mt-2 min-w-0"
+              >
+                <EvidencePanel
+                  evidences={analyzed.evidences.map((evidence) => ({ ...evidence, rawAlertId: initial.rawAlertIds?.[0] ?? null }))}
+                  pinnedEvidenceIds={pinnedEvidenceIds}
+                  caseId={initial.caseId}
+                  onTogglePin={handleEvidencePinToggle}
+                />
+                {pinnedEvidenceIds.length > 0 ? (
+                  <p className="mt-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800" data-testid="key-evidence-summary">
+                    已标记的关键证据会自动复用到人工研判和报告。
+                  </p>
+                ) : null}
+              </div>
+            </details>
+          </section>
         </InvestigationStepSection>
 
         <InvestigationStepSection
