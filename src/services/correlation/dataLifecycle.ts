@@ -39,6 +39,7 @@ export interface DataLifecycleProjection {
   observedCount: number;
   possibleCount: number;
   hasDataSource: boolean;
+  sourceCoverage: string[];
 }
 
 const stageDefinitions: Array<{
@@ -159,6 +160,20 @@ export function buildDataLifecycleProjection(input: {
   const stages = stageDefinitions.map((definition) =>
     classifyStage(definition, input.draft, input.evidences, input.timeline),
   );
+  const sourceCoverage: string[] = [];
+  if (input.draft.alert.title) sourceCoverage.push("案件告警");
+  if (input.timeline.length > 0) sourceCoverage.push("调查时间线");
+  const evidenceLabels: Record<Evidence["sourceType"], string> = {
+    DATABASE_AUDIT: "数据库审计",
+    AUTH_LOG: "认证日志",
+    NETWORK_LOG: "网络日志",
+    BUSINESS_SYSTEM_LOG: "业务系统日志",
+    CHANGE_TICKET: "变更工单",
+    MANUAL_INPUT: "人工输入",
+  };
+  for (const sourceType of new Set(input.evidences.map((evidence) => evidence.sourceType))) {
+    sourceCoverage.push(evidenceLabels[sourceType]);
+  }
   return {
     stages,
     observedCount: stages.filter((stage) => stage.status === "OBSERVED").length,
@@ -166,5 +181,6 @@ export function buildDataLifecycleProjection(input: {
     hasDataSource: Boolean(
       input.draft.alert.title || input.evidences.length > 0 || input.timeline.length > 0,
     ),
+    sourceCoverage,
   };
 }

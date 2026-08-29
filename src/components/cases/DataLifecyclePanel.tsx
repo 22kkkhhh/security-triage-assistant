@@ -41,6 +41,9 @@ export function DataLifecyclePanel({
           <p className="mt-1 text-xs leading-5 text-neutral-500">
             基于当前案件已接入的告警、证据与时间线定位阶段；不等同于合规或泄露结论。
           </p>
+          <p className="mt-1 text-xs text-neutral-400" data-testid="data-lifecycle-coverage">
+            当前覆盖：{projection.sourceCoverage.length > 0 ? projection.sourceCoverage.join(" · ") : "暂无直接来源"}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-xs text-neutral-500" aria-label="生命周期统计">
           <span>已观测 {projection.observedCount}</span>
