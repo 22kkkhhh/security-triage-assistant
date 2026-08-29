@@ -23,9 +23,9 @@ const USERNAME_PATHS = [
 ] as const;
 
 const SOURCE_IP_PATHS = ["data.srcip", "data.src_ip", "srcip", "src_ip", "source.ip"] as const;
-const DESTINATION_IP_PATHS = ["data.dstip", "data.dst_ip", "dstip", "dst_ip", "dest_ip", "destination.ip"] as const;
-const DESTINATION_PORT_PATHS = ["data.dstport", "data.dst_port", "dstport", "dst_port", "dest_port", "destination.port"] as const;
-const PROTOCOL_PATHS = ["data.protocol", "protocol", "proto", "network.protocol"] as const;
+const DESTINATION_IP_PATHS = ["data.dstip", "data.dst_ip", "data.dest_ip", "dstip", "dst_ip", "dest_ip", "destination.ip"] as const;
+const DESTINATION_PORT_PATHS = ["data.dstport", "data.dst_port", "data.dest_port", "dstport", "dst_port", "dest_port", "destination.port"] as const;
+const PROTOCOL_PATHS = ["data.protocol", "data.proto", "protocol", "proto", "network.protocol"] as const;
 const OPERATION_PATHS = [
   "data.operation",
   "data.command",
