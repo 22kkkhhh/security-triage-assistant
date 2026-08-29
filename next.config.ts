@@ -13,6 +13,7 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   // 禁止 Next 自动改写仓库根目录 AGENTS.md（本项目有独立产品约束文件）
   agentRules: false,
+  allowedDevOrigins: ["43.139.70.88"],
   turbopack: {
     root: import.meta.dirname,
   },
