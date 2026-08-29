@@ -91,6 +91,8 @@ import { RelatedCasesPanel } from "./RelatedCasesPanel";
 import { WorkbenchSection } from "./WorkbenchSection";
 import { InvestigationNextActions } from "./InvestigationNextActions";
 import type { InvestigationIntelligenceView } from "@/services/correlation/investigationIntelligenceTypes";
+import { DataLifecyclePanel } from "./DataLifecyclePanel";
+import { buildDataLifecycleProjection } from "@/services/correlation/dataLifecycle";
 
 function countBusinessContextPending(ctx: BusinessContext): number {
   const fields: (keyof BusinessContext)[] = [
@@ -233,6 +235,16 @@ export function PersistedCaseWorkbench({
         timeline,
       }),
     [draftBase, businessContext, humanReview, timeline],
+  );
+
+  const dataLifecycle = useMemo(
+    () =>
+      buildDataLifecycleProjection({
+        draft: draftBase,
+        evidences: analyzed.evidences,
+        timeline,
+      }),
+    [analyzed.evidences, draftBase, timeline],
   );
 
   const checklist = useMemo(
@@ -939,6 +951,25 @@ export function PersistedCaseWorkbench({
           canWriteReport={capabilities.canWriteReport}
           onGoToReport={() => void goToReport()}
           showNextStep={false}
+        />
+
+        <DataLifecyclePanel
+          projection={dataLifecycle}
+          onReferenceClick={(reference) => {
+            if (reference.kind === "EVIDENCE") {
+              switchWorkspace("investigation");
+              window.setTimeout(
+                () => scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.evidence),
+                0,
+              );
+              return;
+            }
+            switchWorkspace("records");
+            window.setTimeout(
+              () => scrollToInvestigationSection(INVESTIGATION_SECTION_IDS.records),
+              0,
+            );
+          }}
         />
 
         <details
