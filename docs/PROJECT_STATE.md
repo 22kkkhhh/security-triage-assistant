@@ -5,11 +5,11 @@
 | 项目 | 值 |
 | --- | --- |
 | 产品 | 数据与网络安全联合研判及案件运营助手 |
-| 当前版本线 | v1.12.0（稳定化基线） |
-| 部署形态 | staging：Node 22；Docker 镜像已完成隔离启动与 ready 烟囱验证 |
-| 当前地址 | `http://43.139.70.88:3012`（直连 staging） |
+| 当前版本线 | v1.12.0（稳定化基线，main @ `4bcddb2`） |
+| 部署形态 | main：Node 22 Docker；3012 直连 HTTP；3133 候选预览已停止 |
+| 当前地址 | `http://43.139.70.88:3012`（内网直连 HTTP） |
 | 数据库 | SQLite：`prisma/staging.db`；迁移由生产启动门禁执行 |
-| 当前里程碑 | 第一阶段：稳定可用（Release Hardening），并开始第二阶段输入基础能力 |
+| 当前里程碑 | 第一阶段：稳定可用（Release Hardening）已完成，进入第二阶段试点准备 |
 
 ## 里程碑
 
@@ -28,7 +28,16 @@
 - [x] 缺少生产密钥时启动门禁按预期 fail-closed。
 - [ ] Nginx/HTTPS/密钥/日志的生产入口方案完成确认后再切换公网流量。
 
-当前 staging 仍为直接 `3012` 端口，不能视为 HTTPS 生产部署；现有 Nginx `80/3013` 入口承载其他服务，未经确认不得改写。
+当前 `3012` 仍为直接 HTTP 端口，不能视为 HTTPS 公网部署；现有 Nginx `80/3013` 入口承载其他服务，未经确认不得改写。
+
+## Main 集成与 3012 验收（2026-08-30）
+
+- 候选分支 `codex/case-detail-ux-consolidation` 已通过 GitHub Verification（verify、docker-smoke），并以 fast-forward 方式合并到 `main`。
+- main 当前提交为 `4bcddb2003fe338c1dc73002d745fe7558dfe99a`；未使用 force push、squash 或历史重写。
+- 3012 已切换至 `security-triage-assistant:main-4bcddb2`，保留原 `/data` 与备份卷；旧容器保留为 `sta-v12-live-before-main-6493020` 以便回滚。
+- 生产健康检查：`/api/health`、`/api/ready` 均通过；公网登录页返回 HTTP 200。
+- 使用 Demo 管理员完成浏览器验收：Overview → 案件队列 → 案件详情 → 调查/实体面板 → 时间线 → Evidence → 原始告警详情/脱敏载荷 → 关联案件对比 → 报告查看。
+- 本次未重复执行数据库备份演练；现有数据库数据卷未更换、未清理。
 
 ## 第二阶段已开始：告警接入基础
 
@@ -52,4 +61,4 @@
 - C1：`c418140a530e1f921e79b06eb8cf386beaa4937d`，报告冻结引用保护、报告 OCC、业务上下文来源边界、目的地区域 fail-closed、运行时解析失败契约。
 - D1：`03bcde8b95115562d3c6aac51edd90246900f5b2`，工作台刷新、命令执行态、报告导航、加载/未找到页面、响应式外壳与基础可访问性。
 
-当前接管分支为 `agent/codex-v1.5-m4-handoff`，仅负责上述整合、项目记忆和状态确认；不在本分支新增 M4 功能。
+当前主线为 `main`（`4bcddb2003fe338c1dc73002d745fe7558dfe99a`）；C1/D1 内容已纳入稳定化基线，后续变更应继续复用现有领域模型与权限边界。
