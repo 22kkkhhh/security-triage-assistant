@@ -1083,7 +1083,7 @@ export function PersistedCaseWorkbench({
             </div>
             <details className="mt-2" data-testid="evidence-disclosure">
               <summary className="cursor-pointer text-xs font-medium text-[var(--ui-brand-hover)] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ui-focus-ring)]">
-                查看证据与来源
+                查看系统证据与来源
               </summary>
               <div
                 id={INVESTIGATION_SECTION_IDS.evidence}
