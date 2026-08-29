@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { normalizeWazuhAlert } from "@/services/intake/wazuhAlertAdapter";
+import { parsePgAuditText } from "@/services/intake/pgAuditAdapter";
 
 function samplePath(name: string): string {
   return resolve(process.cwd(), "samples", "public", name);
@@ -28,10 +29,13 @@ describe("公开样本文件只读解析", () => {
     expect(result.input.operation).toBe("Add user");
   });
 
-  it("keeps pgAudit text as a reference fixture, not an unsupported JSON import", () => {
+  it("parses the pgAudit text sample through the database-audit adapter", () => {
     const text = readFileSync(samplePath("pgaudit-session.log"), "utf8").trim();
-    expect(text.split("\n")).toHaveLength(2);
-    expect(text).toContain("AUDIT: SESSION");
-    expect(text).toContain("READ,SELECT");
+    const results = parsePgAuditText(text);
+    expect(results).toHaveLength(2);
+    expect(results[0].input.sourceType).toBe("DATABASE_AUDIT");
+    expect(results[0].input.operation).toBe("CREATE TABLE");
+    expect(results[1].input.operation).toBe("SELECT");
+    expect(results[1].input.tableName).toBe("public.customers");
   });
 });

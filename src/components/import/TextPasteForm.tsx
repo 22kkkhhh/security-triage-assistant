@@ -33,7 +33,9 @@ export function TextPasteForm({
     <div className="space-y-3">
       <label className="block text-sm">
         <span className="text-neutral-500">
-          粘贴文本（支持“键:值”与“键：值”行，无法识别的行将保留待人工处理）
+          {sourceType === "DATABASE_AUDIT"
+            ? "粘贴数据库审计文本（支持 pgAudit SESSION 单条日志，也支持“键:值”行）"
+            : "粘贴文本（支持“键:值”与“键：值”行，无法识别的行将保留待人工处理）"}
         </span>
         <textarea
           className="mt-1 h-48 w-full rounded border border-neutral-300 px-2 py-1 font-mono text-sm"

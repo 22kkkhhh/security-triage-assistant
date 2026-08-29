@@ -12,6 +12,6 @@ These fixtures are **脱敏、演示用途** samples based on public vendor docu
 
 - `wazuh-suricata-alert.jsonl` checks root-level network fields and alert provenance.
 - `wazuh-office365-user-event.jsonl` checks integration, user and operation fields.
-- `pgaudit-session.log` preserves the original text format; use it as a reference for a JSON wrapper or a future text adapter.
+- `pgaudit-session.log` is parsed by the deterministic `DATABASE_AUDIT` text adapter. The single-event text paste flow accepts one pgAudit `SESSION` line; batch ingestion should use the batch import path.
 
 All identifiers, hosts, IPs and email addresses are documentation-safe examples. Do not treat these samples as proof of an incident or as a compliance conclusion.

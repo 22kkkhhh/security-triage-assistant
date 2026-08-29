@@ -1,5 +1,6 @@
 import { normalizeRecord } from "./normalize";
 import type { ImportSourceType, NormalizeResult, RawKeyValue } from "./types";
+import { normalizePgAuditLine, PgAuditParseError } from "@/services/intake/pgAuditAdapter";
 
 /** 支持 key:value 与 key：value（中文全角冒号） */
 const LINE_PATTERN = /^\s*([^:：\s][^:：]*?)\s*[:：]\s*(.*)$/;
@@ -13,6 +14,14 @@ export function parsePastedText(
   text: string,
   sourceType: ImportSourceType,
 ): NormalizeResult {
+  const nonEmptyLines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (sourceType === "DATABASE_AUDIT" && nonEmptyLines.some((line) => line.startsWith("AUDIT: "))) {
+    if (nonEmptyLines.length !== 1 || !nonEmptyLines[0].startsWith("AUDIT: ")) {
+      throw new PgAuditParseError("pgAudit 文本导入一次仅支持一条审计事件；批量数据请使用批量导入入口");
+    }
+    return normalizePgAuditLine(nonEmptyLines[0]);
+  }
+
   const pairs: RawKeyValue[] = [];
   const unparsedLines: string[] = [];
 
